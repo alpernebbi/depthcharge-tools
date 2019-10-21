@@ -31,6 +31,7 @@ kernel.itb: vmlinuz.lz4 initrd.img rk3399-gru-kevin.dtb
 		-T kernel \
 		-C lz4 \
 		-a 0 \
+		-n "Debian kernel ${kversion}" \
 		-d vmlinuz.lz4 \
 		-i initrd.img \
 		-b rk3399-gru-kevin.dtb \
