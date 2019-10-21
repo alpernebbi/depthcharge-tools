@@ -57,6 +57,13 @@ vmlinuz: $(vmlinuz)
 bootloader.bin:
 	dd if=/dev/zero of=$@ count=1
 
+flash: kernel.img
+	notify-send 'depthcharge' 'enter sudo password'
+	sudo -v
+	sudo dd if=$< of=/dev/disk/by-partlabel/KERN-X
+	sudo cgpt add -i 1 -P 15 -T 1 /dev/sda
+	sudo cgpt show /dev/sda
+
 clean:
 	rm -f kernel.img
 	rm -f kernel.itb
@@ -68,4 +75,4 @@ clean:
 	rm -f bootloader.bin
 	rm -f rk3399-gru-kevin.dtb
 
-.PHONY: clean
+.PHONY: all clean flash
