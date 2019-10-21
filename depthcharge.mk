@@ -24,13 +24,10 @@ kernel.img: kernel.itb kernel.args bootloader.bin $(keyblock) $(vbprivk)
 
 kernel.itb: vmlinuz.lz4 initrd.img rk3399-gru-kevin.dtb
 	mkimage \
-		-D "-I dts -O dtb -p 2048" \
 		-f auto \
 		-A arm64 \
 		-O linux \
-		-T kernel \
 		-C lz4 \
-		-a 0 \
 		-n "Debian kernel ${kversion}" \
 		-d vmlinuz.lz4 \
 		-i initrd.img \
