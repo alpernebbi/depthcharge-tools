@@ -2,9 +2,15 @@
 
 all: kernel.img
 
-keys := kernel.keyblock kernel_data_key.vbprivk
+keyblock := /usr/share/vboot/devkeys/kernel.keyblock
+vbprivk := /usr/share/vboot/devkeys/kernel_data_key.vbprivk
 
-kernel.img: kernel.itb kernel.args bootloader.bin $(keys)
+kversion := 5.3.0-trunk-arm64
+vmlinuz := /boot/vmlinuz-$(kversion)
+initramfs := /boot/initrd.img-$(kversion)
+dtb := /usr/lib/linux-image-$(kversion)/rockchip/rk3399-gru-kevin.dtb
+
+kernel.img: kernel.itb kernel.args bootloader.bin $(keyblock) $(vbprivk)
 	vbutil_kernel \
 		--version 1 \
 		--arch aarch64 \
@@ -12,8 +18,8 @@ kernel.img: kernel.itb kernel.args bootloader.bin $(keys)
 		--vmlinuz kernel.itb \
 		--config kernel.args \
 		--bootloader bootloader.bin \
-		--keyblock kernel.keyblock \
-		--signprivate kernel_data_key.vbprivk
+		--keyblock $(keyblock) \
+		--signprivate $(vbprivk)
 	test "$$(stat -c '%s' $@)" -lt 33554432
 
 kernel.itb: vmlinuz.lz4 initrd.img rk3399-gru-kevin.dtb
@@ -39,10 +45,27 @@ kernel.args: initrd.args
 vmlinuz.lz4: vmlinuz
 	lz4 -12 $< $@
 
+rk3399-gru-kevin.dtb: $(dtb)
+	cp $< $@
+
+initrd.img: $(initramfs)
+	cp $< $@
+
+vmlinuz: $(vmlinuz)
+	cp $< $@
+
 bootloader.bin:
 	dd if=/dev/zero of=$@ count=1
 
 clean:
-	rm kernel.img
+	rm -f kernel.img
+	rm -f kernel.itb
+	rm -f kernel.args
+	rm -f vmlinuz
+	rm -f vmlinuz.lz4
+	rm -f initrd.img
+	rm -f kernel.args
+	rm -f bootloader.bin
+	rm -f rk3399-gru-kevin.dtb
 
 .PHONY: clean
