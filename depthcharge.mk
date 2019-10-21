@@ -17,6 +17,7 @@ keys := kernel.keyblock kernel_data_key.vbprivk
 		--bootloader bootloader.bin \
 		--keyblock kernel.keyblock \
 		--signprivate kernel_data_key.vbprivk
+	test "$$(stat -c '%s' $@)" -lt 33554432
 
 %/kernel-initrd.itb: %/vmlinuz.lz4 %/initrd.img %/rk3399-gru-kevin.dtb
 	mkimage \
