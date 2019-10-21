@@ -36,11 +36,13 @@ kernel.itb: vmlinuz.lz4 initrd.img rk3399-gru-kevin.dtb
 		-b rk3399-gru-kevin.dtb \
 		$@
 
-kernel.args: initrd.args
-	@echo 'root=PARTUUID=4f7a82a0-1e9a-47fd-83b5-73847350f068' > $@
-	@echo 'console=tty1' >> $@
-	@echo 'rootwait' >> $@
-	@echo 'rw' >> $@
+kernel.args:
+	@echo -n \
+		'root=PARTUUID=4f7a82a0-1e9a-47fd-83b5-73847350f068' \
+		'console=tty1' \
+		'rootwait' \
+		'rw' \
+		>$@
 
 vmlinuz.lz4: vmlinuz
 	lz4 -12 $< $@
