@@ -1,0 +1,55 @@
+#!/bin/sh
+set -e
+
+VBOOT_KEYBLOCK="/usr/share/vboot/devkeys/kernel.keyblock"
+VBOOT_VBPRIVK="/usr/share/vboot/devkeys/kernel_data_key.vbprivk"
+
+KVERSION="5.3.0-trunk-arm64"
+VMLINUZ="/boot/vmlinuz-${KVERSION}"
+INITRAMFS="/boot/initrd.img-${KVERSION}"
+DTB="/usr/lib/linux-image-${KVERSION}/rockchip/rk3399-gru-kevin.dtb"
+
+if [ ! -f kernel.args ]; then
+    echo -n \
+        'root=PARTUUID=4f7a82a0-1e9a-47fd-83b5-73847350f068' \
+        'console=tty1' \
+        'rootwait' \
+        'rw' \
+        >kernel.args
+fi
+
+# mkimage can't open these when they are read-only for some reason.
+# Copy them in fear of modifying the originals.
+cp "$VMLINUZ" vmlinuz
+cp "$INITRAMFS" initrd.img
+cp "$DTB" rk3399-gru-kevin.dtb
+
+lz4 -z -9 <vmlinuz >vmlinuz.lz4
+
+mkimage \
+    -f auto \
+    -A arm64 \
+    -O linux \
+    -C lz4 \
+    -n "Debian kernel ${kversion}" \
+    -d vmlinuz.lz4 \
+    -i initrd.img \
+    -b rk3399-gru-kevin.dtb \
+    kernel.itb
+
+dd if=/dev/zero of=bootloader.bin count=1 bs=512
+
+futility vbutil_kernel \
+    --version 1 \
+    --arch aarch64 \
+    --pack kernel.img \
+    --vmlinuz kernel.itb \
+    --config kernel.args \
+    --bootloader bootloader.bin \
+    --keyblock "${VBOOT_KEYBLOCK}" \
+    --signprivate "${VBOOT_VBPRIVK}"
+
+if [ "$(stat -c '%s' kernel.img)" -gt 33554432 ]; then
+    echo "size too big." >&2
+    exit 1
+fi
