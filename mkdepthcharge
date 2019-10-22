@@ -1,55 +1,203 @@
 #!/bin/sh
 set -e
 
-VBOOT_KEYBLOCK="/usr/share/vboot/devkeys/kernel.keyblock"
-VBOOT_VBPRIVK="/usr/share/vboot/devkeys/kernel_data_key.vbprivk"
+error() {
+    echo "$@" >&2
+    exit 1
+}
 
-KVERSION="5.3.0-trunk-arm64"
-VMLINUZ="/boot/vmlinuz-${KVERSION}"
-INITRAMFS="/boot/initrd.img-${KVERSION}"
-DTB="/usr/lib/linux-image-${KVERSION}/rockchip/rk3399-gru-kevin.dtb"
+error_help() {
+    echo "$@" >&2
+    echo >&2
+    print_help >&2
+    exit 1
+}
 
-if [ ! -f kernel.args ]; then
-    echo -n \
-        'root=PARTUUID=4f7a82a0-1e9a-47fd-83b5-73847350f068' \
-        'console=tty1' \
-        'rootwait' \
-        'rw' \
-        >kernel.args
+print_help() {
+cat <<EOF
+Usage: mkdepthcharge [options] -o FILE [--] vmlinuz [initrd] [dtb ...]
+
+Options:
+ -h, --help              Show this help message.
+ -o, --output FILE       Write resulting image to FILE.
+ -c, --cmdline CMD       Command-line parameters for the kernel. Can
+                         be used multiple times to append new values.
+ -C, --compress TYPE     Compress kernel with one of: none, lz4, lzma.
+ -n, --description DESC  Description to use as a mkimage argument.
+EOF
+}
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -h|--help)
+            print_help
+            exit 0
+            ;;
+        -o|--output)
+            OUTPUT="$2"
+            shift 2
+            ;;
+        -C|--compress)
+            COMPRESS="$2"
+            shift 2
+            ;;
+        -n|--description)
+            DESCRIPTION="$2"
+            shift 2
+            ;;
+        -c|--cmdline)
+            CMDLINE="${CMDLINE# } $2"
+            shift 2
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -*)
+            error_help "Option '$1' not understood."
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -*)
+            error_help "Options must precede input filenames."
+            ;;
+        *dtb*)
+            DTBS="$DTBS $1"
+            shift
+            ;;
+        *initrd*|*initramfs*|*cpio*)
+            INITRAMFS="$1"
+            shift
+            ;;
+        *vmlinuz*|*vmlinux*|*linux*|*Image*)
+            VMLINUZ="$1"
+            shift
+            ;;
+        *)
+            if [ -z "$VMLINUZ" ]; then
+                VMLINUZ="$1"
+                shift
+            elif [ -z "$INITRAMFS" ]; then
+                INITRAMFS="$1"
+                shift
+            else
+                DTBS="$DTBS $1"
+                shift
+            fi
+            ;;
+    esac
+done
+
+if [ -z "$OUTPUT" ]; then
+    error_help "Output argument is mandatory."
 fi
 
-# mkimage can't open these when they are read-only for some reason.
-# Copy them in fear of modifying the originals.
-cp "$VMLINUZ" vmlinuz
-cp "$INITRAMFS" initrd.img
-cp "$DTB" rk3399-gru-kevin.dtb
+if [ -z "$VMLINUZ" ]; then
+    error_help "Input file vmlinuz is required."
+fi
 
-lz4 -z -9 <vmlinuz >vmlinuz.lz4
+: "${ARCH:=$(arch)}"
+case "$ARCH" in
+    arm64|aarch64) MKIMAGE_ARCH=arm64;  VBOOT_ARCH=aarch64 ;;
+    arm*)          MKIMAGE_ARCH=arm;    VBOOT_ARCH=arm ;;
+    amd64|x86_64)  MKIMAGE_ARCH=x86_64; VBOOT_ARCH=amd64 ;;
+    x86|i386)      MKIMAGE_ARCH=x86;    VBOOT_ARCH=x86 ;;
+    *) error "Architecture '$ARCH' is not supported." ;;
+esac
+
+# mkimage can't open files when they are read-only for some reason.
+# Copy them into a temporary dir in fear of modifying the originals.
+tmp="$(mktemp -td mkdepthcharge.XXXXXXXX)"
+trap 'rm -rf "${tmp}"' EXIT
+
+: "${COMPRESS:=none}"
+case "$COMPRESS" in
+    lz4)
+        lz4 -z -9 <"$VMLINUZ" >"${tmp}/vmlinuz.lz4"
+        VMLINUZ="${tmp}/vmlinuz.lz4"
+        ;;
+    lzma)
+        lzma -z <"$VMLINUZ" >"${tmp}/vmlinuz.lzma"
+        VMLINUZ="${tmp}/vmlinuz.lzma"
+        ;;
+    none)
+        cp "$VMLINUZ" "${tmp}/vmlinuz"
+        VMLINUZ="${tmp}/vmlinuz"
+        ;;
+    *)
+        error "Compression type '$COMPRESS' is not supported."
+        ;;
+esac
+
+if [ -n "$INITRAMFS" ]; then
+    cp "$INITRAMFS" "${tmp}/initrd.img"
+    INITRAMFS="${tmp}/initrd.img"
+    MKIMAGE_INITRAMFS_ARGS="-i $INITRAMFS"
+fi
+
+if [ -n "$DTBS" ]; then
+    mkdir -p "${tmp}/dtbs"
+    cp $DTBS "${tmp}/dtbs/"
+    DTBS="${tmp}/dtbs/"*
+    MKIMAGE_DTB_ARGS=
+    for DTB in $DTBS; do
+        MKIMAGE_DTB_ARGS="${MKIMAGE_DTB_ARGS# } -b $DTB"
+    done
+fi
+
+# If kernel.args is empty, vbutil_kernel returns an error.
+# Use "--" instead of putting a newline or a space into the cmdline.
+: "${CMDLINE:=--}"
+echo -n $CMDLINE >"${tmp}/kernel.args"
+
+if [ -z "$BOOTSTUB" ]; then
+    case "$VBOOT_ARCH" in
+        arm*|aarch64)
+            dd if=/dev/zero of="${tmp}/bootstub.bin" count=1 bs=512
+            BOOTSTUB="${tmp}/bootstub.bin"
+            ;;
+        x86|amd64|*)
+            error "Architecture '$VBOOT_ARCH' needs a bootstub binary."
+            ;;
+    esac
+fi
 
 mkimage \
     -f auto \
-    -A arm64 \
+    -A "$MKIMAGE_ARCH" \
     -O linux \
-    -C lz4 \
-    -n "Debian kernel ${kversion}" \
-    -d vmlinuz.lz4 \
-    -i initrd.img \
-    -b rk3399-gru-kevin.dtb \
-    kernel.itb
+    -C "$COMPRESS" \
+    -n "$DESCRIPTION" \
+    -d "$VMLINUZ" \
+    $MKIMAGE_INITRAMFS_ARGS \
+    $MKIMAGE_DTB_ARGS \
+    "${tmp}/depthcharge.itb"
 
-dd if=/dev/zero of=bootloader.bin count=1 bs=512
+: "${VBOOT_DEVKEYS:=/usr/share/vboot/devkeys}"
+: "${VBOOT_KEYBLOCK:=${VBOOT_DEVKEYS}/kernel.keyblock}"
+: "${VBOOT_SIGNPRIVATE:=${VBOOT_DEVKEYS}/kernel_data_key.vbprivk}"
 
 futility vbutil_kernel \
     --version 1 \
-    --arch aarch64 \
-    --pack kernel.img \
-    --vmlinuz kernel.itb \
-    --config kernel.args \
-    --bootloader bootloader.bin \
-    --keyblock "${VBOOT_KEYBLOCK}" \
-    --signprivate "${VBOOT_VBPRIVK}"
+    --arch "$VBOOT_ARCH" \
+    --vmlinuz "${tmp}/depthcharge.itb" \
+    --config "${tmp}/kernel.args" \
+    --bootloader "$BOOTSTUB" \
+    --keyblock "$VBOOT_KEYBLOCK" \
+    --signprivate "$VBOOT_SIGNPRIVATE" \
+    --pack "${tmp}/depthcharge.img"
 
-if [ "$(stat -c '%s' kernel.img)" -gt 33554432 ]; then
-    echo "size too big." >&2
-    exit 1
+: "${DEPTHCHARGE_SIZE_LIMIT:=33554432}"
+
+DEPTHCHARGE_SIZE="$(stat -c '%s' "${tmp}/depthcharge.img")"
+if [ "$DEPTHCHARGE_SIZE" -gt "$DEPTHCHARGE_SIZE_LIMIT" ]; then
+    error "Output image size too big to boot." >&2
 fi
+
+cp -f "${tmp}/depthcharge.img" "$OUTPUT"
