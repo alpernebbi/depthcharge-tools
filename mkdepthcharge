@@ -1,14 +1,27 @@
 #!/bin/sh
 set -e
 
+_echo() {
+    if [ "$#" -gt 0 ]; then
+        echo "$0:" "$@"
+    fi
+}
+
+info() {
+    _echo "$@"
+}
+
+warn() {
+    _echo "warning:" "$@" >&2
+}
+
 error() {
-    echo "$@" >&2
+    _echo "error:" "$@" >&2
     exit 1
 }
 
 error_help() {
-    echo "$@" >&2
-    echo >&2
+    _echo "error:" "$@" "\n" >&2
     print_help >&2
     exit 1
 }
@@ -119,10 +132,12 @@ trap 'rm -rf "${tmp}"' EXIT
 : "${COMPRESS:=none}"
 case "$COMPRESS" in
     lz4)
+        info "Compressing kernel with lz4."
         lz4 -z -9 <"$VMLINUZ" >"${tmp}/vmlinuz.lz4"
         VMLINUZ="${tmp}/vmlinuz.lz4"
         ;;
     lzma)
+        info "Compressing kernel with lzma."
         lzma -z <"$VMLINUZ" >"${tmp}/vmlinuz.lzma"
         VMLINUZ="${tmp}/vmlinuz.lzma"
         ;;
@@ -131,7 +146,8 @@ case "$COMPRESS" in
         VMLINUZ="${tmp}/vmlinuz"
         ;;
     *)
-        error "Compression type '$COMPRESS' is not supported."
+        error "Compression type '$COMPRESS' is not supported." \
+                "Valid values are: none, lz4, lzma."
         ;;
 esac
 
@@ -159,7 +175,9 @@ echo -n $CMDLINE >"${tmp}/kernel.args"
 if [ -z "$BOOTSTUB" ]; then
     case "$VBOOT_ARCH" in
         arm*|aarch64)
-            dd if=/dev/zero of="${tmp}/bootstub.bin" count=1 bs=512
+            info "Using dummy file for bootloader."
+            dd if=/dev/zero of="${tmp}/bootstub.bin" \
+                count=1 bs=512 status=none
             BOOTSTUB="${tmp}/bootstub.bin"
             ;;
         x86|amd64|*)
@@ -168,6 +186,7 @@ if [ -z "$BOOTSTUB" ]; then
     esac
 fi
 
+info "Running mkimage:"
 mkimage \
     -f auto \
     -A "$MKIMAGE_ARCH" \
@@ -184,6 +203,7 @@ mkimage \
 : "${VBOOT_SIGNPUBKEY:=${VBOOT_DEVKEYS}/kernel_subkey.vbpubk}"
 : "${VBOOT_SIGNPRIVATE:=${VBOOT_DEVKEYS}/kernel_data_key.vbprivk}"
 
+info "Running vbutil_kernel (pack)."
 futility vbutil_kernel \
     --version 1 \
     --arch "$VBOOT_ARCH" \
@@ -198,11 +218,14 @@ futility vbutil_kernel \
 
 DEPTHCHARGE_SIZE="$(stat -c '%s' "${tmp}/depthcharge.img")"
 if [ "$DEPTHCHARGE_SIZE" -gt "$DEPTHCHARGE_SIZE_LIMIT" ]; then
-    error "Output image size too big to boot." >&2
+    error "Output image size too big to boot."
 fi
 
+info "Running vbutil_kernel (verify):"
 futility vbutil_kernel \
     --signpubkey "$VBOOT_SIGNPUBKEY" \
     --verify "${tmp}/depthcharge.img"
 
+info "Copying image to output."
 cp -f "${tmp}/depthcharge.img" "$OUTPUT"
+info "done."
