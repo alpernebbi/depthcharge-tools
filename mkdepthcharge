@@ -252,10 +252,12 @@ futility vbutil_kernel \
     --pack "${tmp}/depthcharge.img"
 
 : "${DEPTHCHARGE_SIZE_LIMIT:=33554432}"
-
-DEPTHCHARGE_SIZE="$(stat -c '%s' "${tmp}/depthcharge.img")"
-if [ "$DEPTHCHARGE_SIZE" -gt "$DEPTHCHARGE_SIZE_LIMIT" ]; then
-    error "Output image size too big to boot."
+if [ "${DEPTHCHARGE_SIZE_LIMIT}" -gt 0 ]; then
+    info "Checking if image fits into size limit."
+    DEPTHCHARGE_SIZE="$(stat -c '%s' "${tmp}/depthcharge.img")"
+    if [ "$DEPTHCHARGE_SIZE" -gt "$DEPTHCHARGE_SIZE_LIMIT" ]; then
+        error "Output image size too big to boot."
+    fi
 fi
 
 info "Running vbutil_kernel (verify):"
