@@ -113,7 +113,27 @@ fi
 
 if [ -z "$VMLINUZ" ]; then
     error_help "Input file vmlinuz is required."
+elif [ ! -r "$VMLINUZ" ]; then
+    error "File '$VMLINUZ' (vmlinuz) not found or is not readable."
+else
+    info "Using vmlinuz: '$VMLINUZ'"
 fi
+
+if [ -n "$INITRAMFS" ]; then
+    if [ ! -r "$INITRAMFS" ]; then
+        error "File '$INITRAMFS' (initramfs) not found or is not readable."
+    else
+        info "Using initramfs: '$INITRAMFS'"
+    fi
+fi
+
+for DTB in $DTBS; do
+    if [ ! -r "$DTB" ]; then
+        error "File '$DTB' (dtb) not found or is not readable."
+    else
+        info "Using dtb: '$DTB'"
+    fi
+done
 
 : "${ARCH:=$(arch)}"
 case "$ARCH" in
@@ -166,6 +186,22 @@ if [ -n "$DTBS" ]; then
         MKIMAGE_DTB_ARGS="${MKIMAGE_DTB_ARGS# } -b $DTB"
     done
 fi
+
+# Somehow mkimage needs write permissions, add them since we've already
+# copied the files to a temporary directory.
+if [ ! -w "$VMLINUZ" ]; then
+    chmod +w "$VMLINUZ"
+fi
+
+if [ -n "$INITRAMFS" ] && [ ! -w "$INITRAMFS" ]; then
+    chmod +w "$INITRAMFS"
+fi
+
+for DTB in $DTBS; do
+    if [ ! -w "$DTB" ]; then
+        chmod +w "$DTB"
+    fi
+done
 
 # If kernel.args is empty, vbutil_kernel returns an error.
 # Use "--" instead of putting a newline or a space into the cmdline.
