@@ -181,6 +181,7 @@ mkimage \
 
 : "${VBOOT_DEVKEYS:=/usr/share/vboot/devkeys}"
 : "${VBOOT_KEYBLOCK:=${VBOOT_DEVKEYS}/kernel.keyblock}"
+: "${VBOOT_SIGNPUBKEY:=${VBOOT_DEVKEYS}/kernel_subkey.vbpubk}"
 : "${VBOOT_SIGNPRIVATE:=${VBOOT_DEVKEYS}/kernel_data_key.vbprivk}"
 
 futility vbutil_kernel \
@@ -199,5 +200,9 @@ DEPTHCHARGE_SIZE="$(stat -c '%s' "${tmp}/depthcharge.img")"
 if [ "$DEPTHCHARGE_SIZE" -gt "$DEPTHCHARGE_SIZE_LIMIT" ]; then
     error "Output image size too big to boot." >&2
 fi
+
+futility vbutil_kernel \
+    --signpubkey "$VBOOT_SIGNPUBKEY" \
+    --verify "${tmp}/depthcharge.img"
 
 cp -f "${tmp}/depthcharge.img" "$OUTPUT"
