@@ -179,8 +179,9 @@ fi
 
 if [ -n "$DTBS" ]; then
     mkdir -p "${tmp}/dtbs"
-    cp $DTBS "${tmp}/dtbs/"
-    DTBS="${tmp}/dtbs/"*
+    cp -t "${tmp}/dtbs/" -- $DTBS
+    DTBS="$(find "${tmp}/dtbs/" -type f)"
+
     MKIMAGE_DTB_ARGS=
     for DTB in $DTBS; do
         MKIMAGE_DTB_ARGS="${MKIMAGE_DTB_ARGS# } -b $DTB"
