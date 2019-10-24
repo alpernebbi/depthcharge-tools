@@ -1,30 +1,8 @@
 #!/bin/sh
 set -e
 
-_echo() {
-    if [ "$#" -gt 0 ]; then
-        echo "$0:" "$@"
-    fi
-}
-
-info() {
-    _echo "$@"
-}
-
-warn() {
-    _echo "warning:" "$@" >&2
-}
-
-error() {
-    _echo "error:" "$@" >&2
-    exit 1
-}
-
-error_help() {
-    _echo "error:" "$@" "\n" >&2
-    print_help >&2
-    exit 1
-}
+# Import common functions
+. "./functions"
 
 print_help() {
 cat <<EOF
@@ -67,7 +45,7 @@ while [ "$#" -gt 0 ]; do
             break
             ;;
         -*)
-            error_help "Option '$1' not understood."
+            usage_error "Option '$1' not understood."
             ;;
         *)
             break
@@ -78,7 +56,7 @@ done
 while [ "$#" -gt 0 ]; do
     case "$1" in
         -*)
-            error_help "Options must precede input filenames."
+            usage_error "Options must precede input filenames."
             ;;
         *dtb*)
             DTBS="$DTBS $1"
@@ -108,11 +86,11 @@ while [ "$#" -gt 0 ]; do
 done
 
 if [ -z "$OUTPUT" ]; then
-    error_help "Output argument is mandatory."
+    usage_error "Output argument is mandatory."
 fi
 
 if [ -z "$VMLINUZ" ]; then
-    error_help "Input file vmlinuz is required."
+    usage_error "Input file vmlinuz is required."
 elif [ ! -r "$VMLINUZ" ]; then
     error "File '$VMLINUZ' (vmlinuz) not found or is not readable."
 else

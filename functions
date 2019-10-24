@@ -1,5 +1,31 @@
 #!/bin/sh
 
+# Functions to make printing output easier.
+info() {
+    if [ "$#" -gt 0 ]; then
+        echo "$0:" "$@"
+    fi
+}
+
+warn() {
+    info "warning:" "$@" >&2
+}
+
+error() {
+    info "error:" "$@" >&2
+    exit 1
+}
+
+usage_error() {
+    info "error:" "$@" "\n" >&2
+    print_help >&2
+    exit 1
+}
+
+print_help() {
+    : # This should be overridden.
+}
+
 # ChromeOS firmware injects one of these values into the cmdline based
 # on which boot mechanism is used. A 'secure' argument allows us to
 # select for devices where a cros partition is absolutely necessary.
