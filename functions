@@ -86,3 +86,52 @@ find_disks() {
 
     echo "$@"
 }
+
+# Get a partition device from disk device and partition number.
+dev_from_disk_part() {
+    case "$1" in
+        # mmcblk0 1 -> mmcblk0p1
+        # nvme0n1 2 -> nvme0n1p2
+        *[0-9]) echo "${1}p${2}" ;;
+        # sda 3 -> sda3
+        *) echo "${1}${2}" ;;
+    esac
+}
+
+# Get comma seperated disk device and partition number from a device.
+disk_part_from_dev() {
+    case "$1" in
+        # Don't consider mmcblk1rpmb, mmcblk1boot0 as partitions.
+        *boot*|*rpmb*) echo "${1}," ;;
+        # mmcblk0p1 -> mmcblk0,1
+        # nvme0n1p2 -> nvme0n1,2
+        *[0-9]p[0-9]*) echo "${1%p*},${1##*p}" ;;
+        # sda1 -> sda,1
+        *[0-9]) echo "${1%%[0-9]*},${1##*[!0-9]}" ;;
+        *) echo "${1}," ;;
+    esac
+}
+
+# Find the lowest-priority ChromeOS kernel partition across given disks.
+find_depthcharge_part() {
+    # Max priority is 15; use 99 to indicate no valid partition.
+    best_prio=99
+    best_part=""
+    prio=99
+
+    for disk in "$@"; do
+        for partno in $(cgpt find -n -t kernel "$disk"); do
+            prio="$(cgpt show -i "$partno" -P "$disk")" || prio=99
+            if [ "$prio" -lt "$best_prio" ]; then
+                best_prio="$prio"
+                best_part="$(dev_from_disk_part "$disk" "$partno")"
+            fi
+        done
+    done
+
+    if [ -n "$best_part" ]; then
+        echo "$best_part"
+    else
+        return 1
+    fi
+}
