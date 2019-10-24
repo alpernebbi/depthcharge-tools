@@ -1,0 +1,88 @@
+#!/bin/sh
+
+# ChromeOS firmware injects one of these values into the cmdline based
+# on which boot mechanism is used. A 'secure' argument allows us to
+# select for devices where a cros partition is absolutely necessary.
+is_cros_machine() {
+    case "$(cat /proc/cmdline)" in
+        *cros_secure*)
+            return 0
+            ;;
+        *cros_efi*|*cros_legacy*)
+            [ "$1" = "secure" ] && return 1
+            return 0
+            ;;
+    esac
+    return 1
+}
+
+# This function takes some devices (e.g. /dev/sda, /dev/mapper/luks-*,
+# /dev/dm-0, /dev/disk/by-partuuid/*), tries to find physical disks
+# where they are on.
+find_disks() {
+    # Use real devices for all. Turns /dev/disk/** into /dev/*.
+    for d in "$@"; do
+        set -- "$@" "$(readlink -f "$1")"
+        shift
+    done
+
+    # We can have chains of VG-LV, dm-*, md*, *_crypt, so on. They can
+    # resolve to multiple devices. So we keep a stack of devices to
+    # search (in $@) and prepend new ones to run in the next cycle of
+    # the loop. We also need to keep the results in a stack, so keep
+    # them at the end divided with a separator.
+    BREAK="{BREAK}"
+    set -- "$@" "$BREAK"
+    while [ "$#" -gt 0 ]; do
+        if [ "$1" = "$BREAK" ]; then
+            shift
+            break
+        else
+            dev="$(basename "$1")"
+            shift
+        fi
+
+        parent="$(readlink -f "/sys/class/block/${dev}/..")" || parent=''
+        case "$parent" in
+            # VG-LV, sda2_crypt e.g. doesn't exist in /sys/class/block,
+            # so readlink fails. We check each dm device's name here to
+            # find which dm-* device they actually are.
+            '')
+                for d in /sys/class/block/dm-*; do
+                    d="$(basename "$d")"
+                    if grep -qs "$dev" "/sys/class/block/${d}/dm/name"; then
+                        set -- "$d" "$@"
+                    fi
+                done
+                ;;
+            # dm-* and md* reside on /sys/devices/virtual/block, and
+            # have a "slaves" folder for partitions they are built on.
+            */virtual/block)
+                for d in "/sys/class/block/${dev}/slaves"/*; do
+                    set -- "$(basename "$d")" "$@"
+                done
+                ;;
+            # Real partitions e.g. /sys/devices/**/block/sda/sda2
+            # but we need their parent, sda.
+            */block/*)
+                set -- "$(basename "$parent")" "$@"
+                ;;
+            # These are real disks we can use. Keep them after the
+            # separator, without duplicates.
+            */block)
+                case "$@" in
+                    *${BREAK}*${dev}*) continue ;;
+                esac
+                if [ -b "/dev/${dev}" ]; then
+                    set -- "$@" "$dev"
+                fi
+                ;;
+            # I don't know what goes here, but let's try the parent.
+            *)
+                set -- "$(basename "$parent")" "$@"
+                ;;
+        esac
+    done
+
+    echo "$@"
+}
