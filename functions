@@ -100,7 +100,7 @@ find_disks() {
                     *${BREAK}*${dev}*) continue ;;
                 esac
                 if [ -b "/dev/${dev}" ]; then
-                    set -- "$@" "$dev"
+                    set -- "$@" "/dev/${dev}"
                 fi
                 ;;
             # I don't know what goes here, but let's try the parent.
