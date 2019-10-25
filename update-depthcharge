@@ -55,6 +55,7 @@ if [ -z "$MACHINE" ]; then
     MACHINE="$(cat /proc/device-tree/model)"
 fi
 DTB_NAME="$(machine_field dtb-name)"
+MAX_SIZE="$(machine_field max-size)" || MAX_SIZE=0
 
 generate_image() {
     kversion="$1"
@@ -79,6 +80,9 @@ generate_image() {
         -C "lz4" \
         -n "Debian with linux-image-${kversion}" \
         -o "$output"
+
+    size_check "$output" \
+        || error "Depthcharge image '$output' is too big to boot."
 }
 
 write_image() {
@@ -86,6 +90,9 @@ write_image() {
     if [ ! -r "$image" ]; then
         error "Depthcharge image '$image' not found or is not readable."
     fi
+
+    size_check "$image" \
+        || error "Depthcharge image '$image' is too big to boot."
 
     # Disks containing /boot and / should be available during boot,
     # so we can look there for a partition to write our boot image.

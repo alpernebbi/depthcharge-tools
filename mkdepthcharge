@@ -229,13 +229,11 @@ futility vbutil_kernel \
     --signprivate "$VBOOT_SIGNPRIVATE" \
     --pack "${tmp}/depthcharge.img"
 
-: "${DEPTHCHARGE_SIZE_LIMIT:=33554432}"
-if [ "${DEPTHCHARGE_SIZE_LIMIT}" -gt 0 ]; then
+: "${DEPTHCHARGE_MAX_SIZE:=0}"
+if [ "${DEPTHCHARGE_MAX_SIZE}" -gt 0 ]; then
     info "Checking if image fits into size limit."
-    DEPTHCHARGE_SIZE="$(stat -c '%s' "${tmp}/depthcharge.img")"
-    if [ "$DEPTHCHARGE_SIZE" -gt "$DEPTHCHARGE_SIZE_LIMIT" ]; then
-        error "Output image size too big to boot."
-    fi
+    size_check "${tmp}/depthcharge.img" "$DEPTHCHARGE_MAX_SIZE" \
+        || error "Output image size too big to boot."
 fi
 
 info "Running vbutil_kernel (verify):"
