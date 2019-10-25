@@ -9,11 +9,12 @@ mkdir -p "$CACHE"
 
 print_help() {
 cat <<EOF
-Usage: update-depthcharge -k VERSION
+Usage: update-depthcharge [-k VERSION]
 
 Options:
  -h, --help              Show this help message.
- -k, --kversion VERSION  Use a specific kernel version.
+ -k, --kversion VERSION  Use a specific kernel version instead of the
+                         latest version.
 EOF
 }
 
@@ -40,8 +41,13 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 
+# Use latest version if omitted.
 if [ -z "$KVERSION" ]; then
-    error "No kernel version specified."
+    KVERSION="$( \
+        linux-version list \
+            | linux-version sort --reverse \
+            | head -1 \
+    )"
 fi
 
 generate_image() {
