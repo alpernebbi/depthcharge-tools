@@ -1,0 +1,122 @@
+#!/bin/sh
+set -e
+
+# Import common functions
+. "./functions"
+
+: "${CACHE:=/tmp/depthcharge-support/cache}"
+mkdir -p "$CACHE"
+
+print_help() {
+cat <<EOF
+Usage: update-depthcharge -k VERSION
+
+Options:
+ -h, --help              Show this help message.
+ -k, --kversion VERSION  Use a specific kernel version.
+EOF
+}
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -h|--help)
+            print_help
+            exit 0
+            ;;
+        -k|--kversion)
+            KVERSION="$2"
+            shift 2
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -*)
+            usage_error "Option '$1' not understood."
+            ;;
+        *)
+            usage_error "Argument '$1' not understood."
+            ;;
+    esac
+done
+
+if [ -z "$KVERSION" ]; then
+    error "No kernel version specified."
+fi
+
+generate_image() {
+    kversion="$1"
+    output="$2"
+
+    # These variables are understood by mkdepthcharge.
+    VMLINUZ="/boot/vmlinuz-${kversion}"
+    INITRAMFS="/boot/initrd.img-${kversion}"
+    DTBS="$(find "/usr/lib/linux-image-${kversion}" -name "$DTB_NAME")"
+    export VMLINUZ INITRAMFS DTBS
+
+    if [ ! -r "$INITRAMFS" ]; then
+        error "No initramfs found for kernel version '${kversion}'."
+    fi
+
+    if [ -z "$DTBS" ]; then
+        error "No dtb file '$DTB_NAME' found for version '$kversion'."
+    fi
+
+    ./mkdepthcharge \
+        -c "console=tty1 quiet splash kern_guid=%U" \
+        -C "lz4" \
+        -n "Debian with linux-image-${kversion}" \
+        -o "$output"
+}
+
+write_image() {
+    image="$1"
+    if [ ! -r "$image" ]; then
+        error "Depthcharge image '$image' not found or is not readable."
+    fi
+
+    # Disks containing /boot and / should be available during boot,
+    # so we can look there for a partition to write our boot image.
+    root="$(findmnt --fstab -M "/" --evaluate -n -o SOURCE)" || :
+    boot="$(findmnt --fstab -M "/boot" --evaluate -n -o SOURCE)" || :
+    if [ -z "$root" ] && [ -z "$boot" ]; then
+        error "Couldn't find devices for neither / nor /boot from fstab."
+    else
+        disks="$(find_disks $boot $root)" \
+            || error "Couldn't find physical disks for neither" \
+                "/ device '$root' nor /boot device '$boot'."
+    fi
+
+    target="$(find_depthcharge_part $disks)" \
+        || error "No usable ChromeOS kernel partition found (in $disks)."
+    if [ ! -b "$target" ]; then
+        error "Target device '$target' is not a valid block device."
+    elif [ ! -w "$target" ]; then
+        error "Target device '$target' is not writable."
+    fi
+
+    pair="$(disk_part_from_dev "$target")"
+    disk="${pair%,*}"
+    part="${pair#*,}"
+    if [ ! -b "$disk" ]; then
+        error "Target disk '$disk' is not a valid block device."
+    elif [ ! -w "$disk" ]; then
+        error "Target disk '$disk' is not writable."
+    fi
+    case "$part" in
+        *[!0-9]*)
+            error "Parsed invalid partition number for '$target'."
+            ;;
+    esac
+
+    dd if="$image" of="$target" \
+        || error "Failed to write image '$image' to partition '$target'."
+    cgpt add -i "$part" -T 1 -S 0 "$disk" \
+        || error "Failed to set partition '$target' as bootable."
+    cgpt prioritize -i "$part" "$disk" \
+        || error "Failed to prioritize partition '$target'."
+}
+
+IMAGE="${CACHE}/depthcharge.img-${KVERSION}"
+generate_image "$KVERSION" "$IMAGE"
+write_image "$IMAGE"
