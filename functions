@@ -161,3 +161,34 @@ find_depthcharge_part() {
         return 1
     fi
 }
+
+# Read fields from a machine-specific key-value database.
+machine_field() {
+    field="$1"
+    machine="${2:-$MACHINE}"
+    set --
+
+    if [ -z "$MACHINE_DB" ]; then
+        MACHINE_DB="$(cat machines)"
+    fi
+
+    echo "$MACHINE_DB" | {
+        # Skip to the chosen machine.
+        while IFS=: read -r m && [ "$m" != "${machine}" ]; do
+            :
+        done
+
+        # Only read fields until the end of machine block.
+        while IFS=":$IFS" read -r key value && [ "$key" != "" ]; do
+            if [ "$key" = "$field" ]; then
+                set -- "$@" "$value"
+            fi
+        done
+
+        if [ "$#" -gt 0 ]; then
+            echo "$@"
+        else
+            return 1
+        fi
+    }
+}

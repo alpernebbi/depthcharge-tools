@@ -50,6 +50,12 @@ if [ -z "$KVERSION" ]; then
     )"
 fi
 
+# Load machine-specific settings.
+if [ -z "$MACHINE" ]; then
+    MACHINE="$(cat /proc/device-tree/model)"
+fi
+DTB_NAME="$(machine_field dtb-name)"
+
 generate_image() {
     kversion="$1"
     output="$2"
