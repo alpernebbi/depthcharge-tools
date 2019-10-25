@@ -128,6 +128,9 @@ write_image() {
             ;;
     esac
 
+    size_check "$image" "$(blockdev --getsize64 "$target")" \
+        || error "Depthcharge image '$image' bigger than partition '$target'."
+
     dd if="$image" of="$target" \
         || error "Failed to write image '$image' to partition '$target'."
     cgpt add -i "$part" -T 1 -S 0 "$disk" \
