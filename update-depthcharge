@@ -61,7 +61,7 @@ MAX_SIZE="$(machine_field max-size)" || MAX_SIZE=0
 
 generate_image() {
     kversion="$1"
-    output="$2"
+    output="${2:-${CACHE}/depthcharge.img-${kversion}}"
     info "Trying to generate a depthcharge image for version '$kversion'."
 
     # These variables are understood by mkdepthcharge.
@@ -101,7 +101,8 @@ generate_image() {
 }
 
 write_image() {
-    image="$1"
+    kversion="$1"
+    image="${2:-${CACHE}/depthcharge.img-${kversion}}"
     info "Preparing system to use depthcharge image '$image' on next boot."
 
     if [ ! -r "$image" ]; then
@@ -164,6 +165,5 @@ write_image() {
         || error "Failed to prioritize partition '$target'."
 }
 
-IMAGE="${CACHE}/depthcharge.img-${KVERSION}"
-generate_image "$KVERSION" "$IMAGE"
-write_image "$IMAGE"
+generate_image "$KVERSION"
+write_image "$KVERSION"
