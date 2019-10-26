@@ -78,6 +78,15 @@ generate_image() {
         error "No dtb file '$DTB_NAME' found for version '$kversion'."
     fi
 
+    # Try to keep the output reproducible. Initramfs date is bound to be
+    # later than vmlinuz date, so prefer that if possible.
+    if [ -z "$SOURCE_DATE_EPOCH" ]; then
+        SOURCE_DATE_EPOCH="$(
+            stat -c "%Y" "$INITRAMFS" || stat -c "%Y" "$VMLINUZ" \
+        )" || error "Couldn't determine a date from initramfs nor vmlinuz."
+        export SOURCE_DATE_EPOCH
+    fi
+
     info "Generating depthcharge image for kernel version '$kversion'"
     ./mkdepthcharge \
         -c "console=tty1 quiet splash kern_guid=%U" \
