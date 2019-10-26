@@ -187,19 +187,6 @@ parse_field() {
     fi
 }
 
-# Read fields from a machine-specific key-value database.
-machine_field() {
-    field="$1"
-    machine="${2:-${MACHINE:-defaults}}"
-
-    if [ -z "$MACHINE_DB" ]; then
-        MACHINE_DB="$(cat machines)"
-    fi
-
-    echo "$MACHINE_DB" | parse_field "$field" "$machine" \
-        || echo "$MACHINE_DB" | parse_field "$field" "defaults"
-}
-
 # Check if file is less than a maximum size.
 size_check() {
     image="$1"

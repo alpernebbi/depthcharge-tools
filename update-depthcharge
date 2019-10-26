@@ -61,13 +61,44 @@ if [ -z "$KVERSION" ]; then
     info "Defaulting to latest kernel version '$KVERSION'."
 fi
 
-# Load machine-specific settings.
-if [ -z "$MACHINE" ]; then
-    MACHINE="$(cat /proc/device-tree/model)"
-    info "Using settings for detected machine '$MACHINE'."
+# Load user configuration and machine database.
+if [ -z "$USER_DB" ]; then
+    USER_DB="$(grep -v '^#' config 2>/dev/null)" || :
 fi
-DTB_NAME="$(machine_field dtb-name)"
-MAX_SIZE="$(machine_field max-size)" || MAX_SIZE=0
+
+if [ -z "$MACHINE_DB" ]; then
+    MACHINE_DB="$(grep -v '^#' machines 2>/dev/null)" || :
+fi
+
+machine_config() {
+    field="$1"
+    machine="${2:-${MACHINE:-defaults}}"
+
+    echo "$USER_DB" | parse_field "$field" "$machine" \
+        || echo "$MACHINE_DB" | parse_field "$field" "$machine" \
+        || echo "$USER_DB" | parse_field "$field" "defaults" \
+        || echo "$MACHINE_DB" | parse_field "$field" "defaults"
+}
+
+user_config() {
+    field="$1"
+    echo "$USER_DB" | parse_field "$field" "config"
+}
+
+# Detect machine, but allow overriding via user config.
+if [ -n "$MACHINE" ]; then
+    info "Overriding machine '$MACHINE' from environment variable."
+elif MACHINE="$(user_config machine)"; then
+    info "Overriding machine '$MACHINE' from user configuration."
+elif MACHINE="$(cat /proc/device-tree/model 2>/dev/null)"; then
+    info "Detected machine '$MACHINE' from device-tree model."
+else
+    error "Failed to detect machine."
+fi
+
+# Load machine-specific settings.
+DTB_NAME="$(machine_config dtb-name)" || :
+MAX_SIZE="$(machine_config max-size)" || MAX_SIZE=0
 
 generate_image() {
     kversion="$1"
