@@ -48,11 +48,13 @@ if [ -z "$KVERSION" ]; then
             | linux-version sort --reverse \
             | head -1 \
     )"
+    info "Defaulting to latest kernel version '$KVERSION'."
 fi
 
 # Load machine-specific settings.
 if [ -z "$MACHINE" ]; then
     MACHINE="$(cat /proc/device-tree/model)"
+    info "Using settings for detected machine '$MACHINE'."
 fi
 DTB_NAME="$(machine_field dtb-name)"
 MAX_SIZE="$(machine_field max-size)" || MAX_SIZE=0
@@ -60,6 +62,7 @@ MAX_SIZE="$(machine_field max-size)" || MAX_SIZE=0
 generate_image() {
     kversion="$1"
     output="$2"
+    info "Trying to generate a depthcharge image for version '$kversion'."
 
     # These variables are understood by mkdepthcharge.
     VMLINUZ="/boot/vmlinuz-${kversion}"
@@ -75,27 +78,34 @@ generate_image() {
         error "No dtb file '$DTB_NAME' found for version '$kversion'."
     fi
 
+    info "Generating depthcharge image for kernel version '$kversion'"
     ./mkdepthcharge \
         -c "console=tty1 quiet splash kern_guid=%U" \
         -C "lz4" \
         -n "Debian with linux-image-${kversion}" \
-        -o "$output"
+        -o "$output" \
+        || error "Failed to create depthcharge image."
 
+    info "Checking generated image size against firmware limits."
     size_check "$output" \
         || error "Depthcharge image '$output' is too big to boot."
 }
 
 write_image() {
     image="$1"
+    info "Preparing system to use depthcharge image '$image' on next boot."
+
     if [ ! -r "$image" ]; then
         error "Depthcharge image '$image' not found or is not readable."
     fi
 
+    info "Checking image size against firmware limits."
     size_check "$image" \
         || error "Depthcharge image '$image' is too big to boot."
 
     # Disks containing /boot and / should be available during boot,
     # so we can look there for a partition to write our boot image.
+    info "Identifying disks containing root and boot partitions."
     root="$(findmnt --fstab -M "/" --evaluate -n -o SOURCE)" || :
     boot="$(findmnt --fstab -M "/boot" --evaluate -n -o SOURCE)" || :
     if [ -z "$root" ] && [ -z "$boot" ]; then
@@ -106,13 +116,15 @@ write_image() {
                 "/ device '$root' nor /boot device '$boot'."
     fi
 
+    info "Searching for ChromeOS kernel partitions (on $disks)."
     target="$(find_depthcharge_part $disks)" \
-        || error "No usable ChromeOS kernel partition found (in $disks)."
+        || error "No usable ChromeOS kernel partition found (on $disks)."
     if [ ! -b "$target" ]; then
         error "Target device '$target' is not a valid block device."
     elif [ ! -w "$target" ]; then
         error "Target device '$target' is not writable."
     fi
+    info "Chose partition '$target' as the target partition."
 
     pair="$(disk_part_from_dev "$target")"
     disk="${pair%,*}"
@@ -128,11 +140,15 @@ write_image() {
             ;;
     esac
 
+    info "Checking image size against partition size."
     size_check "$image" "$(blockdev --getsize64 "$target")" \
-        || error "Depthcharge image '$image' bigger than partition '$target'."
+        || error "Image '$image' is bigger than partition '$target'."
 
+    info "Writing depthcharge image '$image' to partition '$target':"
     dd if="$image" of="$target" \
         || error "Failed to write image '$image' to partition '$target'."
+
+    info "Setting '$target' as the highest-priority bootable partition."
     cgpt add -i "$part" -T 1 -S 0 "$disk" \
         || error "Failed to set partition '$target' as bootable."
     cgpt prioritize -i "$part" "$disk" \
