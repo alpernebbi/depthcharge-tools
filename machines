@@ -5,6 +5,7 @@
 #
 
 defaults:
+  description: Debian with linux-image-%s
   max-size: 33554432
 
 Google Kevin:

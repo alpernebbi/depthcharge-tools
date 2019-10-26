@@ -12,3 +12,5 @@
 #   <field>: <value>
 #
 
+config:
+  cmdline: quiet splash

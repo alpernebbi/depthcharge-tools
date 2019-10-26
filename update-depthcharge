@@ -82,7 +82,8 @@ machine_config() {
 
 user_config() {
     field="$1"
-    echo "$USER_DB" | parse_field "$field" "config"
+    echo "$USER_DB" | parse_field "$field" "config" \
+        || echo "$MACHINE_DB" | parse_field "$field" "defaults"
 }
 
 # Detect machine, but allow overriding via user config.
@@ -100,6 +101,11 @@ fi
 DTB_NAME="$(machine_config dtb-name)" || :
 MAX_SIZE="$(machine_config max-size)" || :
 
+# Load user configuration.
+CMDLINE="$(user_config cmdline)" || :
+COMPRESS="$(user_config compress)" || :
+DESCRIPTION_FMT="$(user_config description)" || :
+
 generate_image() {
     kversion="$1"
     output="${2:-${CACHE}/depthcharge.img-${kversion}}"
@@ -109,7 +115,9 @@ generate_image() {
     VMLINUZ="/boot/vmlinuz-${kversion}"
     INITRAMFS="/boot/initrd.img-${kversion}"
     DTBS="$(find "/usr/lib/linux-image-${kversion}" -name "$DTB_NAME")"
+    DESCRIPTION="$(printf "$DESCRIPTION_FMT" "$kversion")"
     export VMLINUZ INITRAMFS DTBS
+    export CMDLINE COMPRESS DESCRIPTION
 
     if [ ! -r "$INITRAMFS" ]; then
         error "No initramfs found for kernel version '${kversion}'."
@@ -129,11 +137,7 @@ generate_image() {
     fi
 
     info "Generating depthcharge image for kernel version '$kversion'"
-    ./mkdepthcharge \
-        -c "console=tty1 quiet splash kern_guid=%U" \
-        -C "lz4" \
-        -n "Debian with linux-image-${kversion}" \
-        -o "$output" \
+    ./mkdepthcharge -o "$output" \
         || error "Failed to create depthcharge image."
 
     info "Checking generated image size against firmware limits."
