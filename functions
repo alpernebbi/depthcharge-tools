@@ -162,35 +162,42 @@ find_depthcharge_part() {
     fi
 }
 
+# Read fields from a simple key-value database with sections.
+parse_field() {
+    field="$1"
+    section="$2"
+    set --
+
+    # Skip to the chosen section.
+    while IFS=: read -r s && [ "$s" != "$section" ]; do
+        :
+    done
+
+    # Only read fields until the end of section.
+    while IFS=":$IFS" read -r key value && [ "$key" != "" ]; do
+        if [ "$key" = "$field" ]; then
+            set -- "$@" "$value"
+        fi
+    done
+
+    if [ "$#" -gt 0 ]; then
+        echo "$@"
+    else
+        return 1
+    fi
+}
+
 # Read fields from a machine-specific key-value database.
 machine_field() {
     field="$1"
-    machine="${2:-$MACHINE}"
-    set --
+    machine="${2:-${MACHINE:-defaults}}"
 
     if [ -z "$MACHINE_DB" ]; then
         MACHINE_DB="$(cat machines)"
     fi
 
-    echo "$MACHINE_DB" | {
-        # Skip to the chosen machine.
-        while IFS=: read -r m && [ "$m" != "${machine}" ]; do
-            :
-        done
-
-        # Only read fields until the end of machine block.
-        while IFS=":$IFS" read -r key value && [ "$key" != "" ]; do
-            if [ "$key" = "$field" ]; then
-                set -- "$@" "$value"
-            fi
-        done
-
-        if [ "$#" -gt 0 ]; then
-            echo "$@"
-        else
-            return 1
-        fi
-    }
+    echo "$MACHINE_DB" | parse_field "$field" "$machine" \
+        || echo "$MACHINE_DB" | parse_field "$field" "defaults"
 }
 
 # Check if file is less than a maximum size.

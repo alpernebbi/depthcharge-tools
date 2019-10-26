@@ -4,6 +4,8 @@
 # Setting a key multiple times appends to it with a space.
 #
 
+defaults:
+  max-size: 33554432
+
 Google Kevin:
   dtb-name: rk3399-gru-kevin.dtb
-  max-size: 33554432
