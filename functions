@@ -190,7 +190,7 @@ parse_field() {
 # Check if file is less than a maximum size.
 size_check() {
     image="$1"
-    max_size="${2:-$MAX_SIZE}"
+    max_size="${2:-${MAX_SIZE:-0}}"
 
     if [ "${max_size}" -gt 0 ]; then
         size="$(stat -c '%s' "$image")"

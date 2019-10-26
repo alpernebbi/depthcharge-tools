@@ -98,7 +98,7 @@ fi
 
 # Load machine-specific settings.
 DTB_NAME="$(machine_config dtb-name)" || :
-MAX_SIZE="$(machine_config max-size)" || MAX_SIZE=0
+MAX_SIZE="$(machine_config max-size)" || :
 
 generate_image() {
     kversion="$1"
@@ -137,7 +137,7 @@ generate_image() {
         || error "Failed to create depthcharge image."
 
     info "Checking generated image size against firmware limits."
-    size_check "$output" \
+    size_check "$output" "$MAX_SIZE" \
         || error "Depthcharge image '$output' is too big to boot."
 }
 
@@ -151,7 +151,7 @@ write_image() {
     fi
 
     info "Checking image size against firmware limits."
-    size_check "$image" \
+    size_check "$image" "$MAX_SIZE" \
         || error "Depthcharge image '$image' is too big to boot."
 
     # Disks containing /boot and / should be available during boot,
