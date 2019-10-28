@@ -107,14 +107,7 @@ generate_image() {
     output="${2:-${CACHE}/depthcharge.img-${kversion}}"
     info "Trying to generate a depthcharge image for version '$kversion'."
 
-    # These variables are understood by mkdepthcharge.
     VMLINUZ="/boot/vmlinuz-${kversion}"
-    INITRAMFS="/boot/initrd.img-${kversion}"
-    DTBS="$(find "/usr/lib/linux-image-${kversion}" -name "$DTB_NAME")"
-    DESCRIPTION="$(printf "$DESCRIPTION_FMT" "$kversion")"
-    export VMLINUZ INITRAMFS DTBS
-    export CMDLINE COMPRESS DESCRIPTION
-
     # Decompress kernel if packaged as gzip compressed.
     if { command -v gzip && gzip -t "$VMLINUZ"; } >/dev/null 2>&1; then
         info "Packaged kernel is gzip compressed, decompressing."
@@ -122,13 +115,23 @@ generate_image() {
             && VMLINUZ="${CACHE}/vmlinuz-gunzipped-${kversion}"
     fi
 
+    INITRAMFS="/boot/initrd.img-${kversion}"
     if [ ! -r "$INITRAMFS" ]; then
         error "No initramfs found for kernel version '${kversion}'."
     fi
 
+    DTBS="$(find "/usr/lib/linux-image-${kversion}" -name "$DTB_NAME")"
     if [ -z "$DTBS" ]; then
         error "No dtb file '$DTB_NAME' found for version '$kversion'."
     fi
+
+    # We must do this here and not outside with others since --all
+    # builds multiple '$kversion's where '$KVERSION' is the latest one.
+    DESCRIPTION="$(printf "$DESCRIPTION_FMT" "$kversion")"
+
+    # These variables are understood by mkdepthcharge.
+    export VMLINUZ INITRAMFS DTBS
+    export CMDLINE COMPRESS DESCRIPTION
 
     # Try to keep the output reproducible. Initramfs date is bound to be
     # later than vmlinuz date, so prefer that if possible.
