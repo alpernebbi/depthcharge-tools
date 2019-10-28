@@ -165,7 +165,7 @@ find_depthcharge_part() {
 # Read fields from a simple key-value database with sections.
 parse_field() {
     field="$1"
-    section="$2"
+    section="${2:-defaults}"
     set --
 
     # Skip to the chosen section.

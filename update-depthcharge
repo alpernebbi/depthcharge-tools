@@ -70,26 +70,22 @@ if [ -z "$MACHINE_DB" ]; then
     MACHINE_DB="$(grep -v '^#' machines 2>/dev/null)" || :
 fi
 
-machine_config() {
+get_config() {
     field="$1"
-    machine="${2:-${MACHINE:-defaults}}"
+    machine="${2:-$MACHINE}"
 
-    echo "$USER_DB" | parse_field "$field" "$machine" \
+    echo "$USER_DB" | parse_field "$field" "config" \
+        || echo "$MACHINE_DB" | parse_field "$field" "config" \
+        || echo "$USER_DB" | parse_field "$field" "$machine" \
         || echo "$MACHINE_DB" | parse_field "$field" "$machine" \
         || echo "$USER_DB" | parse_field "$field" "defaults" \
-        || echo "$MACHINE_DB" | parse_field "$field" "defaults"
-}
-
-user_config() {
-    field="$1"
-    echo "$USER_DB" | parse_field "$field" "config" \
         || echo "$MACHINE_DB" | parse_field "$field" "defaults"
 }
 
 # Detect machine, but allow overriding via user config.
 if [ -n "$MACHINE" ]; then
     info "Overriding machine '$MACHINE' from environment variable."
-elif MACHINE="$(user_config machine)"; then
+elif MACHINE="$(get_config machine)"; then
     info "Overriding machine '$MACHINE' from user configuration."
 elif MACHINE="$(cat /proc/device-tree/model 2>/dev/null)"; then
     info "Detected machine '$MACHINE' from device-tree model."
@@ -98,13 +94,13 @@ else
 fi
 
 # Load machine-specific settings.
-DTB_NAME="$(machine_config dtb-name)" || :
-MAX_SIZE="$(machine_config max-size)" || :
+DTB_NAME="$(get_config dtb-name)" || :
+MAX_SIZE="$(get_config max-size)" || :
 
 # Load user configuration.
-CMDLINE="$(user_config cmdline)" || :
-COMPRESS="$(user_config compress)" || :
-DESCRIPTION_FMT="$(user_config description)" || :
+CMDLINE="$(get_config cmdline)" || :
+COMPRESS="$(get_config compress)" || :
+DESCRIPTION_FMT="$(get_config description)" || :
 
 generate_image() {
     kversion="$1"
