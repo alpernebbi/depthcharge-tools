@@ -132,9 +132,23 @@ generate_image() {
         export SOURCE_DATE_EPOCH
     fi
 
-    info "Generating depthcharge image for kernel version '$kversion'"
-    ./mkdepthcharge -o "$output" \
-        || error "Failed to create depthcharge image."
+    info "Generating depthcharge image for kernel version '$kversion':"
+    if [ -n "$COMPRESS" ]; then
+        info "Trying with user-chosen compression '$COMPRESS':"
+        ./mkdepthcharge -o "$output" \
+            || error "Failed to create depthcharge image."
+    else
+        for compress in none lz4 lzma; do
+            info "Trying with compression set to '$compress'."
+            ./mkdepthcharge -C "$compress" -o "$output" \
+                || error "Failed to create depthcharge image."
+            if size_check "$output" "$MAX_SIZE"; then
+                break
+            else
+                warn "Image is too big with compression '$compress'."
+            fi
+        done
+    fi
 
     info "Checking generated image size against firmware limits."
     size_check "$output" "$MAX_SIZE" \
