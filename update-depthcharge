@@ -115,6 +115,13 @@ generate_image() {
     export VMLINUZ INITRAMFS DTBS
     export CMDLINE COMPRESS DESCRIPTION
 
+    # Decompress kernel if packaged as gzip compressed.
+    if { command -v gzip && gzip -t "$VMLINUZ"; } >/dev/null 2>&1; then
+        info "Packaged kernel is gzip compressed, decompressing."
+        gzip -d <"$VMLINUZ" >"${CACHE}/vmlinuz-gunzipped-${kversion}" \
+            && VMLINUZ="${CACHE}/vmlinuz-gunzipped-${kversion}"
+    fi
+
     if [ ! -r "$INITRAMFS" ]; then
         error "No initramfs found for kernel version '${kversion}'."
     fi
