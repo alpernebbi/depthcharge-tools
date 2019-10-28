@@ -199,3 +199,38 @@ size_check() {
         fi
     fi
 }
+
+# Tries to validate the root=* kernel cmdline parameter.
+# See init/do_mounts.c in Linux tree.
+check_root_cmdline() {
+    d="[0-9]"
+    x="[0-9a-f]"
+    a="[0-9a-z]"
+    uuid="$x{8}-$x{4}-$x{4}-$x{4}-$x{12}"
+    ntsig="$x{8}-$x{2}"
+
+    echo "$1" | grep -E -q -x \
+        -e "root=$x{4}" \
+        -e "root=/dev/nfs" \
+        -e "root=/dev/$a+" \
+        -e "root=/dev/$a+$d+" \
+        -e "root=/dev/$a+p$d+" \
+        -e "root=PARTUUID=($uuid|$ntsig)" \
+        -e "root=PARTUUID=($uuid|$ntsig)/PARTNROFF=$d+" \
+        -e "root=$d+:$d+" \
+        -e "root=PARTLABEL=.*"
+}
+
+# Gets a kernel cmdline for our root, for when we don't have an initramfs.
+get_root_cmdline() {
+    rootdev="$(
+        findmnt --fstab -M "/" -n -o SOURCE \
+            | sed -e 's/\="\(.*\)"$/\=\1/' -e 's/ /\\x20/g' \
+    )"
+
+    if [ -n "$rootdev" ]; then
+        echo "root=$rootdev"
+    else
+        return 1
+    fi
+}
