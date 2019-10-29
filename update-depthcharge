@@ -99,7 +99,7 @@ MAX_SIZE="$(get_config max-size)" || :
 
 # Load user configuration.
 CMDLINE_USER="$(get_config cmdline)" || :
-COMPRESS="$(get_config compress)" || :
+COMPRESS_TYPES="$(get_config compress)" || :
 DESCRIPTION_FMT="$(get_config description)" || :
 
 generate_image() {
@@ -148,6 +148,11 @@ generate_image() {
         esac
     fi
 
+    if [ -z "$COMPRESS_TYPES" ]; then
+        warn "Compression is set to nothing in config, assuming 'none'."
+        COMPRESS_TYPES=none
+    fi
+
     # We must do this here and not outside with others since --all
     # builds multiple '$kversion's where '$KVERSION' is the latest one.
     DESCRIPTION="$(printf "$DESCRIPTION_FMT" "$kversion")"
@@ -166,23 +171,18 @@ generate_image() {
     fi
 
     info "Generating depthcharge image for kernel version '$kversion':"
-    if [ -n "$COMPRESS" ]; then
-        info "Trying with user-chosen compression '$COMPRESS':"
+    for COMPRESS in $COMPRESS_TYPES; do
+        info "Trying with compression set to '$COMPRESS'."
         ./mkdepthcharge -o "$output" \
             || error "Failed to create depthcharge image."
-    else
-        for compress in none lz4 lzma; do
-            info "Trying with compression set to '$compress'."
-            ./mkdepthcharge -C "$compress" -o "$output" \
-                || error "Failed to create depthcharge image."
-            if size_check "$output" "$MAX_SIZE"; then
-                break
-            else
-                warn "Image is too big with compression '$compress'."
-            fi
-        done
-    fi
+        if size_check "$output" "$MAX_SIZE"; then
+            break
+        else
+            warn "Image is too big with compression '$COMPRESS'."
+        fi
+    done
 
+    # This is redundant now, but here just to raise an error.
     info "Checking generated image size against firmware limits."
     size_check "$output" "$MAX_SIZE" \
         || error "Depthcharge image '$output' is too big to boot."

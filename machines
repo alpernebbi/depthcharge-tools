@@ -7,6 +7,7 @@
 defaults:
   description: Debian with linux-image-%s
   max-size: 33554432
+  compress: none lz4 lzma
 
 Google Kevin:
   dtb-name: rk3399-gru-kevin.dtb
