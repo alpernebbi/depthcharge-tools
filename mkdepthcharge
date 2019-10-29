@@ -10,6 +10,7 @@ Usage: mkdepthcharge [options] -o FILE [--] vmlinuz [initrd] [dtb ...]
 
 Options:
  -h, --help              Show this help message.
+ -v, --verbose           Print more detailed output.
  -o, --output FILE       Write resulting image to FILE.
  -c, --cmdline CMD       Command-line parameters for the kernel. Can
                          be used multiple times to append new values.
@@ -23,6 +24,10 @@ while [ "$#" -gt 0 ]; do
         -h|--help)
             print_help
             exit 0
+            ;;
+        -v|--verbose)
+            VERBOSE=yes
+            shift
             ;;
         -o|--output)
             OUTPUT="$2"
@@ -201,35 +206,51 @@ if [ -z "$BOOTSTUB" ]; then
     esac
 fi
 
+pack_fit() {
+    mkimage \
+        -f auto \
+        -A "$MKIMAGE_ARCH" \
+        -O linux \
+        -C "$COMPRESS" \
+        -n "$DESCRIPTION" \
+        -d "$VMLINUZ" \
+        $MKIMAGE_INITRAMFS_ARGS \
+        $MKIMAGE_DTB_ARGS \
+        "${tmp}/depthcharge.itb" \
+        || error "Could not pack inputs into a FIT image."
+}
+
 info "Running mkimage:"
-mkimage \
-    -f auto \
-    -A "$MKIMAGE_ARCH" \
-    -O linux \
-    -C "$COMPRESS" \
-    -n "$DESCRIPTION" \
-    -d "$VMLINUZ" \
-    $MKIMAGE_INITRAMFS_ARGS \
-    $MKIMAGE_DTB_ARGS \
-    "${tmp}/depthcharge.itb" \
-    || error "Could not pack inputs into a FIT image."
+if [ "$VERBOSE" = yes ]; then
+    pack_fit
+else
+    pack_fit >/dev/null
+fi
 
 : "${VBOOT_DEVKEYS:=/usr/share/vboot/devkeys}"
 : "${VBOOT_KEYBLOCK:=${VBOOT_DEVKEYS}/kernel.keyblock}"
 : "${VBOOT_SIGNPUBKEY:=${VBOOT_DEVKEYS}/kernel_subkey.vbpubk}"
 : "${VBOOT_SIGNPRIVATE:=${VBOOT_DEVKEYS}/kernel_data_key.vbprivk}"
 
+pack_depthcharge() {
+    futility vbutil_kernel \
+        --version 1 \
+        --arch "$VBOOT_ARCH" \
+        --vmlinuz "${tmp}/depthcharge.itb" \
+        --config "${tmp}/kernel.args" \
+        --bootloader "$BOOTSTUB" \
+        --keyblock "$VBOOT_KEYBLOCK" \
+        --signprivate "$VBOOT_SIGNPRIVATE" \
+        --pack "${tmp}/depthcharge.img" \
+        || error "Could not pack inputs into a depthcharge image."
+}
+
 info "Running vbutil_kernel (pack)."
-futility vbutil_kernel \
-    --version 1 \
-    --arch "$VBOOT_ARCH" \
-    --vmlinuz "${tmp}/depthcharge.itb" \
-    --config "${tmp}/kernel.args" \
-    --bootloader "$BOOTSTUB" \
-    --keyblock "$VBOOT_KEYBLOCK" \
-    --signprivate "$VBOOT_SIGNPRIVATE" \
-    --pack "${tmp}/depthcharge.img" \
-    || error "Could not pack inputs into a depthcharge image."
+if [ "$VERBOSE" = yes ]; then
+    pack_depthcharge
+else
+    pack_depthcharge >/dev/null
+fi
 
 : "${DEPTHCHARGE_MAX_SIZE:=0}"
 if [ "${DEPTHCHARGE_MAX_SIZE}" -gt 0 ]; then
@@ -238,13 +259,20 @@ if [ "${DEPTHCHARGE_MAX_SIZE}" -gt 0 ]; then
         || error "Output image size too big to boot."
 fi
 
+verify_depthcharge() {
+    futility vbutil_kernel \
+        --signpubkey "$VBOOT_SIGNPUBKEY" \
+        --verify "${tmp}/depthcharge.img" \
+        || error "Generated image cannot be verified by vbutil_kernel."
+}
+
 info "Running vbutil_kernel (verify):"
-futility vbutil_kernel \
-    --signpubkey "$VBOOT_SIGNPUBKEY" \
-    --verify "${tmp}/depthcharge.img" \
-    || error "Generated image cannot be verified by vbutil_kernel."
+if [ "$VERBOSE" = yes ]; then
+    verify_depthcharge
+else
+    verify_depthcharge >/dev/null
+fi
 
 info "Copying image to output '$OUTPUT'."
 cp -f "${tmp}/depthcharge.img" "$OUTPUT" \
     || error "Couldn't copy to output."
-info "done."

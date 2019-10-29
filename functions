@@ -1,23 +1,29 @@
 #!/bin/sh
 
 # Functions to make printing output easier.
-info() {
+msg() {
     if [ "$#" -gt 0 ]; then
         echo "$0:" "$@"
     fi
 }
 
+info() {
+    if [ "$VERBOSE" = yes ]; then
+        msg "$@"
+    fi
+}
+
 warn() {
-    info "warning:" "$@" >&2
+    msg "warning:" "$@" >&2
 }
 
 error() {
-    info "error:" "$@" >&2
+    msg "error:" "$@" >&2
     exit 1
 }
 
 usage_error() {
-    info "error:" "$@" "\n" >&2
+    msg "error:" "$@" "\n" >&2
     print_help >&2
     exit 1
 }
