@@ -4,6 +4,16 @@ set -e
 # Import common functions
 . "./functions"
 
+# We need to use a non-space separator to support paths with spaces.
+# Instead of hard-coding it everywhere, let's put it in a variable.
+# To support e.g. DTBS=$(find ...) we also need a newline in the IFS.
+# Also keep a copy of the original so we can restore it.
+SEP=","
+NEWLINE="
+"
+ORIG_IFS="$IFS"
+CUSTOM_IFS="${NEWLINE}${SEP}"
+
 print_help() {
 cat <<EOF
 Usage: mkdepthcharge [options] -o FILE [--] vmlinuz [initrd] [dtb ...]
@@ -42,7 +52,8 @@ while [ "$#" -gt 0 ]; do
             shift 2
             ;;
         -c|--cmdline)
-            CMDLINE="${CMDLINE# } $2"
+            CMDLINE="${CMDLINE} $2"
+            CMDLINE="${CMDLINE# }"
             shift 2
             ;;
         --)
@@ -64,7 +75,8 @@ while [ "$#" -gt 0 ]; do
             usage_error "Options must precede input filenames."
             ;;
         *dtb*)
-            DTBS="$DTBS $1"
+            DTBS="${DTBS}${SEP}$1"
+            DTBS="${DTBS#${SEP}}"
             shift
             ;;
         *initrd*|*initramfs*|*cpio*)
@@ -83,7 +95,8 @@ while [ "$#" -gt 0 ]; do
                 INITRAMFS="$1"
                 shift
             else
-                DTBS="$DTBS $1"
+                DTBS="${DTBS}${SEP}$1"
+                DTBS="${DTBS#${SEP}}"
                 shift
             fi
             ;;
@@ -110,6 +123,7 @@ if [ -n "$INITRAMFS" ]; then
     fi
 fi
 
+IFS="$CUSTOM_IFS"
 for DTB in $DTBS; do
     if [ ! -r "$DTB" ]; then
         error "File '$DTB' (dtb) not found or is not readable."
@@ -117,6 +131,7 @@ for DTB in $DTBS; do
         info "Using dtb: '$DTB'"
     fi
 done
+IFS="$ORIG_IFS"
 
 : "${ARCH:=$(arch)}"
 case "$ARCH" in
@@ -157,19 +172,17 @@ esac
 if [ -n "$INITRAMFS" ]; then
     cp "$INITRAMFS" "${tmp}/initrd.img"
     INITRAMFS="${tmp}/initrd.img"
-    MKIMAGE_INITRAMFS_ARGS="-i $INITRAMFS"
+    MKIMAGE_INITRAMFS_ARGS="-i${SEP}${INITRAMFS}"
 fi
 
+IFS="$CUSTOM_IFS"
 if [ -n "$DTBS" ]; then
     mkdir -p "${tmp}/dtbs"
     cp -t "${tmp}/dtbs/" -- $DTBS
     DTBS="$(find "${tmp}/dtbs/" -type f)"
-
-    MKIMAGE_DTB_ARGS=
-    for DTB in $DTBS; do
-        MKIMAGE_DTB_ARGS="${MKIMAGE_DTB_ARGS# } -b $DTB"
-    done
+    MKIMAGE_DTB_ARGS="$(printf -- "-b${SEP}%s${SEP}" $DTBS)"
 fi
+IFS="$ORIG_IFS"
 
 # Somehow mkimage needs write permissions, add them since we've already
 # copied the files to a temporary directory.
@@ -181,11 +194,13 @@ if [ -n "$INITRAMFS" ] && [ ! -w "$INITRAMFS" ]; then
     chmod +w "$INITRAMFS"
 fi
 
+IFS="$CUSTOM_IFS"
 for DTB in $DTBS; do
     if [ ! -w "$DTB" ]; then
         chmod +w "$DTB"
     fi
 done
+IFS="$ORIG_IFS"
 
 # If kernel.args is empty, vbutil_kernel returns an error.
 # Use "--" instead of putting a newline or a space into the cmdline.
@@ -207,6 +222,7 @@ if [ -z "$BOOTSTUB" ]; then
 fi
 
 pack_fit() {
+    IFS="$CUSTOM_IFS"
     mkimage \
         -f auto \
         -A "$MKIMAGE_ARCH" \
@@ -218,6 +234,7 @@ pack_fit() {
         $MKIMAGE_DTB_ARGS \
         "${tmp}/depthcharge.itb" \
         || error "Could not pack inputs into a FIT image."
+    IFS="$ORIG_IFS"
 }
 
 info "Running mkimage:"
@@ -245,7 +262,7 @@ pack_depthcharge() {
         || error "Could not pack inputs into a depthcharge image."
 }
 
-info "Running vbutil_kernel (pack)."
+info "Running vbutil_kernel (pack):"
 if [ "$VERBOSE" = yes ]; then
     pack_depthcharge
 else
