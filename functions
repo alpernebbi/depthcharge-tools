@@ -171,19 +171,32 @@ find_depthcharge_part() {
 # Read fields from a simple key-value database with sections.
 parse_field() {
     field="$1"
-    section="${2:-defaults}"
+    section="$2"
     set --
+    section_done=no
+
+    if [ -z "$section" ]; then
+        return 1
+    fi
 
     # Skip to the chosen section.
-    while IFS=: read -r s && [ "$s" != "$section" ]; do
-        :
-    done
-
-    # Only read fields until the end of section.
-    while IFS=":$IFS" read -r key value && [ "$key" != "" ]; do
-        if [ "$key" = "$field" ]; then
-            set -- "$@" "$value"
+    while IFS=: read -r s; do
+        if [ "$s" != "$section" ]; then
+            continue
         fi
+
+        # Try fields until the end of section.
+        while IFS=":$IFS" read -r key values && [ "$key" != "" ]; do
+            if [ "$key" = "$field" ]; then
+                if [ "$section_done" = yes ]; then
+                    set -- "$values"
+                    section_done=no
+                else
+                    set -- "$@" "$values"
+                fi
+            fi
+        done
+        section_done=yes
     done
 
     if [ "$#" -gt 0 ]; then

@@ -76,24 +76,21 @@ if [ -z "$KVERSION" ]; then
 fi
 
 # Load user configuration and machine database.
-if [ -z "$USER_DB" ]; then
-    USER_DB="$(grep -v '^#' "$CONFIG" 2>/dev/null)" || :
-fi
-
-if [ -z "$MACHINE_DB" ]; then
-    MACHINE_DB="$(grep -v '^#' "$MACHINES" 2>/dev/null)" || :
+if [ -z "$CONFIG_DB" ]; then
+    CONFIG_DB="$( \
+        grep -v '^#' "$MACHINES" 2>/dev/null; \
+        echo ""; \
+        grep -v '^#' "$CONFIG" 2>/dev/null; \
+    )" || :
 fi
 
 get_config() {
     field="$1"
     machine="${2:-$MACHINE}"
 
-    echo "$USER_DB" | parse_field "$field" "config" \
-        || echo "$MACHINE_DB" | parse_field "$field" "config" \
-        || echo "$USER_DB" | parse_field "$field" "$machine" \
-        || echo "$MACHINE_DB" | parse_field "$field" "$machine" \
-        || echo "$USER_DB" | parse_field "$field" "defaults" \
-        || echo "$MACHINE_DB" | parse_field "$field" "defaults"
+    echo "$CONFIG_DB" | parse_field "$field" "config" \
+        || echo "$CONFIG_DB" | parse_field "$field" "$machine" \
+        || echo "$CONFIG_DB" | parse_field "$field" "defaults"
 }
 
 # Detect machine, but allow overriding via user config.

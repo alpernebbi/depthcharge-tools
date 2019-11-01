@@ -1,7 +1,7 @@
 #
-# This file is parsed with a very simple pipeline (not YAML).
-# If multiple blocks exist for a device, only the first one is used.
-# Setting a key multiple times appends to it with a space.
+# This file is parsed with a very simple parser (i.e. it's not YAML).
+# Setting a key multiple times within a block appends to it with a
+# space. Settings in later blocks override those in earlier blocks.
 #
 
 defaults:
