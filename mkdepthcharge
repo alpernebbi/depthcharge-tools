@@ -1,8 +1,14 @@
 #!/bin/sh
 set -e
 
-# Import common functions
-. "./functions"
+if [ -n "$CHECKOUT" ]; then
+    : "${FUNCTIONS:=${CHECKOUT}/functions}"
+else
+    : "${FUNCTIONS:=/usr/share/depthcharge-support/functions}"
+fi
+
+# Import common functions.
+. "$FUNCTIONS"
 
 # We need to use a non-space separator to support paths with spaces.
 # Instead of hard-coding it everywhere, let's put it in a variable.
