@@ -1,0 +1,16 @@
+#
+# This file is parsed with a very simple parser (i.e. it's not YAML).
+# If multiple blocks exist for the same machine they are searched in
+# order for a requested field. Only the values in the first block
+# containing the field is considered. Setting a key multiple times
+# within a block appends to it with a space.
+#
+
+defaults:
+  cmdline: quiet splash
+  description: Debian with linux-image-%s
+  max-size: 33554432
+  compress: none lz4 lzma
+
+Google Kevin:
+  dtb-name: rk3399-gru-kevin.dtb

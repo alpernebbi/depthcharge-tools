@@ -3,13 +3,13 @@ set -e
 
 if [ -n "$CHECKOUT" ]; then
     : "${FUNCTIONS:=${CHECKOUT}/functions}"
-    : "${MACHINES:=${CHECKOUT}/machines}"
-    : "${CONFIG:=${CHECKOUT}/config}"
+    : "${DEFAULTS:=${CHECKOUT}/conf/defaults}"
+    : "${CONFIGS:=${CHECKOUT}/conf}"
     : "${CACHE:=${CHECKOUT}/cache}"
 else
     : "${FUNCTIONS:=/usr/share/depthcharge-support/functions}"
-    : "${MACHINES:=/usr/share/depthcharge-support/machines}"
-    : "${CONFIG:=/etc/depthcharge-support/config}"
+    : "${DEFAULTS:=/usr/share/depthcharge-support/defaults}"
+    : "${CONFIGS:=/etc/depthcharge-support}"
     : "${CACHE:=/var/cache/depthcharge-support}"
 fi
 
@@ -78,9 +78,10 @@ fi
 # Load user configuration and machine database.
 if [ -z "$CONFIG_DB" ]; then
     CONFIG_DB="$( \
-        grep -v '^#' "$MACHINES" 2>/dev/null; \
-        echo ""; \
-        grep -v '^#' "$CONFIG" 2>/dev/null; \
+        for config in "$DEFAULTS" "${CONFIGS}"/*; do \
+            grep -sv '^#' "$config" || :; \
+            echo ""; \
+        done
     )" || :
 fi
 

@@ -1,0 +1,20 @@
+#
+# User configuration files for depthcharge-support.
+#
+# The update-depthcharge script reads all files in this directory
+# (including this file) in shell expansion order for its settings.
+# Lines starting with a hash/number sign (#) are ignored.
+#
+# You can configure the kernel command line, override machine detection
+# and change machine-specific settings with fragments similar to these:
+#
+# ----8<----
+#
+# config:
+#   cmdline: console=tty1 rootwait quiet splash
+#   machine: Google Kevin
+#
+# Google Kevin:
+#   dtb-name: rk3399-gru-kevin.dtb
+#
+# ----8<----
