@@ -1,0 +1,5 @@
+config /etc/depthcharge-support
+machines /usr/share/depthcharge-support
+functions /usr/share/depthcharge-support
+mkdepthcharge /usr/bin
+update-depthcharge /usr/sbin
