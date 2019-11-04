@@ -1,14 +1,33 @@
 #!/bin/sh
 set -e
 
-if [ -n "$CHECKOUT" ]; then
-    : "${FUNCTIONS:=${CHECKOUT}/functions}"
-else
-    : "${FUNCTIONS:=/usr/share/depthcharge-support/functions}"
-fi
+# Functions to make printing output easier.
+msg() {
+    if [ "$#" -gt 0 ]; then
+        echo "$0:" "$@"
+    fi
+}
 
-# Import common functions.
-. "$FUNCTIONS"
+info() {
+    if [ "$VERBOSE" = yes ]; then
+        msg "$@"
+    fi
+}
+
+warn() {
+    msg "warning:" "$@" >&2
+}
+
+error() {
+    msg "error:" "$@" >&2
+    exit 1
+}
+
+usage_error() {
+    msg "error:" "$@" "\n" >&2
+    print_help >&2
+    exit 1
+}
 
 # We need to use a non-space separator to support paths with spaces.
 # Instead of hard-coding it everywhere, let's put it in a variable.
@@ -278,8 +297,10 @@ fi
 : "${DEPTHCHARGE_MAX_SIZE:=0}"
 if [ "${DEPTHCHARGE_MAX_SIZE}" -gt 0 ]; then
     info "Checking if image fits into size limit."
-    size_check "${tmp}/depthcharge.img" "$DEPTHCHARGE_MAX_SIZE" \
-        || error "Output image size too big to boot."
+    size="$(stat -c '%s' "${tmp}/depthcharge.img")"
+    if [ "$size" -gt "${DEPTHCHARGE_MAX_SIZE}"  ]; then
+        error "Output image size too big to boot."
+    fi
 fi
 
 verify_depthcharge() {
