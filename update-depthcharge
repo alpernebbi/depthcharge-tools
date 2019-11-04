@@ -1,6 +1,20 @@
 #!/bin/sh
 set -e
 
+print_help() {
+cat <<EOF
+Usage: update-depthcharge [options]
+
+Options:
+ -h, --help              Show this help message.
+ -v, --verbose           Print more detailed output.
+ -a, --all               Rebuild depthcharge images for all versions.
+ -k, --kversion VERSION  Use a specific kernel version instead of the
+                         latest version.
+ -n, --no-write          Don't write the image to disk.
+EOF
+}
+
 if [ -n "$CHECKOUT" ]; then
     : "${FUNCTIONS:=${CHECKOUT}/functions}"
     : "${DEFAULTS:=${CHECKOUT}/conf/defaults}"
@@ -15,20 +29,6 @@ fi
 
 # Import common functions.
 . "$FUNCTIONS"
-
-print_help() {
-cat <<EOF
-Usage: update-depthcharge [options]
-
-Options:
- -h, --help              Show this help message.
- -v, --verbose           Print more detailed output.
- -a, --all               Rebuild depthcharge images for all versions.
- -k, --kversion VERSION  Use a specific kernel version instead of the
-                         latest version.
- -n, --no-write          Don't write the image to disk.
-EOF
-}
 
 while [ "$#" -gt 0 ]; do
     case "$1" in

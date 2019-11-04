@@ -1,6 +1,21 @@
 #!/bin/sh
 set -e
 
+print_help() {
+cat <<EOF
+Usage: mkdepthcharge [options] -o FILE [--] vmlinuz [initrd] [dtb ...]
+
+Options:
+ -h, --help              Show this help message.
+ -v, --verbose           Print more detailed output.
+ -o, --output FILE       Write resulting image to FILE.
+ -c, --cmdline CMD       Command-line parameters for the kernel. Can
+                         be used multiple times to append new values.
+ -C, --compress TYPE     Compress kernel with one of: none, lz4, lzma.
+ -n, --description DESC  Description to use as a mkimage argument.
+EOF
+}
+
 # Functions to make printing output easier.
 msg() {
     if [ "$#" -gt 0 ]; then
@@ -38,21 +53,6 @@ NEWLINE="
 "
 ORIG_IFS="$IFS"
 CUSTOM_IFS="${NEWLINE}${SEP}"
-
-print_help() {
-cat <<EOF
-Usage: mkdepthcharge [options] -o FILE [--] vmlinuz [initrd] [dtb ...]
-
-Options:
- -h, --help              Show this help message.
- -v, --verbose           Print more detailed output.
- -o, --output FILE       Write resulting image to FILE.
- -c, --cmdline CMD       Command-line parameters for the kernel. Can
-                         be used multiple times to append new values.
- -C, --compress TYPE     Compress kernel with one of: none, lz4, lzma.
- -n, --description DESC  Description to use as a mkimage argument.
-EOF
-}
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
