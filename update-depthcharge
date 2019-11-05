@@ -30,60 +30,68 @@ fi
 # Import common functions.
 . "$FUNCTIONS"
 
-while [ "$#" -gt 0 ]; do
-    case "$1" in
-        -h|--help)
-            print_help
-            exit 0
-            ;;
-        -v|--verbose)
-            VERBOSE=yes
-            shift
-            ;;
-        -k|--kversion)
-            KVERSION="$2"
-            shift 2
-            ;;
-        -a|--all)
-            ALL_IMAGES=yes
-            shift 1
-            ;;
-        -n|--no-write)
-            NO_WRITE=yes
-            shift 1
-            ;;
-        --)
-            shift
-            break
-            ;;
-        -*)
-            usage_error "Option '$1' not understood."
-            ;;
-        *)
-            usage_error "Argument '$1' not understood."
-            ;;
-    esac
-done
+kernel_versions() {
+    linux-version list | linux-version sort
+}
 
-# Use latest version if omitted.
-if [ -z "$KVERSION" ]; then
-    KVERSION="$( \
-        linux-version list \
-            | linux-version sort --reverse \
-            | head -1 \
-    )"
-    info "Defaulting to latest kernel version '$KVERSION'."
-fi
+parse_args() {
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            -h|--help)
+                print_help
+                exit 0
+                ;;
+            -v|--verbose)
+                VERBOSE=yes
+                shift
+                ;;
+            -k|--kversion)
+                KVERSION="$2"
+                shift 2
+                ;;
+            -a|--all)
+                ALL_IMAGES=yes
+                shift 1
+                ;;
+            -n|--no-write)
+                NO_WRITE=yes
+                shift 1
+                ;;
+            --)
+                shift
+                break
+                ;;
+            -*)
+                usage_error "Option '$1' not understood."
+                ;;
+            *)
+                usage_error "Argument '$1' not understood."
+                ;;
+        esac
+    done
+
+    # Use latest version if omitted.
+    if [ -z "$KVERSION" ]; then
+        KVERSION="$(kernel_versions | tail -1)" \
+            || error "Couldn't figure out latest kernel version."
+        info "Defaulting to latest kernel version '$KVERSION'."
+    fi
+}
+
+read_config_files() {
+    for config in "$DEFAULTS" "${CONFIGS}"/*; do \
+        grep -sv '^#' "$config" || :
+        echo ""
+    done
+}
 
 # Load user configuration and machine database.
-if [ -z "$CONFIG_DB" ]; then
-    CONFIG_DB="$( \
-        for config in "$DEFAULTS" "${CONFIGS}"/*; do \
-            grep -sv '^#' "$config" || :; \
-            echo ""; \
-        done
-    )" || :
-fi
+set_config_db() {
+    if [ -z "$CONFIG_DB" ]; then
+        CONFIG_DB="$(read_config_files)" \
+            || error "Could not read configuration files."
+    fi
+}
 
 get_config() {
     field="$1"
@@ -95,24 +103,28 @@ get_config() {
 }
 
 # Detect machine, but allow overriding via user config.
-if [ -n "$MACHINE" ]; then
-    info "Overriding machine '$MACHINE' from environment variable."
-elif MACHINE="$(get_config machine)"; then
-    info "Overriding machine '$MACHINE' from user configuration."
-elif MACHINE="$(cat /proc/device-tree/model 2>/dev/null)"; then
-    info "Detected machine '$MACHINE' from device-tree model."
-else
-    error "Failed to detect machine."
-fi
+set_machine() {
+    if [ -n "$MACHINE" ]; then
+        info "Overriding machine '$MACHINE' from environment variable."
+    elif MACHINE="$(get_config machine)"; then
+        info "Overriding machine '$MACHINE' from user configuration."
+    elif MACHINE="$(cat /proc/device-tree/model 2>/dev/null)"; then
+        info "Detected machine '$MACHINE' from device-tree model."
+    else
+        error "Failed to detect machine."
+    fi
+}
 
-# Load machine-specific settings.
-DTB_NAME="$(get_config dtb-name)" || :
-MAX_SIZE="$(get_config max-size)" || :
+load_configs() {
+    # Load machine-specific settings.
+    DTB_NAME="$(get_config dtb-name)" || :
+    MAX_SIZE="$(get_config max-size)" || :
 
-# Load user configuration.
-CMDLINE_USER="$(get_config cmdline)" || :
-COMPRESS_TYPES="$(get_config compress)" || :
-DESCRIPTION_FMT="$(get_config description)" || :
+    # Load user configuration.
+    CMDLINE_USER="$(get_config cmdline)" || :
+    COMPRESS_TYPES="$(get_config compress)" || :
+    DESCRIPTION_FMT="$(get_config description)" || :
+}
 
 generate_image() {
     kversion="$1"
@@ -265,22 +277,36 @@ write_image() {
         || error "Failed to prioritize partition '$target'."
 }
 
-if [ "$ALL_IMAGES" = yes ]; then
-    for v in $(linux-version list | linux-version sort); do
-        if generate_image "$v"; then
-            continue
-        elif [ "$v" = "$KVERSION" ]; then
-            error "Couldn't generate image for chosen version '$v'."
-        else
-            warn "Couldn't generate image for version '$v', ignoring."
-        fi
-    done
-else
-    generate_image "$KVERSION" \
-        || error "Couldn't generate image for chosen version '$v'."
-fi
+main() {
+    parse_args "$@"
 
-if [ "$NO_WRITE" != yes ]; then
-    write_image "$KVERSION" \
-        || error "Couldn't write image to disk for chosen version '$v'."
-fi
+    if [ "$VERBOSE" != yes ]; then
+        exec >/dev/null
+    fi
+
+    set_config_db
+    set_machine
+    load_configs
+
+    if [ "$ALL_IMAGES" = yes ]; then
+        for v in $(kernel_versions); do
+            if generate_image "$v"; then
+                continue
+            elif [ "$v" = "$KVERSION" ]; then
+                error "Couldn't generate image for chosen version '$v'."
+            else
+                warn "Couldn't generate image for version '$v', ignoring."
+            fi
+        done
+    else
+        generate_image "$KVERSION" \
+            || error "Couldn't generate image for chosen version '$v'."
+    fi
+
+    if [ "$NO_WRITE" != yes ]; then
+        write_image "$KVERSION" \
+            || error "Couldn't write image to disk for chosen version '$v'."
+    fi
+}
+
+main "$@"
