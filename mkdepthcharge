@@ -228,6 +228,12 @@ setup_tmp_dir() {
 }
 
 compress_kernel() {
+    if [ "$VMLINUZ" = "$TMP_VMLINUZ_LZ4" ]; then
+        error "Not compressing kernel twice (lz4 then '$COMPRESS')."
+    elif [ "$VMLINUZ" = "$TMP_VMLINUZ_LZMA" ]; then
+        error "Not compressing kernel twice (lzma then '$COMPRESS')."
+    fi
+
     case "$COMPRESS" in
         lz4)
             info "Compressing kernel with lz4."
