@@ -274,14 +274,12 @@ copy_inputs_to_tmp() {
     if [ -n "$INITRAMFS" ]; then
         cp "$INITRAMFS" "$TMP_INITRAMFS"
         INITRAMFS="$TMP_INITRAMFS"
-        MKIMAGE_INITRAMFS_ARGS="-i${SEP}${INITRAMFS}"
     fi
 
     IFS="$CUSTOM_IFS"
     if [ -n "$DTBS" ]; then
         cp -t "$TMP_DTBS_DIR" -- $DTBS
         DTBS="$(find "$TMP_DTBS_DIR" -type f)"
-        MKIMAGE_DTB_ARGS="$(printf -- "-b${SEP}%s${SEP}" $DTBS)"
     fi
     IFS="$ORIG_IFS"
 }
@@ -332,6 +330,12 @@ make_bootstub_file() {
 pack_fit() {
     IFS="$CUSTOM_IFS"
     if [ -z "$FIT_IMAGE" ]; then
+        if [ -n "$INITRAMFS" ]; then
+            MKIMAGE_INITRAMFS_ARGS="-i${SEP}${INITRAMFS}"
+        fi
+        if [ -n "$DTBS" ]; then
+            MKIMAGE_DTB_ARGS="$(printf -- "-b${SEP}%s${SEP}" $DTBS)"
+        fi
         info "Running mkimage:"
         mkimage \
             -f auto \
