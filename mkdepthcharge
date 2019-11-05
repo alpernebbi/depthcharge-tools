@@ -217,6 +217,7 @@ setup_tmp_dir() {
     : "${TMP_VMLINUZ:=${tmp}/vmlinuz}"
     : "${TMP_VMLINUZ_LZ4:=${tmp}/vmlinuz.lz4}"
     : "${TMP_VMLINUZ_LZMA:=${tmp}/vmlinuz.lzma}"
+    : "${TMP_VMLINUZ_GUNZIPPED:=${tmp}/vmlinuz-gunzipped}"
     : "${TMP_INITRAMFS:=${tmp}/initrd.img}"
     : "${TMP_DTBS_DIR:=${tmp}/dtbs}"
     : "${TMP_CMDLINE:=${tmp}/kernel.args}"
@@ -225,6 +226,15 @@ setup_tmp_dir() {
     : "${TMP_DEPTHCHARGE_IMAGE:=${tmp}/depthcharge.img}"
 
     mkdir -p "$TMP_DTBS_DIR"
+}
+
+# Decompress kernel if packaged as gzip compressed.
+decompress_kernel() {
+    if { command -v gzip && gzip -t "$VMLINUZ"; } >/dev/null 2>&1; then
+        info "Kernel is gzip compressed, decompressing."
+        gzip -d <"$VMLINUZ" >"$TMP_VMLINUZ_GUNZIPPED"
+        VMLINUZ="$TMP_VMLINUZ_GUNZIPPED"
+    fi
 }
 
 compress_kernel() {
@@ -393,6 +403,7 @@ main() {
 
     setup_tmp_dir
     copy_inputs_to_tmp
+    decompress_kernel
     compress_kernel
     make_inputs_writable
     make_cmdline_file

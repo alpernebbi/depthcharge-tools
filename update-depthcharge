@@ -132,12 +132,6 @@ generate_image() {
     info "Trying to generate a depthcharge image for version '$kversion'."
 
     VMLINUZ="/boot/vmlinuz-${kversion}"
-    # Decompress kernel if packaged as gzip compressed.
-    if { command -v gzip && gzip -t "$VMLINUZ"; } >/dev/null 2>&1; then
-        info "Packaged kernel is gzip compressed, decompressing."
-        gzip -d <"$VMLINUZ" >"${CACHE}/vmlinuz-gunzipped-${kversion}" \
-            && VMLINUZ="${CACHE}/vmlinuz-gunzipped-${kversion}"
-    fi
 
     INITRAMFS="/boot/initrd.img-${kversion}"
     if [ ! -r "$INITRAMFS" ]; then
