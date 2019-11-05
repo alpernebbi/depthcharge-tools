@@ -208,23 +208,36 @@ set_vboot_arch() {
     fi
 }
 
-# Some steps will require a directory to write temporary files.
+# Some steps will require a directory to write temporary files. But
+# let's also allow those files to be redirected somewhere else.
 setup_tmp_dir() {
     tmp="$(mktemp -td mkdepthcharge.XXXXXXXX)"
     trap 'rm -rf "${tmp}"' EXIT
+
+    : "${TMP_VMLINUZ:=${tmp}/vmlinuz}"
+    : "${TMP_VMLINUZ_LZ4:=${tmp}/vmlinuz.lz4}"
+    : "${TMP_VMLINUZ_LZMA:=${tmp}/vmlinuz.lzma}"
+    : "${TMP_INITRAMFS:=${tmp}/initrd.img}"
+    : "${TMP_DTBS_DIR:=${tmp}/dtbs}"
+    : "${TMP_CMDLINE:=${tmp}/kernel.args}"
+    : "${TMP_BOOTSTUB:=${tmp}/bootstub.bin}"
+    : "${TMP_FIT_IMAGE:=${tmp}/depthcharge.itb}"
+    : "${TMP_DEPTHCHARGE_IMAGE:=${tmp}/depthcharge.img}"
+
+    mkdir -p "$TMP_DTBS_DIR"
 }
 
 compress_kernel() {
     case "$COMPRESS" in
         lz4)
             info "Compressing kernel with lz4."
-            lz4 -z -9 <"$VMLINUZ" >"${tmp}/vmlinuz.lz4"
-            VMLINUZ="${tmp}/vmlinuz.lz4"
+            lz4 -z -9 <"$VMLINUZ" >"$TMP_VMLINUZ_LZ4"
+            VMLINUZ="$TMP_VMLINUZ_LZ4"
             ;;
         lzma)
             info "Compressing kernel with lzma."
-            lzma -z <"$VMLINUZ" >"${tmp}/vmlinuz.lzma"
-            VMLINUZ="${tmp}/vmlinuz.lzma"
+            lzma -z <"$VMLINUZ" >"$TMP_VMLINUZ_LZMA"
+            VMLINUZ="$TMP_VMLINUZ_LZMA"
             ;;
         none)
             : # No need to do anything.
@@ -239,20 +252,19 @@ compress_kernel() {
 # mkimage can't open files when they are read-only for some reason.
 # We'll copy them into a temp dir in fear of modifying the originals.
 copy_inputs_to_tmp() {
-    cp "$VMLINUZ" "${tmp}/vmlinuz"
-    VMLINUZ="${tmp}/vmlinuz"
+    cp "$VMLINUZ" "$TMP_VMLINUZ"
+    VMLINUZ="$TMP_VMLINUZ"
 
     if [ -n "$INITRAMFS" ]; then
-        cp "$INITRAMFS" "${tmp}/initrd.img"
-        INITRAMFS="${tmp}/initrd.img"
+        cp "$INITRAMFS" "$TMP_INITRAMFS"
+        INITRAMFS="$TMP_INITRAMFS"
         MKIMAGE_INITRAMFS_ARGS="-i${SEP}${INITRAMFS}"
     fi
 
     IFS="$CUSTOM_IFS"
     if [ -n "$DTBS" ]; then
-        mkdir -p "${tmp}/dtbs"
-        cp -t "${tmp}/dtbs/" -- $DTBS
-        DTBS="$(find "${tmp}/dtbs/" -type f)"
+        cp -t "$TMP_DTBS_DIR" -- $DTBS
+        DTBS="$(find "$TMP_DTBS_DIR" -type f)"
         MKIMAGE_DTB_ARGS="$(printf -- "-b${SEP}%s${SEP}" $DTBS)"
     fi
     IFS="$ORIG_IFS"
@@ -279,7 +291,10 @@ make_inputs_writable() {
 }
 
 make_cmdline_file() {
-    echo -n $CMDLINE >"${tmp}/kernel.args"
+    if [ -z "$VBOOT_CMDLINE" ]; then
+        echo -n $CMDLINE >"$TMP_CMDLINE"
+        VBOOT_CMDLINE="$TMP_CMDLINE"
+    fi
 }
 
 make_bootstub_file() {
@@ -287,9 +302,9 @@ make_bootstub_file() {
         case "$VBOOT_ARCH" in
             arm*|aarch64)
                 info "Using dummy file for bootloader."
-                dd if=/dev/zero of="${tmp}/bootstub.bin" \
+                dd if=/dev/zero of="$TMP_BOOTSTUB" \
                     count=1 bs=512 status=none
-                BOOTSTUB="${tmp}/bootstub.bin"
+                BOOTSTUB="$TMP_BOOTSTUB"
                 ;;
             x86|amd64|*)
                 error "Architecture '$VBOOT_ARCH' needs a bootstub binary."
@@ -299,48 +314,54 @@ make_bootstub_file() {
 }
 
 pack_fit() {
-    info "Running mkimage:"
     IFS="$CUSTOM_IFS"
-    mkimage \
-        -f auto \
-        -A "$MKIMAGE_ARCH" \
-        -O linux \
-        -C "$COMPRESS" \
-        -n "$DESCRIPTION" \
-        -d "$VMLINUZ" \
-        $MKIMAGE_INITRAMFS_ARGS \
-        $MKIMAGE_DTB_ARGS \
-        "${tmp}/depthcharge.itb" \
-        || error "Could not pack inputs into a FIT image."
+    if [ -z "$FIT_IMAGE" ]; then
+        info "Running mkimage:"
+        mkimage \
+            -f auto \
+            -A "$MKIMAGE_ARCH" \
+            -O linux \
+            -C "$COMPRESS" \
+            -n "$DESCRIPTION" \
+            -d "$VMLINUZ" \
+            $MKIMAGE_INITRAMFS_ARGS \
+            $MKIMAGE_DTB_ARGS \
+            "$TMP_FIT_IMAGE" \
+            || error "Could not pack inputs into a FIT image."
+        FIT_IMAGE="$TMP_FIT_IMAGE"
+    fi
     IFS="$ORIG_IFS"
 }
 
 pack_depthcharge() {
-    info "Running vbutil_kernel (pack):"
-    futility vbutil_kernel \
-        --version 1 \
-        --arch "$VBOOT_ARCH" \
-        --vmlinuz "${tmp}/depthcharge.itb" \
-        --config "${tmp}/kernel.args" \
-        --bootloader "$BOOTSTUB" \
-        --keyblock "$VBOOT_KEYBLOCK" \
-        --signprivate "$VBOOT_SIGNPRIVATE" \
-        --pack "${tmp}/depthcharge.img" \
-        || error "Could not pack inputs into a depthcharge image."
+    if [ -z "$DEPTHCHARGE_IMAGE" ]; then
+        info "Running vbutil_kernel (pack):"
+        futility vbutil_kernel \
+            --version 1 \
+            --arch "$VBOOT_ARCH" \
+            --vmlinuz "$FIT_IMAGE" \
+            --config "$VBOOT_CMDLINE" \
+            --bootloader "$BOOTSTUB" \
+            --keyblock "$VBOOT_KEYBLOCK" \
+            --signprivate "$VBOOT_SIGNPRIVATE" \
+            --pack "$TMP_DEPTHCHARGE_IMAGE" \
+            || error "Could not pack inputs into a depthcharge image."
+        DEPTHCHARGE_IMAGE="$TMP_DEPTHCHARGE_IMAGE"
+    fi
 }
 
 verify_depthcharge() {
     info "Running vbutil_kernel (verify):"
     futility vbutil_kernel \
         --signpubkey "$VBOOT_SIGNPUBKEY" \
-        --verify "${tmp}/depthcharge.img" \
+        --verify "$DEPTHCHARGE_IMAGE" \
         || error "Generated image cannot be verified by vbutil_kernel."
 }
 
 check_depthcharge_size() {
     if [ "${DEPTHCHARGE_MAX_SIZE}" -gt 0 ]; then
         info "Checking if image fits into size limit."
-        size="$(stat -c '%s' "${tmp}/depthcharge.img")"
+        size="$(stat -c '%s' "$DEPTHCHARGE_IMAGE")"
         if [ "$size" -gt "${DEPTHCHARGE_MAX_SIZE}" ]; then
             error "Output image size too big to boot."
         fi
@@ -349,7 +370,7 @@ check_depthcharge_size() {
 
 copy_depthcharge_to_output() {
     info "Copying image to output '$OUTPUT'."
-    cp -f "${tmp}/depthcharge.img" "$OUTPUT" \
+    cp -f "$DEPTHCHARGE_IMAGE" "$OUTPUT" \
         || error "Couldn't copy to output."
 }
 
