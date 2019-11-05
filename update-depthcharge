@@ -15,20 +15,32 @@ Options:
 EOF
 }
 
+# Prefer to use files from the repository.
 if [ -n "$CHECKOUT" ]; then
     : "${FUNCTIONS:=${CHECKOUT}/functions}"
     : "${DEFAULTS:=${CHECKOUT}/conf/defaults}"
     : "${CONFIGS:=${CHECKOUT}/conf}"
     : "${CACHE:=${CHECKOUT}/cache}"
-else
-    : "${FUNCTIONS:=/usr/share/depthcharge-support/functions}"
-    : "${DEFAULTS:=/usr/share/depthcharge-support/defaults}"
-    : "${CONFIGS:=/etc/depthcharge-support}"
-    : "${CACHE:=/var/cache/depthcharge-support}"
 fi
+
+# Things we might want to override during testing.
+: "${PROC_DT_MODEL:=/proc/device-tree/model}"
+
+# Distro-specific paths for installed files.
+: "${FUNCTIONS:=/usr/share/depthcharge-support/functions}"
+: "${DEFAULTS:=/usr/share/depthcharge-support/defaults}"
+: "${CONFIGS:=/etc/depthcharge-support}"
+: "${CACHE:=/var/cache/depthcharge-support}"
 
 # Import common functions.
 . "$FUNCTIONS"
+
+# A '%s' in these values will be replaced with a kernel version if any.
+: "${VMLINUZ_FMT:=/boot/vmlinuz-%s}"
+: "${INITRAMFS_FMT=/boot/initrd.img-%s}"
+: "${DTBS_DIR_FMT=/usr/lib/linux-image-%s}"
+: "${DESCRIPTION_FMT=Debian with linux-image-%s}"
+: "${OUTPUT_PATH_FMT:=${CACHE}/depthcharge.img-%s}"
 
 kernel_versions() {
     linux-version list | linux-version sort
@@ -108,7 +120,7 @@ set_machine() {
         info "Overriding machine '$MACHINE' from environment variable."
     elif MACHINE="$(get_config machine)"; then
         info "Overriding machine '$MACHINE' from user configuration."
-    elif MACHINE="$(cat /proc/device-tree/model 2>/dev/null)"; then
+    elif MACHINE="$(cat "$PROC_DT_MODEL" 2>/dev/null)"; then
         info "Detected machine '$MACHINE' from device-tree model."
     else
         error "Failed to detect machine."
@@ -123,23 +135,26 @@ load_configs() {
     # Load user configuration.
     CMDLINE_USER="$(get_config cmdline)" || :
     COMPRESS_TYPES="$(get_config compress)" || :
-    DESCRIPTION_FMT="$(get_config description)" || :
 }
 
 generate_image() {
-    kversion="$1"
-    output="${2:-${CACHE}/depthcharge.img-${kversion}}"
+    kversion="${1:-$KVERSION}"
+    output="${2:-$(printf "$OUTPUT_PATH_FMT" "$kversion")}"
     info "Trying to generate a depthcharge image for version '$kversion'."
 
-    VMLINUZ="/boot/vmlinuz-${kversion}"
+    VMLINUZ="$(printf "$VMLINUZ_FMT" "$kversion")"
+    if [ ! -r "$VMLINUZ" ]; then
+        error "No vmlinuz ('$VMLINUZ') found for version '${kversion}'."
+    fi
 
-    INITRAMFS="/boot/initrd.img-${kversion}"
+    INITRAMFS="$(printf "$INITRAMFS_FMT" "$kversion")"
     if [ ! -r "$INITRAMFS" ]; then
-        warn "No initramfs found for kernel version '${kversion}'."
+        warn "No initramfs ('$INITRAMFS') found for version '${kversion}'."
         INITRAMFS=""
     fi
 
-    DTBS="$(find "/usr/lib/linux-image-${kversion}" -name "$DTB_NAME")"
+    DTBS_DIR="$(printf "$DTBS_DIR_FMT" "$kversion")"
+    DTBS="$(find "$DTBS_DIR" -name "$DTB_NAME")"
     if [ -z "$DTBS" ]; then
         error "No dtb file '$DTB_NAME' found for version '$kversion'."
     fi
@@ -207,8 +222,8 @@ generate_image() {
 }
 
 write_image() {
-    kversion="$1"
-    image="${2:-${CACHE}/depthcharge.img-${kversion}}"
+    kversion="${1:-$KVERSION}"
+    image="${2:-$(printf "$OUTPUT_PATH_FMT" "$kversion")}"
     info "Preparing system to use depthcharge image '$image' on next boot."
 
     if [ ! -r "$image" ]; then
