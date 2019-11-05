@@ -16,6 +16,38 @@ Options:
 EOF
 }
 
+# We need to use a non-space separator to support paths with spaces.
+# Instead of hard-coding it everywhere, let's put it in a variable.
+# To support e.g. DTBS=$(find ...) we also need a newline in the IFS.
+# Also keep a copy of the original so we can restore it.
+SEP=","
+NEWLINE="
+"
+ORIG_IFS="$IFS"
+CUSTOM_IFS="${NEWLINE}${SEP}"
+
+# We should be able to make an image for other architectures, but the
+# default should be this machine's. Use this variable for that.
+: "${ARCH:=$(arch)}"
+
+# If --compress option isn't given, COMPRESS wouldn't be set, but it
+# should be set to none in that case.
+: "${COMPRESS:=none}"
+
+# If kernel.args is empty, vbutil_kernel returns an error. We can
+# use "--" instead of putting a newline or a space into the cmdline.
+: "${CMDLINE:=--}"
+
+# We can optionally enable a size check from the environment variable,
+# but let's keep it disabled by default.
+: "${DEPTHCHARGE_MAX_SIZE:=0}"
+
+# These are distro-specific paths for necessary files.
+: "${VBOOT_DEVKEYS:=/usr/share/vboot/devkeys}"
+: "${VBOOT_KEYBLOCK:=${VBOOT_DEVKEYS}/kernel.keyblock}"
+: "${VBOOT_SIGNPUBKEY:=${VBOOT_DEVKEYS}/kernel_subkey.vbpubk}"
+: "${VBOOT_SIGNPRIVATE:=${VBOOT_DEVKEYS}/kernel_data_key.vbprivk}"
+
 # Functions to make printing output easier.
 msg() {
     if [ "$#" -gt 0 ]; then
@@ -35,218 +67,239 @@ warn() {
 
 error() {
     msg "error:" "$@" >&2
-    exit 1
+    return 1
 }
 
 usage_error() {
     msg "error:" "$@" "\n" >&2
     print_help >&2
-    exit 1
+    return 1
 }
 
-# We need to use a non-space separator to support paths with spaces.
-# Instead of hard-coding it everywhere, let's put it in a variable.
-# To support e.g. DTBS=$(find ...) we also need a newline in the IFS.
-# Also keep a copy of the original so we can restore it.
-SEP=","
-NEWLINE="
-"
-ORIG_IFS="$IFS"
-CUSTOM_IFS="${NEWLINE}${SEP}"
-
-while [ "$#" -gt 0 ]; do
-    case "$1" in
-        -h|--help)
-            print_help
-            exit 0
-            ;;
-        -v|--verbose)
-            VERBOSE=yes
-            shift
-            ;;
-        -o|--output)
-            OUTPUT="$2"
-            shift 2
-            ;;
-        -C|--compress)
-            COMPRESS="$2"
-            shift 2
-            ;;
-        -n|--description)
-            DESCRIPTION="$2"
-            shift 2
-            ;;
-        -c|--cmdline)
-            CMDLINE="${CMDLINE} $2"
-            CMDLINE="${CMDLINE# }"
-            shift 2
-            ;;
-        --)
-            shift
-            break
-            ;;
-        -*)
-            usage_error "Option '$1' not understood."
-            ;;
-        *)
-            break
-            ;;
-    esac
-done
-
-while [ "$#" -gt 0 ]; do
-    case "$1" in
-        -*)
-            usage_error "Options must precede input filenames."
-            ;;
-        *dtb*)
-            DTBS="${DTBS}${SEP}$1"
-            DTBS="${DTBS#${SEP}}"
-            shift
-            ;;
-        *initrd*|*initramfs*|*cpio*)
-            INITRAMFS="$1"
-            shift
-            ;;
-        *vmlinuz*|*vmlinux*|*linux*|*Image*)
-            VMLINUZ="$1"
-            shift
-            ;;
-        *)
-            if [ -z "$VMLINUZ" ]; then
-                VMLINUZ="$1"
+parse_args() {
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            -h|--help)
+                print_help
+                exit 0
+                ;;
+            -v|--verbose)
+                VERBOSE=yes
                 shift
-            elif [ -z "$INITRAMFS" ]; then
-                INITRAMFS="$1"
+                ;;
+            -o|--output)
+                OUTPUT="$2"
+                shift 2
+                ;;
+            -C|--compress)
+                COMPRESS="$2"
+                shift 2
+                ;;
+            -n|--description)
+                DESCRIPTION="$2"
+                shift 2
+                ;;
+            -c|--cmdline)
+                CMDLINE="${CMDLINE} $2"
+                CMDLINE="${CMDLINE# }"
+                shift 2
+                ;;
+            --)
                 shift
-            else
+                break
+                ;;
+            -*)
+                usage_error "Option '$1' not understood."
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            -*)
+                usage_error "Options must precede input filenames."
+                ;;
+            *dtb*)
                 DTBS="${DTBS}${SEP}$1"
                 DTBS="${DTBS#${SEP}}"
                 shift
-            fi
+                ;;
+            *initrd*|*initramfs*|*cpio*)
+                INITRAMFS="$1"
+                shift
+                ;;
+            *vmlinuz*|*vmlinux*|*linux*|*Image*)
+                VMLINUZ="$1"
+                shift
+                ;;
+            *)
+                if [ -z "$VMLINUZ" ]; then
+                    VMLINUZ="$1"
+                    shift
+                elif [ -z "$INITRAMFS" ]; then
+                    INITRAMFS="$1"
+                    shift
+                else
+                    DTBS="${DTBS}${SEP}$1"
+                    DTBS="${DTBS#${SEP}}"
+                    shift
+                fi
+                ;;
+        esac
+    done
+
+    if [ -z "$OUTPUT" ]; then
+        usage_error "Output argument is mandatory."
+    fi
+}
+
+validate_inputs() {
+    if [ -z "$VMLINUZ" ]; then
+        usage_error "Input file vmlinuz is required."
+    elif [ ! -r "$VMLINUZ" ]; then
+        error "File '$VMLINUZ' (vmlinuz) not found or is not readable."
+    else
+        info "Using vmlinuz: '$VMLINUZ'"
+    fi
+
+    if [ -n "$INITRAMFS" ]; then
+        if [ ! -r "$INITRAMFS" ]; then
+            error "File '$INITRAMFS' (initramfs) not found or is not readable."
+        else
+            info "Using initramfs: '$INITRAMFS'"
+        fi
+    fi
+
+    IFS="$CUSTOM_IFS"
+    for DTB in $DTBS; do
+        if [ ! -r "$DTB" ]; then
+            error "File '$DTB' (dtb) not found or is not readable."
+        else
+            info "Using dtb: '$DTB'"
+        fi
+    done
+    IFS="$ORIG_IFS"
+}
+
+set_mkimage_arch() {
+    if [ -z "$MKIMAGE_ARCH" ]; then
+        case "$ARCH" in
+            arm64|aarch64) MKIMAGE_ARCH=arm64 ;;
+            arm*)          MKIMAGE_ARCH=arm ;;
+            amd64|x86_64)  MKIMAGE_ARCH=x86_64 ;;
+            x86|i386)      MKIMAGE_ARCH=x86 ;;
+            *) error "Architecture '$ARCH' is not supported." ;;
+        esac
+    fi
+}
+
+set_vboot_arch() {
+    if [ -z "$VBOOT_ARCH" ]; then
+        case "$ARCH" in
+            arm64|aarch64) VBOOT_ARCH=aarch64 ;;
+            arm*)          VBOOT_ARCH=arm ;;
+            amd64|x86_64)  VBOOT_ARCH=amd64 ;;
+            x86|i386)      VBOOT_ARCH=x86 ;;
+            *) error "Architecture '$ARCH' is not supported." ;;
+        esac
+    fi
+}
+
+# Some steps will require a directory to write temporary files.
+setup_tmp_dir() {
+    tmp="$(mktemp -td mkdepthcharge.XXXXXXXX)"
+    trap 'rm -rf "${tmp}"' EXIT
+}
+
+compress_kernel() {
+    case "$COMPRESS" in
+        lz4)
+            info "Compressing kernel with lz4."
+            lz4 -z -9 <"$VMLINUZ" >"${tmp}/vmlinuz.lz4"
+            VMLINUZ="${tmp}/vmlinuz.lz4"
+            ;;
+        lzma)
+            info "Compressing kernel with lzma."
+            lzma -z <"$VMLINUZ" >"${tmp}/vmlinuz.lzma"
+            VMLINUZ="${tmp}/vmlinuz.lzma"
+            ;;
+        none)
+            : # No need to do anything.
+            ;;
+        *)
+            error "Compression type '$COMPRESS' is not supported." \
+                    "Valid values are: none, lz4, lzma."
             ;;
     esac
-done
-
-if [ -z "$OUTPUT" ]; then
-    usage_error "Output argument is mandatory."
-fi
-
-if [ -z "$VMLINUZ" ]; then
-    usage_error "Input file vmlinuz is required."
-elif [ ! -r "$VMLINUZ" ]; then
-    error "File '$VMLINUZ' (vmlinuz) not found or is not readable."
-else
-    info "Using vmlinuz: '$VMLINUZ'"
-fi
-
-if [ -n "$INITRAMFS" ]; then
-    if [ ! -r "$INITRAMFS" ]; then
-        error "File '$INITRAMFS' (initramfs) not found or is not readable."
-    else
-        info "Using initramfs: '$INITRAMFS'"
-    fi
-fi
-
-IFS="$CUSTOM_IFS"
-for DTB in $DTBS; do
-    if [ ! -r "$DTB" ]; then
-        error "File '$DTB' (dtb) not found or is not readable."
-    else
-        info "Using dtb: '$DTB'"
-    fi
-done
-IFS="$ORIG_IFS"
-
-: "${ARCH:=$(arch)}"
-case "$ARCH" in
-    arm64|aarch64) MKIMAGE_ARCH=arm64;  VBOOT_ARCH=aarch64 ;;
-    arm*)          MKIMAGE_ARCH=arm;    VBOOT_ARCH=arm ;;
-    amd64|x86_64)  MKIMAGE_ARCH=x86_64; VBOOT_ARCH=amd64 ;;
-    x86|i386)      MKIMAGE_ARCH=x86;    VBOOT_ARCH=x86 ;;
-    *) error "Architecture '$ARCH' is not supported." ;;
-esac
+}
 
 # mkimage can't open files when they are read-only for some reason.
-# Copy them into a temporary dir in fear of modifying the originals.
-tmp="$(mktemp -td mkdepthcharge.XXXXXXXX)"
-trap 'rm -rf "${tmp}"' EXIT
+# We'll copy them into a temp dir in fear of modifying the originals.
+copy_inputs_to_tmp() {
+    cp "$VMLINUZ" "${tmp}/vmlinuz"
+    VMLINUZ="${tmp}/vmlinuz"
 
-: "${COMPRESS:=none}"
-case "$COMPRESS" in
-    lz4)
-        info "Compressing kernel with lz4."
-        lz4 -z -9 <"$VMLINUZ" >"${tmp}/vmlinuz.lz4"
-        VMLINUZ="${tmp}/vmlinuz.lz4"
-        ;;
-    lzma)
-        info "Compressing kernel with lzma."
-        lzma -z <"$VMLINUZ" >"${tmp}/vmlinuz.lzma"
-        VMLINUZ="${tmp}/vmlinuz.lzma"
-        ;;
-    none)
-        cp "$VMLINUZ" "${tmp}/vmlinuz"
-        VMLINUZ="${tmp}/vmlinuz"
-        ;;
-    *)
-        error "Compression type '$COMPRESS' is not supported." \
-                "Valid values are: none, lz4, lzma."
-        ;;
-esac
-
-if [ -n "$INITRAMFS" ]; then
-    cp "$INITRAMFS" "${tmp}/initrd.img"
-    INITRAMFS="${tmp}/initrd.img"
-    MKIMAGE_INITRAMFS_ARGS="-i${SEP}${INITRAMFS}"
-fi
-
-IFS="$CUSTOM_IFS"
-if [ -n "$DTBS" ]; then
-    mkdir -p "${tmp}/dtbs"
-    cp -t "${tmp}/dtbs/" -- $DTBS
-    DTBS="$(find "${tmp}/dtbs/" -type f)"
-    MKIMAGE_DTB_ARGS="$(printf -- "-b${SEP}%s${SEP}" $DTBS)"
-fi
-IFS="$ORIG_IFS"
-
-# Somehow mkimage needs write permissions, add them since we've already
-# copied the files to a temporary directory.
-if [ ! -w "$VMLINUZ" ]; then
-    chmod +w "$VMLINUZ"
-fi
-
-if [ -n "$INITRAMFS" ] && [ ! -w "$INITRAMFS" ]; then
-    chmod +w "$INITRAMFS"
-fi
-
-IFS="$CUSTOM_IFS"
-for DTB in $DTBS; do
-    if [ ! -w "$DTB" ]; then
-        chmod +w "$DTB"
+    if [ -n "$INITRAMFS" ]; then
+        cp "$INITRAMFS" "${tmp}/initrd.img"
+        INITRAMFS="${tmp}/initrd.img"
+        MKIMAGE_INITRAMFS_ARGS="-i${SEP}${INITRAMFS}"
     fi
-done
-IFS="$ORIG_IFS"
 
-# If kernel.args is empty, vbutil_kernel returns an error.
-# Use "--" instead of putting a newline or a space into the cmdline.
-: "${CMDLINE:=--}"
-echo -n $CMDLINE >"${tmp}/kernel.args"
+    IFS="$CUSTOM_IFS"
+    if [ -n "$DTBS" ]; then
+        mkdir -p "${tmp}/dtbs"
+        cp -t "${tmp}/dtbs/" -- $DTBS
+        DTBS="$(find "${tmp}/dtbs/" -type f)"
+        MKIMAGE_DTB_ARGS="$(printf -- "-b${SEP}%s${SEP}" $DTBS)"
+    fi
+    IFS="$ORIG_IFS"
+}
 
-if [ -z "$BOOTSTUB" ]; then
-    case "$VBOOT_ARCH" in
-        arm*|aarch64)
-            info "Using dummy file for bootloader."
-            dd if=/dev/zero of="${tmp}/bootstub.bin" \
-                count=1 bs=512 status=none
-            BOOTSTUB="${tmp}/bootstub.bin"
-            ;;
-        x86|amd64|*)
-            error "Architecture '$VBOOT_ARCH' needs a bootstub binary."
-            ;;
-    esac
-fi
+# Somehow mkimage needs write permissions, we can add them after we copy
+# the files to a temporary directory.
+make_inputs_writable() {
+    if [ ! -w "$VMLINUZ" ]; then
+        chmod +w "$VMLINUZ"
+    fi
+
+    if [ -n "$INITRAMFS" ] && [ ! -w "$INITRAMFS" ]; then
+        chmod +w "$INITRAMFS"
+    fi
+
+    IFS="$CUSTOM_IFS"
+    for DTB in $DTBS; do
+        if [ ! -w "$DTB" ]; then
+            chmod +w "$DTB"
+        fi
+    done
+    IFS="$ORIG_IFS"
+}
+
+make_cmdline_file() {
+    echo -n $CMDLINE >"${tmp}/kernel.args"
+}
+
+make_bootstub_file() {
+    if [ -z "$BOOTSTUB" ]; then
+        case "$VBOOT_ARCH" in
+            arm*|aarch64)
+                info "Using dummy file for bootloader."
+                dd if=/dev/zero of="${tmp}/bootstub.bin" \
+                    count=1 bs=512 status=none
+                BOOTSTUB="${tmp}/bootstub.bin"
+                ;;
+            x86|amd64|*)
+                error "Architecture '$VBOOT_ARCH' needs a bootstub binary."
+                ;;
+        esac
+    fi
+}
 
 pack_fit() {
+    info "Running mkimage:"
     IFS="$CUSTOM_IFS"
     mkimage \
         -f auto \
@@ -262,19 +315,8 @@ pack_fit() {
     IFS="$ORIG_IFS"
 }
 
-info "Running mkimage:"
-if [ "$VERBOSE" = yes ]; then
-    pack_fit
-else
-    pack_fit >/dev/null
-fi
-
-: "${VBOOT_DEVKEYS:=/usr/share/vboot/devkeys}"
-: "${VBOOT_KEYBLOCK:=${VBOOT_DEVKEYS}/kernel.keyblock}"
-: "${VBOOT_SIGNPUBKEY:=${VBOOT_DEVKEYS}/kernel_subkey.vbpubk}"
-: "${VBOOT_SIGNPRIVATE:=${VBOOT_DEVKEYS}/kernel_data_key.vbprivk}"
-
 pack_depthcharge() {
+    info "Running vbutil_kernel (pack):"
     futility vbutil_kernel \
         --version 1 \
         --arch "$VBOOT_ARCH" \
@@ -287,36 +329,54 @@ pack_depthcharge() {
         || error "Could not pack inputs into a depthcharge image."
 }
 
-info "Running vbutil_kernel (pack):"
-if [ "$VERBOSE" = yes ]; then
-    pack_depthcharge
-else
-    pack_depthcharge >/dev/null
-fi
-
-: "${DEPTHCHARGE_MAX_SIZE:=0}"
-if [ "${DEPTHCHARGE_MAX_SIZE}" -gt 0 ]; then
-    info "Checking if image fits into size limit."
-    size="$(stat -c '%s' "${tmp}/depthcharge.img")"
-    if [ "$size" -gt "${DEPTHCHARGE_MAX_SIZE}"  ]; then
-        error "Output image size too big to boot."
-    fi
-fi
-
 verify_depthcharge() {
+    info "Running vbutil_kernel (verify):"
     futility vbutil_kernel \
         --signpubkey "$VBOOT_SIGNPUBKEY" \
         --verify "${tmp}/depthcharge.img" \
         || error "Generated image cannot be verified by vbutil_kernel."
 }
 
-info "Running vbutil_kernel (verify):"
-if [ "$VERBOSE" = yes ]; then
-    verify_depthcharge
-else
-    verify_depthcharge >/dev/null
-fi
+check_depthcharge_size() {
+    if [ "${DEPTHCHARGE_MAX_SIZE}" -gt 0 ]; then
+        info "Checking if image fits into size limit."
+        size="$(stat -c '%s' "${tmp}/depthcharge.img")"
+        if [ "$size" -gt "${DEPTHCHARGE_MAX_SIZE}" ]; then
+            error "Output image size too big to boot."
+        fi
+    fi
+}
 
-info "Copying image to output '$OUTPUT'."
-cp -f "${tmp}/depthcharge.img" "$OUTPUT" \
-    || error "Couldn't copy to output."
+copy_depthcharge_to_output() {
+    info "Copying image to output '$OUTPUT'."
+    cp -f "${tmp}/depthcharge.img" "$OUTPUT" \
+        || error "Couldn't copy to output."
+}
+
+main() {
+    parse_args "$@"
+
+    if [ "$VERBOSE" != yes ]; then
+        exec >/dev/null
+    fi
+
+    validate_inputs
+    set_mkimage_arch
+    set_vboot_arch
+
+    setup_tmp_dir
+    copy_inputs_to_tmp
+    compress_kernel
+    make_inputs_writable
+    make_cmdline_file
+    make_bootstub_file
+
+    pack_fit
+    pack_depthcharge
+
+    verify_depthcharge
+    check_depthcharge_size
+    copy_depthcharge_to_output
+}
+
+main "$@"
