@@ -101,30 +101,20 @@ parse_args() {
     fi
 }
 
-read_config_files() {
-    for config in "$CONFIG_FILE" "${CONFIG_DIR}"/*; do \
-        grep -sv '^#' "$config" && echo || :
-    done
-}
-
-read_machine_files() {
-    for config in "$DB_FILE" "$USERDB_FILE" "${USERDB_DIR}"/*; do \
-        grep -sv '^#' "$config" && echo || :
-    done
-}
-
 # Load user configuration and machine database.
 set_config_var() {
     if [ -z "$CONFIG" ]; then
-        CONFIG="$(read_config_files)" \
-            || error "Could not read configuration files."
+        CONFIG="$( \
+            read_files "$CONFIG_FILE" "${CONFIG_DIR}"/* \
+        )" || error "Could not read configuration files."
     fi
 }
 
 set_machine_db() {
     if [ -z "$MACHINE_DB" ]; then
-        MACHINE_DB="$(read_machine_files)" \
-            || error "Could not read machine database."
+        MACHINE_DB="$( \
+            read_files "$DB_FILE" "$USERDB_FILE" "${USERDB_DIR}"/* \
+        )" || error "Could not read machine database."
     fi
 }
 

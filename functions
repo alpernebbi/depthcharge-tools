@@ -218,6 +218,15 @@ parse_db() {
     fi
 }
 
+# Read files but ignore commented lines. Insert newlines between files
+# since parse_db uses an empty line as a block delimiter and two files
+# could accidentally merge into one block otherwise.
+read_files() {
+    for f in "$@"; do
+        grep -sv '^#' "$f" && echo || :
+    done
+}
+
 # Check if file is less than a maximum size.
 size_check() {
     image="$1"
