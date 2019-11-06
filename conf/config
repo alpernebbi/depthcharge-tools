@@ -1,0 +1,8 @@
+# Configure kernel command line parameters.
+#Kernel-Cmdline: quiet splash
+
+# Set a preferred compression level for the kernel.
+#Kernel-Compression: none lz4 lzma
+
+# Override automatic machine detection.
+#Force-Machine: <machine>

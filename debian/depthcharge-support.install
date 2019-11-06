@@ -1,5 +1,6 @@
-conf/README /etc/depthcharge-support
-conf/defaults /usr/share/depthcharge-support
+conf/userdb /etc/depthcharge-support
+conf/config /etc/depthcharge-support
+conf/db /usr/share/depthcharge-support
 functions /usr/share/depthcharge-support
 mkdepthcharge /usr/bin
 update-depthcharge /usr/sbin

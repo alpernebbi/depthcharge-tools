@@ -168,16 +168,14 @@ find_depthcharge_part() {
     fi
 }
 
-# Find values for a key from lines of key:value pairs.
-# Results from multiple such lines are joined with spaces.
-parse_field() {
+# Finds values for a key, among input lines of "<key>: <values>".
+parse_config() {
     field="$1"
     set --
 
-    # Try fields until the end of section.
-    while IFS=":$IFS" read -r key values && [ "$key" != "" ]; do
+    while IFS=":$IFS" read -r key values; do
         if [ "$key" = "$field" ]; then
-            set -- "$@" "$values"
+            set -- "$values"
         fi
     done
 
@@ -188,59 +186,33 @@ parse_field() {
     fi
 }
 
-# Find values for a key among multiple sections, where each section has
-# lines of key:value pairs. Sections args interpreted in descending
-# priority order, this prints the values from the highest available
-# section with the field.
-parse_config() {
+# Like parse_config, but only considers blocks of lines whose first line
+# is a certain "Machine: <machine>".
+parse_db() {
     field="$1"
-    if [ -z "$field" ]; then
+    machine="$2"
+    set --
+
+    if [ -z "$field" ] || [ -z "$machine" ]; then
         return 1
     fi
-    shift
 
-    # Remove empty arguments.
-    for s in "$@"; do
-        if [ -n "$s" ]; then
-            set -- "$@" "$s"
+    while IFS=":$IFS" read -r key value; do
+        # Skip to "Machine: $machine"
+        if [ "$key" != "Machine" ] || [ "$value" != "$machine" ]; then
+            continue
         fi
-        shift
+
+        # Try fields until the end of machine (empty line).
+        while IFS=":$IFS" read -r key values && [ "$key" != "" ]; do
+            if [ "$key" = "$field" ]; then
+                set -- "$values"
+            fi
+        done
     done
 
-    if [ "$#" -eq 0 ]; then
-        return
-    fi
-
-    # Keep a delimited list of sections. No empty arguments means double
-    # colon shouldn't exist in it, so we can use that as a sentinel.
-    sections="$(printf "%s:" "$@")"
-    best_section="::"
-    best_values=""
-
-    while IFS=: read -r section; do
-        # Skip empty or indented lines as they are not sections.
-        case "$section" in
-            "") continue ;;
-            "[$IFS]"*) continue ;;
-        esac
-
-        case "$sections" in
-            # Lower-priority than a previous section.
-            *"$best_section":*"$section":*) continue ;;
-            # Exists in requested sections, so either equal or better.
-            *"$section":*) : ;;
-            # Not in requested sections.
-            *) continue ;;
-        esac
-
-        if values="$(parse_field "$field")"; then
-            best_section="$section"
-            best_values="$values"
-        fi
-    done
-
-    if [ "$best_section" != "::" ]; then
-        echo "$best_values"
+    if [ "$#" -gt 0 ]; then
+        echo "$@"
     else
         return 1
     fi

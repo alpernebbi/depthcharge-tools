@@ -1,0 +1,7 @@
+# To set fields for a machine, start a block with a Machine field and
+# set other fields under it.
+#
+# e.g. To set "DTB-Name" for a machine called "Google Gru", use:
+#
+#Machine: Google Gru
+#DTB-Name: rk3399-gru-*.dtb

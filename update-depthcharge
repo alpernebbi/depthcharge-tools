@@ -18,8 +18,11 @@ EOF
 # Prefer to use files from the repository.
 if [ -n "$CHECKOUT" ]; then
     : "${FUNCTIONS:=${CHECKOUT}/functions}"
-    : "${DEFAULTS:=${CHECKOUT}/conf/defaults}"
-    : "${CONFIGS:=${CHECKOUT}/conf}"
+    : "${DB_FILE:=${CHECKOUT}/conf/db}"
+    : "${CONFIG_FILE:=${CHECKOUT}/conf/config}"
+    : "${CONFIG_DIR:=${CHECKOUT}/conf/config.d}"
+    : "${USERDB_FILE:=${CHECKOUT}/conf/userdb}"
+    : "${USERDB_DIR:=${CHECKOUT}/conf/userdb.d}"
     : "${CACHE:=${CHECKOUT}/cache}"
 fi
 
@@ -28,12 +31,20 @@ fi
 
 # Distro-specific paths for installed files.
 : "${FUNCTIONS:=/usr/share/depthcharge-support/functions}"
-: "${DEFAULTS:=/usr/share/depthcharge-support/defaults}"
-: "${CONFIGS:=/etc/depthcharge-support}"
+: "${DB_FILE:=/usr/share/depthcharge-support/db}"
+: "${USERDB_FILE:=/etc/depthcharge-support/userdb}"
+: "${USERDB_DIR:=/etc/depthcharge-support/userdb.d}"
+: "${CONFIG_FILE:=/etc/depthcharge-support/config}"
+: "${CONFIG_DIR:=/etc/depthcharge-support/config.d}"
 : "${CACHE:=/var/cache/depthcharge-support}"
 
 # Import common functions.
 . "$FUNCTIONS"
+
+# Default values to be used in absence of machine-specific ones.
+: "${DEFAULT_CMDLINE:=quiet splash}"
+: "${DEFAULT_COMPRESS:=none lz4 lzma}"
+: "${DEFAULT_MAX_SIZE:=33554432}"
 
 # A '%s' in these values will be replaced with a kernel version if any.
 : "${VMLINUZ_FMT:=/boot/vmlinuz-%s}"
@@ -91,17 +102,29 @@ parse_args() {
 }
 
 read_config_files() {
-    for config in "$DEFAULTS" "${CONFIGS}"/*; do \
-        grep -sv '^#' "$config" || :
-        echo ""
+    for config in "$CONFIG_FILE" "${CONFIG_DIR}"/*; do \
+        grep -sv '^#' "$config" && echo || :
+    done
+}
+
+read_machine_files() {
+    for config in "$DB_FILE" "$USERDB_FILE" "${USERDB_DIR}"/*; do \
+        grep -sv '^#' "$config" && echo || :
     done
 }
 
 # Load user configuration and machine database.
-set_config_db() {
-    if [ -z "$CONFIG_DB" ]; then
-        CONFIG_DB="$(read_config_files)" \
+set_config_var() {
+    if [ -z "$CONFIG" ]; then
+        CONFIG="$(read_config_files)" \
             || error "Could not read configuration files."
+    fi
+}
+
+set_machine_db() {
+    if [ -z "$MACHINE_DB" ]; then
+        MACHINE_DB="$(read_machine_files)" \
+            || error "Could not read machine database."
     fi
 }
 
@@ -109,15 +132,15 @@ get_config() {
     field="$1"
     machine="${2:-$MACHINE}"
 
-    echo "$CONFIG_DB" \
-        | parse_config "$field" "config" "$machine" "defaults"
+    echo "$CONFIG" | parse_config "$field" \
+        || echo "$MACHINE_DB" | parse_db "$field" "$machine"
 }
 
 # Detect machine, but allow overriding via user config.
 set_machine() {
     if [ -n "$MACHINE" ]; then
         info "Overriding machine '$MACHINE' from environment variable."
-    elif MACHINE="$(get_config machine)"; then
+    elif MACHINE="$(get_config Force-Machine)"; then
         info "Overriding machine '$MACHINE' from user configuration."
     elif MACHINE="$(cat "$PROC_DT_MODEL" 2>/dev/null)"; then
         info "Detected machine '$MACHINE' from device-tree model."
@@ -128,12 +151,18 @@ set_machine() {
 
 load_configs() {
     # Load machine-specific settings.
-    DTB_NAME="$(get_config dtb-name)" || :
-    MAX_SIZE="$(get_config max-size)" || :
+    CONFIG_DTB_NAME="$(get_config DTB-Name)" || :
+    CONFIG_MAX_SIZE="$(get_config Depthcharge-Max-Size)" || :
 
     # Load user configuration.
-    CMDLINE_USER="$(get_config cmdline)" || :
-    COMPRESS_TYPES="$(get_config compress)" || :
+    CONFIG_CMDLINE="$(get_config Kernel-Cmdline)" || :
+    CONFIG_COMPRESS="$(get_config Kernel-Compression)" || :
+
+    # Load defaults if unset
+    : "${CONFIG_DTB_NAME:=}"
+    : "${CONFIG_MAX_SIZE:=$DEFAULT_MAX_SIZE}"
+    : "${CONFIG_CMDLINE:=$DEFAULT_CMDLINE}"
+    : "${CONFIG_COMPRESS:=$DEFAULT_COMPRESS}"
 }
 
 generate_image() {
@@ -153,12 +182,12 @@ generate_image() {
     fi
 
     DTBS_DIR="$(printf "$DTBS_DIR_FMT" "$kversion")"
-    DTBS="$(find "$DTBS_DIR" -name "$DTB_NAME")"
+    DTBS="$(find "$DTBS_DIR" -name "$CONFIG_DTB_NAME")"
     if [ -z "$DTBS" ]; then
-        error "No dtb file '$DTB_NAME' found for version '$kversion'."
+        error "No dtb file '$CONFIG_DTB_NAME' found for version '$kversion'."
     fi
 
-    CMDLINE="${CMDLINE_USER}"
+    CMDLINE="$CONFIG_CMDLINE"
     # Custom kernels might still be able to boot without an initramfs,
     # but we need to inject a root= parameter for that.
     if [ -z "$INITRAMFS" ]; then
@@ -180,6 +209,7 @@ generate_image() {
         esac
     fi
 
+    COMPRESS_TYPES="$CONFIG_COMPRESS"
     if [ -z "$COMPRESS_TYPES" ]; then
         warn "Compression is set to nothing in config, assuming 'none'."
         COMPRESS_TYPES=none
@@ -207,7 +237,7 @@ generate_image() {
         info "Trying with compression set to '$COMPRESS'."
         mkdepthcharge -o "$output" \
             || error "Failed to create depthcharge image."
-        if size_check "$output" "$MAX_SIZE"; then
+        if size_check "$output" "$CONFIG_MAX_SIZE"; then
             break
         else
             warn "Image is too big with compression '$COMPRESS'."
@@ -216,7 +246,7 @@ generate_image() {
 
     # This is redundant now, but here just to raise an error.
     info "Checking generated image size against firmware limits."
-    size_check "$output" "$MAX_SIZE" \
+    size_check "$output" "$CONFIG_MAX_SIZE" \
         || error "Depthcharge image '$output' is too big to boot."
 }
 
@@ -230,7 +260,7 @@ write_image() {
     fi
 
     info "Checking image size against firmware limits."
-    size_check "$image" "$MAX_SIZE" \
+    size_check "$image" "$CONFIG_MAX_SIZE" \
         || error "Depthcharge image '$image' is too big to boot."
 
     # Disks containing /boot and / should be available during boot,
@@ -292,7 +322,8 @@ main() {
         exec >/dev/null
     fi
 
-    set_config_db
+    set_config_var
+    set_machine_db
     set_machine
     load_configs
 

@@ -1,0 +1,5 @@
+# Somewhat like RFC2822 but not really as flexible.
+# Keep machines sorted please.
+
+Machine: Google Kevin
+DTB-Name: rk3399-gru-kevin.dtb
