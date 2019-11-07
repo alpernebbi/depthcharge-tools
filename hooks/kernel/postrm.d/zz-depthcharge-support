@@ -1,0 +1,22 @@
+#!/bin/sh
+
+set -e
+
+# Disable if our package is not installed.
+if ! which update-depthcharge >/dev/null 2>&1; then
+    exit 0
+fi
+
+kversion="$1"
+vmlinuz="${2:-/boot/vmlinuz-$kversion}"
+
+set -- $DEB_MAINT_PARAMS
+action="$1"
+version="$2"
+
+# Run only once at the end.
+case "$action" in
+  "configure"|"'configure'"|'')
+    exec update-depthcharge -k "$kversion"
+  ;;
+esac

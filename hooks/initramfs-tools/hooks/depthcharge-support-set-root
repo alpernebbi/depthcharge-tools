@@ -1,0 +1,30 @@
+#!/bin/sh
+
+PREREQ=""
+
+prereqs()
+{
+	echo "$PREREQ"
+}
+
+case $1 in
+# get pre-requisites
+prereqs)
+	prereqs
+	exit 0
+	;;
+esac
+
+. /usr/share/initramfs-tools/hook-functions
+
+# Disable if our package is not installed.
+if ! command -v update-depthcharge >/dev/null 2>&1; then
+	exit 0
+fi
+
+# Provide a default root.
+install -d $DESTDIR/conf/conf.d
+rootdev="$(findmnt --fstab --mountpoint / -n -o SOURCE)"
+echo "ROOT=\"$rootdev\"" > $DESTDIR/conf/conf.d/default_root
+
+exit 0
