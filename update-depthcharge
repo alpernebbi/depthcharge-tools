@@ -261,7 +261,7 @@ write_image() {
     if [ -z "$root" ] && [ -z "$boot" ]; then
         error "Couldn't find devices for neither / nor /boot from fstab."
     else
-        disks="$(find_disks $boot $root)" \
+        disks="$(find_disks "$boot" "$root")" \
             || error "Couldn't find physical disks for neither" \
                 "/ device '$root' nor /boot device '$boot'."
     fi

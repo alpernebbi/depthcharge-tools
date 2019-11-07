@@ -54,7 +54,9 @@ is_cros_machine() {
 find_disks() {
     # Use real devices for all. Turns /dev/disk/** into /dev/*.
     for d in "$@"; do
-        set -- "$@" "$(readlink -f "$1")"
+        if [ -n "$d" ]; then
+            set -- "$@" "$(readlink -f "$d")"
+        fi
         shift
     done
 
