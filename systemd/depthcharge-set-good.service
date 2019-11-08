@@ -1,0 +1,18 @@
+# This is a modified copy of systemd-bless-boot.service from systemd.
+
+[Unit]
+Description=Mark the current depthcharge partition as successful
+DefaultDependencies=no
+Requires=boot-complete.target
+After=local-fs.target boot-complete.target
+Conflicts=shutdown.target
+Before=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/depthcharge-set-good
+
+# systemd-bless-boot-generator symlinks its file to basic.target.wants.
+[Install]
+WantedBy=basic.target
