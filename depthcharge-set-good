@@ -1,0 +1,120 @@
+#!/bin/sh
+set -e
+
+print_help() {
+cat <<EOF
+Usage: depthcharge-set-good [options]
+
+Options:
+ -h, --help              Show this help message.
+ -u, --partuuid UUID     Use this PARTUUID to find a partition, instead
+                         of searching kern_guid=UUID in kernel cmdline.
+EOF
+}
+
+# Prefer to use files from the repository.
+if [ -n "$CHECKOUT" ]; then
+    : "${FUNCTIONS:=${CHECKOUT}/functions}"
+fi
+
+# Things we might want to override when testing.
+: "${PROC_CMDLINE:=/proc/cmdline}"
+
+# Distro-specific paths for installed files.
+: "${FUNCTIONS:=/usr/share/depthcharge-support/functions}"
+
+# Import common functions.
+. "$FUNCTIONS"
+
+# Functions to make printing output easier.
+msg() {
+    if [ "$#" -gt 0 ]; then
+        echo "$0:" "$@"
+    fi
+}
+
+info() {
+    if [ "$VERBOSE" = yes ]; then
+        msg "$@"
+    fi
+}
+
+warn() {
+    msg "warning:" "$@" >&2
+}
+
+error() {
+    msg "error:" "$@" >&2
+    return 1
+}
+
+usage_error() {
+    msg "error:" "$@" "\n" >&2
+    print_help >&2
+    return 1
+}
+
+get_kern_guid() {
+    guid="$(sed -n -e 's/.*kern_guid=\([^ ]*\).*/\1/p' "$PROC_CMDLINE")"
+    if [ -n "$guid" ] && [ "$guid" != "%U" ]; then
+        echo "$guid"
+    else
+        return 1
+    fi
+}
+
+parse_args() {
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            -h|--help)
+                print_help
+                exit 0
+                ;;
+            -v|--verbose)
+                VERBOSE=yes
+                shift
+                ;;
+            -u|--partuuid)
+                PARTUUID="$2"
+                shift 2
+                ;;
+            -*)
+                usage_error "Option '$1' not understood."
+                ;;
+            *)
+                usage_error "Argument '$1' not understood."
+                ;;
+        esac
+    done
+
+    if [ -z "$PARTUUID" ]; then
+        PARTUUID="$(get_kern_guid)" \
+            || error "No PARTUUID specified and none can be found" \
+            "from the kernel command-line parameters."
+    fi
+}
+
+main() {
+    parse_args "$@"
+
+    if [ "$VERBOSE" != yes ]; then
+        exec >/dev/null
+    fi
+
+    partdev="$(cgpt find -u "$PARTUUID" 2>/dev/null)" \
+        || error "No partition with PARTUUID='$PARTUUID' found."
+    pair="$(disk_part_from_dev "$partdev")"
+    disk="${pair%,*}"
+    part="${pair#*,}"
+
+    typeguid="$(cgpt show -i "$part" -t "$disk")"
+    if [ "$typeguid" != "FE3A2A5D-4F32-41A7-B725-ACCC3285A309" ]; then
+        error "Partition '$partdev' is not a ChromeOS kernel partition."
+    fi
+
+    cgpt add -i "$part" -T 1 -S 1 "$disk"
+    cgpt prioritize -i "$part" "$disk"
+    cgpt show -i "$part" "$disk"
+}
+
+main "$@"
