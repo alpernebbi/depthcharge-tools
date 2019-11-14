@@ -5,8 +5,8 @@ functions /usr/share/depthcharge-support
 mkdepthcharge /usr/bin
 update-depthcharge /usr/sbin
 depthcharge-set-good /usr/sbin
-hooks/initramfs/post-update.d/depthcharge-support /etc/initramfs/post-update.d
-hooks/kernel/postinst.d/zz-depthcharge-support /etc/kernel/postinst.d
-hooks/kernel/postrm.d/zz-depthcharge-support /etc/kernel/postrm.d
-hooks/initramfs-tools/hooks/depthcharge-support-set-root /usr/share/initramfs-tools/hooks
 systemd/depthcharge-set-good.service /lib/systemd/system
+debian/hooks/initramfs/post-update.d/depthcharge-support /etc/initramfs/post-update.d
+debian/hooks/kernel/postinst.d/zz-depthcharge-support /etc/kernel/postinst.d
+debian/hooks/kernel/postrm.d/zz-depthcharge-support /etc/kernel/postrm.d
+debian/hooks/initramfs-tools/hooks/depthcharge-support-set-root /usr/share/initramfs-tools/hooks
