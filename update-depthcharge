@@ -23,7 +23,8 @@ if [ -n "$CHECKOUT" ]; then
     : "${CONFIG_DIR:=${CHECKOUT}/conf/config.d}"
     : "${USERDB_FILE:=${CHECKOUT}/conf/userdb}"
     : "${USERDB_DIR:=${CHECKOUT}/conf/userdb.d}"
-    : "${CACHE:=${CHECKOUT}/cache}"
+    : "${CACHE:=$(mktemp -td update-depthcharge.XXXXXXXX)}"
+    trap 'rm -rf "${CACHE}"' EXIT
 fi
 
 # Things we might want to override during testing.
