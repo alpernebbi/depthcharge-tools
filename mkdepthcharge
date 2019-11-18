@@ -3,16 +3,28 @@ set -e
 
 usage() {
 cat <<EOF
-Usage: mkdepthcharge [options] -o FILE [--] vmlinuz [initrd] [dtb ...]
+Usage:
+ mkdepthcharge [options] -o FILE [--] vmlinuz [initramfs] [dtb ...]
+
+Build boot images for the ChromeOS firmware.
 
 Options:
- -h, --help              Show this help message.
- -v, --verbose           Print more detailed output.
- -o, --output FILE       Write resulting image to FILE.
- -c, --cmdline CMD       Command-line parameters for the kernel. Can
-                         be used multiple times to append new values.
- -C, --compress TYPE     Compress kernel with one of: none, lz4, lzma.
- -n, --description DESC  Description to use as a mkimage argument.
+ -h, --help                 Show this help message.
+ -v, --verbose              Print more detailed output.
+ -o, --output FILE          Write resulting image to FILE.
+
+FIT image options:
+ -C, --compress TYPE        Compress vmlinuz with lz4 or lzma.
+ -n, --description DESC     Description of vmlinuz to put in the FIT.
+
+Depthcharge image options:
+ -c, --cmdline CMD          Command-line parameters for the kernel.
+                            be used multiple times to append new values.
+     --bootloader FILE      Bootloader stub binary to use.
+     --keyblock FILE        The key block file (.keyblock).
+     --signprivate FILE     Private key (.vbprivk) to sign the image.
+     --signpubkey FILE      Public key (.vbpubk) to verify the image.
+     --max-size SIZE        Fail if image is bigger than SIZE bytes.
 EOF
 }
 
@@ -125,41 +137,27 @@ file_arg() {
 parse_args() {
     while [ "$#" -gt 0 ]; do
         case "$1" in
-            -h|--help)
-                print_help
-                exit 0
-                ;;
-            -v|--verbose)
-                VERBOSE=yes
-                shift
-                ;;
-            -o|--output)
-                OUTPUT="$2"
-                shift 2
-                ;;
-            -C|--compress)
-                COMPRESS="$2"
-                shift 2
-                ;;
-            -n|--description)
-                DESCRIPTION="$2"
-                shift 2
-                ;;
-            -c|--cmdline)
-                add_cmdline "$2"
-                shift 2
-                ;;
-            --)
-                shift
-                break
-                ;;
-            -*)
-                usage_error "Option '$1' not understood."
-                ;;
-            *)
-                file_arg "$1"
-                shift
-                ;;
+            # Options:
+            -h|--help)          usage;                      exit 0 ;;
+            -v|--verbose)       VERBOSE=yes;                shift 1 ;;
+            -o|--output)        OUTPUT="$2";                shift 2 ;;
+
+            # FIT image options:
+            -C|--compress)      COMPRESS="$2";              shift 2 ;;
+            -n|--description)   DESCRIPTION="$2";           shift 2 ;;
+
+            # Depthcharge options:
+            -c|--cmdline)       add_cmdline "$2";           shift 2 ;;
+            --bootloader)       VBOOT_BOOTSTUB="$2";        shift 2 ;;
+            --keyblock)         VBOOT_KEYBLOCK="$2";        shift 2 ;;
+            --signpubkey)       VBOOT_SIGNPUBKEY="$2";      shift 2 ;;
+            --signprivate)      VBOOT_SIGNPRIVATE="$2";     shift 2 ;;
+            --max-size)         MAX_SIZE="$2";              shift 2 ;;
+
+            # End of options
+            --) shift; break ;;
+            -*) usage_error "Option '$1' not understood." ;;
+            *)  file_arg "$1"; shift ;;
         esac
     done
 
