@@ -86,75 +86,79 @@ parse_args() {
         esac
     done
 
-    while [ "$#" -gt 0 ]; do
-        case "$1" in
+    for arg in "$@"; do
+        case "$arg" in
             -*)
                 usage_error "Options must precede input filenames."
                 ;;
+        esac
+    done
+
+    while [ "$#" -gt 0 ]; do
+        if [ ! -r "$1" ]; then
+            error "File input '$1' is not found or not readable."
+        fi
+
+        if has_newline "$1"; then
+            error "Can't have newlines in input filename '$1'."
+        fi
+
+        # mkimage can't open files when they are read-only for some reason.
+        # Copy them into a temp dir in fear of modifying the originals.
+        # We can add write permissions after we copy the files to temp.
+        temp=$(temp_copy "$1")
+        chmod +w "$temp"
+
+        case "$(basename "$1")" in
+            # Try some heuristics first.
             *dtb*)
-                DTB="$(temp_copy "$1")"
+                DTB="$temp"
                 chmod +w "$DTB"
                 DTBS="${DTBS:-}${DTBS:+$NEWLINE}${1}"
                 shift
+                info "Using dtb: '$1'"
                 ;;
             *initrd*|*initramfs*|*cpio*)
-                INITRAMFS="$(temp_copy "$1")"
+                INITRAMFS="$temp)"
                 chmod +w "$INITRAMFS"
                 shift
+                info "Using initramfs: '$1'"
                 ;;
             *vmlinuz*|*vmlinux*|*linux*|*Image*)
-                VMLINUZ="$(temp_copy "$1")"
+                VMLINUZ="$(temp)"
                 chmod +w "$VMLINUZ"
                 shift
+                info "Using vmlinuz: '$1'"
                 ;;
             *)
                 if [ -z "$VMLINUZ" ]; then
-                    VMLINUZ="$(temp_copy "$1")"
+                    VMLINUZ="$temp"
                     chmod +w "$VMLINUZ"
                     shift
+                    info "Using vmlinuz: '$1'"
                 elif [ -z "$INITRAMFS" ]; then
-                    INITRAMFS="$(temp_copy "$1")"
+                    INITRAMFS="$temp"
                     chmod +w "$INITRAMFS"
                     shift
+                    info "Using initramfs: '$1'"
                 else
-                    DTB="$(temp_copy "$1")"
+                    DTB="$temp"
                     chmod +w "$DTB"
                     DTBS="${DTBS:-}${DTBS:+$NEWLINE}${DTB}"
                     shift
+                    info "Using dtb: '$1'"
                 fi
                 ;;
         esac
     done
 
+    if [ -z "$VMLINUZ" ]; then
+        usage_error "Input file vmlinuz is required."
+    fi
+
     if [ -z "$OUTPUT" ]; then
         usage_error "Output argument is mandatory."
     fi
-}
-
-validate_inputs() {
-    if [ -z "$VMLINUZ" ]; then
-        usage_error "Input file vmlinuz is required."
-    elif [ ! -r "$VMLINUZ" ]; then
-        error "File '$VMLINUZ' (vmlinuz) not found or is not readable."
-    else
-        info "Using vmlinuz: '$VMLINUZ'"
-    fi
-
-    if [ -n "$INITRAMFS" ]; then
-        if [ ! -r "$INITRAMFS" ]; then
-            error "File '$INITRAMFS' (initramfs) not found or is not readable."
-        else
-            info "Using initramfs: '$INITRAMFS'"
-        fi
-    fi
-
-    for DTB in $DTBS; do
-        if [ ! -r "$DTB" ]; then
-            error "File '$DTB' (dtb) not found or is not readable."
-        else
-            info "Using dtb: '$DTB'"
-        fi
-    done
 }
 
 set_mkimage_arch() {
@@ -324,7 +328,6 @@ main() {
         exec >/dev/null
     fi
 
-    validate_inputs
     set_mkimage_arch
     set_vboot_arch
 
