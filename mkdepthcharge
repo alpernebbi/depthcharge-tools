@@ -16,16 +16,6 @@ Options:
 EOF
 }
 
-# We need to use a non-space separator to support paths with spaces.
-# Instead of hard-coding it everywhere, let's put it in a variable.
-# To support e.g. DTBS=$(find ...) we also need a newline in the IFS.
-# Also keep a copy of the original so we can restore it.
-SEP=","
-NEWLINE="
-"
-ORIG_IFS="$IFS"
-CUSTOM_IFS="${NEWLINE}${SEP}"
-
 # We should be able to make an image for other architectures, but the
 # default should be this machine's. Use this variable for that.
 : "${ARCH:=$(arch)}"
@@ -51,6 +41,10 @@ CUSTOM_IFS="${NEWLINE}${SEP}"
 # Import common functions
 . "lib/msg.sh"
 . "lib/tmp.sh"
+. "lib/ifs.sh"
+
+# Use custom IFS so we can support paths with spaces, $(find ...), etc.
+IFS="$CUSTOM_IFS"
 
 parse_args() {
     while [ "$#" -gt 0 ]; do
@@ -76,8 +70,7 @@ parse_args() {
                 shift 2
                 ;;
             -c|--cmdline)
-                CMDLINE="${CMDLINE} $2"
-                CMDLINE="${CMDLINE# }"
+                CMDLINE="${CMDLINE:-}${CMDLINE:+$NEWLINE}${1}"
                 shift 2
                 ;;
             --)
@@ -99,8 +92,7 @@ parse_args() {
                 usage_error "Options must precede input filenames."
                 ;;
             *dtb*)
-                DTBS="${DTBS}${SEP}$1"
-                DTBS="${DTBS#${SEP}}"
+                DTBS="${DTBS:-}${DTBS:+$NEWLINE}${1}"
                 shift
                 ;;
             *initrd*|*initramfs*|*cpio*)
@@ -119,8 +111,7 @@ parse_args() {
                     INITRAMFS="$1"
                     shift
                 else
-                    DTBS="${DTBS}${SEP}$1"
-                    DTBS="${DTBS#${SEP}}"
+                    DTBS="${DTBS:-}${DTBS:+$NEWLINE}${1}"
                     shift
                 fi
                 ;;
@@ -149,7 +140,6 @@ validate_inputs() {
         fi
     fi
 
-    IFS="$CUSTOM_IFS"
     for DTB in $DTBS; do
         if [ ! -r "$DTB" ]; then
             error "File '$DTB' (dtb) not found or is not readable."
@@ -157,7 +147,6 @@ validate_inputs() {
             info "Using dtb: '$DTB'"
         fi
     done
-    IFS="$ORIG_IFS"
 }
 
 set_mkimage_arch() {
@@ -230,14 +219,12 @@ copy_inputs_to_tmp() {
         INITRAMFS="$(temp_copy "$INITRAMFS")"
     fi
 
-    IFS="$CUSTOM_IFS"
     if [ -n "$DTBS" ]; then
         temp="$(temp_dir dtbs)"
         cp -t "$temp" -- $DTBS
         DTBS="$(find "$temp" -type f)"
         unset temp
     fi
-    IFS="$ORIG_IFS"
 }
 
 # Somehow mkimage needs write permissions, we can add them after we copy
@@ -251,13 +238,11 @@ make_inputs_writable() {
         chmod +w "$INITRAMFS"
     fi
 
-    IFS="$CUSTOM_IFS"
     for DTB in $DTBS; do
         if [ ! -w "$DTB" ]; then
             chmod +w "$DTB"
         fi
     done
-    IFS="$ORIG_IFS"
 }
 
 make_cmdline_file() {
@@ -287,13 +272,12 @@ make_bootstub_file() {
 }
 
 pack_fit() {
-    IFS="$CUSTOM_IFS"
     if [ -z "$FIT_IMAGE" ]; then
         if [ -n "$INITRAMFS" ]; then
-            MKIMAGE_INITRAMFS_ARGS="-i${SEP}${INITRAMFS}"
+            MKIMAGE_INITRAMFS_ARGS="-i${NEWLINE}${INITRAMFS}"
         fi
         if [ -n "$DTBS" ]; then
-            MKIMAGE_DTB_ARGS="$(printf -- "-b${SEP}%s${SEP}" $DTBS)"
+            MKIMAGE_DTB_ARGS="$(printf -- "-b${NEWLINE}%s${NEWLINE}" $DTBS)"
         fi
         info "Running mkimage:"
         temp="$(temp_file depthcharge.itb)"
@@ -310,7 +294,6 @@ pack_fit() {
             || error "Could not pack inputs into a FIT image."
         FIT_IMAGE="$temp"
     fi
-    IFS="$ORIG_IFS"
 }
 
 pack_depthcharge() {
