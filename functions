@@ -1,36 +1,6 @@
 #!/bin/sh
 
-# Functions to make printing output easier.
-msg() {
-    if [ "$#" -gt 0 ]; then
-        echo "$0:" "$@"
-    fi
-}
-
-info() {
-    if [ "$VERBOSE" = yes ]; then
-        msg "$@"
-    fi
-}
-
-warn() {
-    msg "warning:" "$@" >&2
-}
-
-error() {
-    msg "error:" "$@" >&2
-    exit 1
-}
-
-usage_error() {
-    msg "error:" "$@" "\n" >&2
-    print_help >&2
-    exit 1
-}
-
-print_help() {
-    : # This should be overridden.
-}
+. "lib/msg.sh"
 
 # ChromeOS firmware injects one of these values into the cmdline based
 # on which boot mechanism is used. A 'secure' argument allows us to

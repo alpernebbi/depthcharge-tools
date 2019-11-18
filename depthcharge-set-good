@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-print_help() {
+usage() {
 cat <<EOF
 Usage: depthcharge-set-good [options]
 
@@ -25,34 +25,6 @@ fi
 
 # Import common functions.
 . "$FUNCTIONS"
-
-# Functions to make printing output easier.
-msg() {
-    if [ "$#" -gt 0 ]; then
-        echo "$0:" "$@"
-    fi
-}
-
-info() {
-    if [ "$VERBOSE" = yes ]; then
-        msg "$@"
-    fi
-}
-
-warn() {
-    msg "warning:" "$@" >&2
-}
-
-error() {
-    msg "error:" "$@" >&2
-    return 1
-}
-
-usage_error() {
-    msg "error:" "$@" "\n" >&2
-    print_help >&2
-    return 1
-}
 
 get_kern_guid() {
     guid="$(sed -n -e 's/.*kern_guid=\([^ ]*\).*/\1/p' "$PROC_CMDLINE")"

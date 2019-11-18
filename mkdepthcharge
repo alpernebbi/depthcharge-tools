@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-print_help() {
+usage() {
 cat <<EOF
 Usage: mkdepthcharge [options] -o FILE [--] vmlinuz [initrd] [dtb ...]
 
@@ -48,33 +48,8 @@ CUSTOM_IFS="${NEWLINE}${SEP}"
 : "${VBOOT_SIGNPUBKEY:=${VBOOT_DEVKEYS}/kernel_subkey.vbpubk}"
 : "${VBOOT_SIGNPRIVATE:=${VBOOT_DEVKEYS}/kernel_data_key.vbprivk}"
 
-# Functions to make printing output easier.
-msg() {
-    if [ "$#" -gt 0 ]; then
-        echo "$0:" "$@"
-    fi
-}
-
-info() {
-    if [ "$VERBOSE" = yes ]; then
-        msg "$@"
-    fi
-}
-
-warn() {
-    msg "warning:" "$@" >&2
-}
-
-error() {
-    msg "error:" "$@" >&2
-    return 1
-}
-
-usage_error() {
-    msg "error:" "$@" "\n" >&2
-    print_help >&2
-    return 1
-}
+# Import common functions
+. "lib/msg.sh"
 
 parse_args() {
     while [ "$#" -gt 0 ]; do
