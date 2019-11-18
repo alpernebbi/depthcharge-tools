@@ -50,6 +50,7 @@ CUSTOM_IFS="${NEWLINE}${SEP}"
 
 # Import common functions
 . "lib/msg.sh"
+. "lib/tmp.sh"
 
 parse_args() {
     while [ "$#" -gt 0 ]; do
@@ -186,21 +187,16 @@ set_vboot_arch() {
 # Some steps will require a directory to write temporary files. But
 # let's also allow those files to be redirected somewhere else.
 setup_tmp_dir() {
-    tmp="$(mktemp -td mkdepthcharge.XXXXXXXX)"
-    trap 'rm -rf "${tmp}"' EXIT
-
-    : "${TMP_VMLINUZ:=${tmp}/vmlinuz}"
-    : "${TMP_VMLINUZ_LZ4:=${tmp}/vmlinuz.lz4}"
-    : "${TMP_VMLINUZ_LZMA:=${tmp}/vmlinuz.lzma}"
-    : "${TMP_VMLINUZ_GUNZIPPED:=${tmp}/vmlinuz-gunzipped}"
-    : "${TMP_INITRAMFS:=${tmp}/initrd.img}"
-    : "${TMP_DTBS_DIR:=${tmp}/dtbs}"
-    : "${TMP_CMDLINE:=${tmp}/kernel.args}"
-    : "${TMP_BOOTSTUB:=${tmp}/bootstub.bin}"
-    : "${TMP_FIT_IMAGE:=${tmp}/depthcharge.itb}"
-    : "${TMP_DEPTHCHARGE_IMAGE:=${tmp}/depthcharge.img}"
-
-    mkdir -p "$TMP_DTBS_DIR"
+    TMP_VMLINUZ="$(temp_file vmlinuz)"
+    TMP_VMLINUZ_LZ4="$(temp_file vmlinuz.lz4)"
+    TMP_VMLINUZ_LZMA="$(temp_file vmlinuz.lzma)"
+    TMP_VMLINUZ_GUNZIPPED="$(temp_file vmlinuz-gunzipped)"
+    TMP_INITRAMFS="$(temp_file initrd.img)"
+    TMP_DTBS_DIR="$(temp_file dtbs)"
+    TMP_CMDLINE="$(temp_file kernel.args)"
+    TMP_BOOTSTUB="$(temp_file bootstub.bin)"
+    TMP_FIT_IMAGE="$(temp_file depthcharge.itb)"
+    TMP_DEPTHCHARGE_IMAGE="$(temp_file depthcharge.img)"
 }
 
 # Decompress kernel if packaged as gzip compressed.
