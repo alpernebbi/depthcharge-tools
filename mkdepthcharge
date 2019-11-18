@@ -30,6 +30,15 @@ Depthcharge image options:
 EOF
 }
 
+
+# Set argument defaults
+# ---------------------
+
+# Verbosity options.
+: "${VERBOSE:=no}"
+: "${QUIET:=no}"
+: "${SILENT:=no}"
+
 # We should be able to make an image for other architectures, but the
 # default should be this machine's. Use this variable for that.
 : "${ARCH:=$(arch)}"
@@ -166,6 +175,14 @@ file_arg() {
 }
 
 parse_args() {
+    # Check verbose options before printing anything.
+    for arg in "$@"; do
+        case "$arg" in
+            -v|--verbose) VERBOSE=yes ;;
+            --) break ;;
+        esac
+    done
+
     while [ "$#" -gt 0 ]; do
         case "$1" in
             # Options:
