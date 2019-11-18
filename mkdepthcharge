@@ -273,25 +273,31 @@ make_bootstub_file() {
 
 pack_fit() {
     if [ -z "$FIT_IMAGE" ]; then
-        if [ -n "$INITRAMFS" ]; then
-            MKIMAGE_INITRAMFS_ARGS="-i${NEWLINE}${INITRAMFS}"
-        fi
-        if [ -n "$DTBS" ]; then
-            MKIMAGE_DTB_ARGS="$(printf -- "-b${NEWLINE}%s${NEWLINE}" $DTBS)"
-        fi
-        info "Running mkimage:"
         temp="$(temp_file depthcharge.itb)"
-        mkimage \
-            -f auto \
-            -A "$MKIMAGE_ARCH" \
-            -O linux \
-            -C "$COMPRESS" \
-            -n "$DESCRIPTION" \
-            -d "$VMLINUZ" \
-            $MKIMAGE_INITRAMFS_ARGS \
-            $MKIMAGE_DTB_ARGS \
-            "$temp" \
-            || error "Could not pack inputs into a FIT image."
+        info "Running mkimage:"
+        (
+            set --
+
+            if [ -n "${DTBS:-}" ]; then
+                for dtb in $DTBS; do
+                    set -- "$@" "-b" "$dtb"
+                done
+            fi
+
+            if [ -n "${INITRAMFS:-}" ]; then
+                set -- "-i" "$INITRAMFS" "$@"
+            fi
+
+            mkimage \
+                -f auto \
+                -A "$MKIMAGE_ARCH" \
+                -O linux \
+                -C "$COMPRESS" \
+                -n "$DESCRIPTION" \
+                -d "$VMLINUZ" \
+                "$@" \
+                "$temp"
+        ) || error "Could not pack inputs into a FIT image."
         FIT_IMAGE="$temp"
     fi
 }
