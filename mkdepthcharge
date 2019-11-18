@@ -38,38 +38,6 @@ EOF
 IFS="$CUSTOM_IFS"
 
 
-# Set argument defaults
-# ---------------------
-
-# Verbosity options.
-: "${VERBOSE:=no}"
-: "${QUIET:=no}"
-: "${SILENT:=no}"
-
-# We should be able to make an image for other architectures, but the
-# default should be this machine's. Use this variable for that.
-: "${ARCH:=$(arch)}"
-: "${ARCH:=unknown}"
-
-# If --compress option isn't given, COMPRESS wouldn't be set, but it
-# should be set to none in that case.
-: "${COMPRESS:=none}"
-
-# If kernel.args is empty, vbutil_kernel returns an error. We can
-# use "--" instead of putting a newline or a space into the cmdline.
-: "${CMDLINE:=--}"
-
-# We can optionally enable a size check from the environment variable,
-# but let's keep it disabled by default.
-: "${MAX_SIZE:=0}"
-
-# These are distro-specific paths for necessary files.
-: "${VBOOT_DEVKEYS:=/usr/share/vboot/devkeys}"
-: "${VBOOT_KEYBLOCK:=${VBOOT_DEVKEYS}/kernel.keyblock}"
-: "${VBOOT_SIGNPUBKEY:=${VBOOT_DEVKEYS}/kernel_subkey.vbpubk}"
-: "${VBOOT_SIGNPRIVATE:=${VBOOT_DEVKEYS}/kernel_data_key.vbprivk}"
-
-
 # Parse options and arguments
 # ---------------------------
 
@@ -215,10 +183,6 @@ while [ "$#" -gt 0 ]; do
     shift
 done
 
-# Synchronize -A and --arch if only one is given, or set to defaults.
-set_mkimage_arch
-set_vboot_arch
-
 if [ -z "$VMLINUZ" ]; then
     usage_error "Input file vmlinuz is required."
 fi
@@ -233,6 +197,41 @@ CMDLINE="$(
     printf "%s " "$@"
 )"
 CMDLINE="${CMDLINE% }"
+
+
+# Set argument defaults
+# ---------------------
+
+# Verbosity options.
+: "${VERBOSE:=no}"
+: "${QUIET:=no}"
+: "${SILENT:=no}"
+
+# We should be able to make an image for other architectures, but the
+# default should be this machine's. Use this variable for that.
+: "${ARCH:=$(arch)}"
+: "${ARCH:=unknown}"
+
+# Synchronize -A and --arch if only one is given, or set to defaults.
+set_mkimage_arch
+set_vboot_arch
+
+# If --compress option isn't given, COMPRESS wouldn't be set, but it
+# should be set to none in that case.
+: "${COMPRESS:=none}"
+
+# If kernel.args is empty, vbutil_kernel returns an error. We can
+# use "--" instead of putting a newline or a space into the cmdline.
+: "${CMDLINE:=--}"
+
+# Keep the size check disabled by default.
+: "${MAX_SIZE:=0}"
+
+# These are distro-specific paths for necessary files.
+: "${VBOOT_DEVKEYS:=/usr/share/vboot/devkeys}"
+: "${VBOOT_KEYBLOCK:=${VBOOT_DEVKEYS}/kernel.keyblock}"
+: "${VBOOT_SIGNPUBKEY:=${VBOOT_DEVKEYS}/kernel_subkey.vbpubk}"
+: "${VBOOT_SIGNPRIVATE:=${VBOOT_DEVKEYS}/kernel_data_key.vbprivk}"
 
 
 # Prepare vmlinuz
