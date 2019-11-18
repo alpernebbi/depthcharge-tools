@@ -46,6 +46,38 @@ EOF
 # Use custom IFS so we can support paths with spaces, $(find ...), etc.
 IFS="$CUSTOM_IFS"
 
+
+# Parse options and arguments
+# ---------------------------
+
+add_cmdline() {
+    if has_newline "$1"; then
+        error "Can't have newlines in cmdline '$1'."
+    else
+        CMDLINE="${CMDLINE:-}${CMDLINE:+$NEWLINE}${1}"
+    fi
+}
+
+set_vmlinuz() {
+    if [ -n "${VMLINUZ:-}" ]; then
+        error "Can't have vmlinuz multiple times ('$VMLINUZ', '$1')."
+    else
+        VMLINUZ="$1"
+    fi
+}
+
+set_initramfs() {
+    if [ -n "${INITRAMFS:-}" ]; then
+        error "Can't have vmlinuz multiple times ('$INITRAMFS', '$1')."
+    else
+        INITRAMFS="$1"
+    fi
+}
+
+add_dtb() {
+    DTBS="${DTBS:-}${DTBS:+$NEWLINE}${1}"
+}
+
 parse_args() {
     while [ "$#" -gt 0 ]; do
         case "$1" in
@@ -70,7 +102,7 @@ parse_args() {
                 shift 2
                 ;;
             -c|--cmdline)
-                CMDLINE="${CMDLINE:-}${CMDLINE:+$NEWLINE}${1}"
+                add_cmdline "$2"
                 shift 2
                 ;;
             --)
@@ -112,41 +144,33 @@ parse_args() {
         case "$(basename "$1")" in
             # Try some heuristics first.
             *dtb*)
-                DTB="$temp"
-                chmod +w "$DTB"
-                DTBS="${DTBS:-}${DTBS:+$NEWLINE}${1}"
-                shift
                 info "Using dtb: '$1'"
+                shift
+                add_dtb "$temp"
                 ;;
             *initrd*|*initramfs*|*cpio*)
-                INITRAMFS="$temp)"
-                chmod +w "$INITRAMFS"
-                shift
                 info "Using initramfs: '$1'"
+                shift
+                set_initramfs "$temp"
                 ;;
             *vmlinuz*|*vmlinux*|*linux*|*Image*)
-                VMLINUZ="$(temp)"
-                chmod +w "$VMLINUZ"
-                shift
                 info "Using vmlinuz: '$1'"
+                shift
+                set_vmlinuz "$temp"
                 ;;
-            *)
-                if [ -z "$VMLINUZ" ]; then
-                    VMLINUZ="$temp"
-                    chmod +w "$VMLINUZ"
-                    shift
+
+            # Assume in the order given in usage.
+            *)  if set_vmlinuz "$temp" 2>/dev/null; then
                     info "Using vmlinuz: '$1'"
-                elif [ -z "$INITRAMFS" ]; then
-                    INITRAMFS="$temp"
-                    chmod +w "$INITRAMFS"
                     shift
+                elif set_initramfs "$temp" 2>/dev/null; then
                     info "Using initramfs: '$1'"
-                else
-                    DTB="$temp"
-                    chmod +w "$DTB"
-                    DTBS="${DTBS:-}${DTBS:+$NEWLINE}${DTB}"
                     shift
+                elif add_dtb "$temp" 2>/dev/null; then
                     info "Using dtb: '$1'"
+                    shift
+                else
+                    error "Couldn't parse file argument '$1'."
                 fi
                 ;;
         esac
