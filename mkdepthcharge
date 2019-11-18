@@ -227,6 +227,13 @@ if [ -z "$OUTPUT" ]; then
     usage_error "Output argument is mandatory."
 fi
 
+# Normalize CMDLINE to a single line.
+CMDLINE="$(
+    set -- $CMDLINE
+    printf "%s " "$@"
+)"
+CMDLINE="${CMDLINE% }"
+
 
 # Prepare vmlinuz
 # ---------------
@@ -270,7 +277,7 @@ esac
 
 # vbutil_kernel --config argument and wants cmdline as a file.
 temp="$(temp_file kernel.args)"
-echo -n $CMDLINE >"$temp"
+printf "%s" "$CMDLINE" >"$temp"
 VBOOT_CMDLINE="$temp"
 unset temp
 
