@@ -92,26 +92,34 @@ parse_args() {
                 usage_error "Options must precede input filenames."
                 ;;
             *dtb*)
+                DTB="$(temp_copy "$1")"
+                chmod +w "$DTB"
                 DTBS="${DTBS:-}${DTBS:+$NEWLINE}${1}"
                 shift
                 ;;
             *initrd*|*initramfs*|*cpio*)
-                INITRAMFS="$1"
+                INITRAMFS="$(temp_copy "$1")"
+                chmod +w "$INITRAMFS"
                 shift
                 ;;
             *vmlinuz*|*vmlinux*|*linux*|*Image*)
-                VMLINUZ="$1"
+                VMLINUZ="$(temp_copy "$1")"
+                chmod +w "$VMLINUZ"
                 shift
                 ;;
             *)
                 if [ -z "$VMLINUZ" ]; then
-                    VMLINUZ="$1"
+                    VMLINUZ="$(temp_copy "$1")"
+                    chmod +w "$VMLINUZ"
                     shift
                 elif [ -z "$INITRAMFS" ]; then
-                    INITRAMFS="$1"
+                    INITRAMFS="$(temp_copy "$1")"
+                    chmod +w "$INITRAMFS"
                     shift
                 else
-                    DTBS="${DTBS:-}${DTBS:+$NEWLINE}${1}"
+                    DTB="$(temp_copy "$1")"
+                    chmod +w "$DTB"
+                    DTBS="${DTBS:-}${DTBS:+$NEWLINE}${DTB}"
                     shift
                 fi
                 ;;
@@ -208,41 +216,6 @@ compress_kernel() {
                     "Valid values are: none, lz4, lzma."
             ;;
     esac
-}
-
-# mkimage can't open files when they are read-only for some reason.
-# We'll copy them into a temp dir in fear of modifying the originals.
-copy_inputs_to_tmp() {
-    VMLINUZ="$(temp_copy "$VMLINUZ")"
-
-    if [ -n "$INITRAMFS" ]; then
-        INITRAMFS="$(temp_copy "$INITRAMFS")"
-    fi
-
-    if [ -n "$DTBS" ]; then
-        temp="$(temp_dir dtbs)"
-        cp -t "$temp" -- $DTBS
-        DTBS="$(find "$temp" -type f)"
-        unset temp
-    fi
-}
-
-# Somehow mkimage needs write permissions, we can add them after we copy
-# the files to a temporary directory.
-make_inputs_writable() {
-    if [ ! -w "$VMLINUZ" ]; then
-        chmod +w "$VMLINUZ"
-    fi
-
-    if [ -n "$INITRAMFS" ] && [ ! -w "$INITRAMFS" ]; then
-        chmod +w "$INITRAMFS"
-    fi
-
-    for DTB in $DTBS; do
-        if [ ! -w "$DTB" ]; then
-            chmod +w "$DTB"
-        fi
-    done
 }
 
 make_cmdline_file() {
@@ -355,10 +328,8 @@ main() {
     set_mkimage_arch
     set_vboot_arch
 
-    copy_inputs_to_tmp
     decompress_kernel
     compress_kernel
-    make_inputs_writable
     make_cmdline_file
     make_bootstub_file
 
