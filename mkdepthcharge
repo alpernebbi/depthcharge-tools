@@ -184,47 +184,32 @@ set_vboot_arch() {
     fi
 }
 
-# Some steps will require a directory to write temporary files. But
-# let's also allow those files to be redirected somewhere else.
-setup_tmp_dir() {
-    TMP_VMLINUZ="$(temp_file vmlinuz)"
-    TMP_VMLINUZ_LZ4="$(temp_file vmlinuz.lz4)"
-    TMP_VMLINUZ_LZMA="$(temp_file vmlinuz.lzma)"
-    TMP_VMLINUZ_GUNZIPPED="$(temp_file vmlinuz-gunzipped)"
-    TMP_INITRAMFS="$(temp_file initrd.img)"
-    TMP_DTBS_DIR="$(temp_file dtbs)"
-    TMP_CMDLINE="$(temp_file kernel.args)"
-    TMP_BOOTSTUB="$(temp_file bootstub.bin)"
-    TMP_FIT_IMAGE="$(temp_file depthcharge.itb)"
-    TMP_DEPTHCHARGE_IMAGE="$(temp_file depthcharge.img)"
-}
-
 # Decompress kernel if packaged as gzip compressed.
 decompress_kernel() {
     if { command -v gzip && gzip -t "$VMLINUZ"; } >/dev/null 2>&1; then
+        temp="$(temp_file vmlinuz-gunzip)"
         info "Kernel is gzip compressed, decompressing."
-        gzip -d <"$VMLINUZ" >"$TMP_VMLINUZ_GUNZIPPED"
-        VMLINUZ="$TMP_VMLINUZ_GUNZIPPED"
+        gzip -d <"$VMLINUZ" >"$temp"
+        VMLINUZ="$temp"
+        unset temp
     fi
 }
 
 compress_kernel() {
-    if [ "$VMLINUZ" = "$TMP_VMLINUZ_LZ4" ]; then
-        error "Not compressing kernel twice (lz4 then '$COMPRESS')."
-    elif [ "$VMLINUZ" = "$TMP_VMLINUZ_LZMA" ]; then
-        error "Not compressing kernel twice (lzma then '$COMPRESS')."
-    fi
-
     case "$COMPRESS" in
         lz4)
             info "Compressing kernel with lz4."
-            lz4 -z -9 <"$VMLINUZ" >"$TMP_VMLINUZ_LZ4"
-            VMLINUZ="$TMP_VMLINUZ_LZ4"
+            temp="$(temp_file vmlinuz.lz4)"
+            lz4 -z -9 <"$VMLINUZ" >"$temp"
+            VMLINUZ="$temp"
+            unset temp
             ;;
         lzma)
             info "Compressing kernel with lzma."
-            lzma -z <"$VMLINUZ" >"$TMP_VMLINUZ_LZMA"
-            VMLINUZ="$TMP_VMLINUZ_LZMA"
+            temp="$(temp_file vmlinuz.lzma)"
+            lzma -z <"$VMLINUZ" >"$temp"
+            VMLINUZ="$temp"
+            unset temp
             ;;
         none)
             : # No need to do anything.
@@ -239,18 +224,18 @@ compress_kernel() {
 # mkimage can't open files when they are read-only for some reason.
 # We'll copy them into a temp dir in fear of modifying the originals.
 copy_inputs_to_tmp() {
-    cp "$VMLINUZ" "$TMP_VMLINUZ"
-    VMLINUZ="$TMP_VMLINUZ"
+    VMLINUZ="$(temp_copy "$VMLINUZ")"
 
     if [ -n "$INITRAMFS" ]; then
-        cp "$INITRAMFS" "$TMP_INITRAMFS"
-        INITRAMFS="$TMP_INITRAMFS"
+        INITRAMFS="$(temp_copy "$INITRAMFS")"
     fi
 
     IFS="$CUSTOM_IFS"
     if [ -n "$DTBS" ]; then
-        cp -t "$TMP_DTBS_DIR" -- $DTBS
-        DTBS="$(find "$TMP_DTBS_DIR" -type f)"
+        temp="$(temp_dir dtbs)"
+        cp -t "$temp" -- $DTBS
+        DTBS="$(find "$temp" -type f)"
+        unset temp
     fi
     IFS="$ORIG_IFS"
 }
@@ -277,8 +262,10 @@ make_inputs_writable() {
 
 make_cmdline_file() {
     if [ -z "$VBOOT_CMDLINE" ]; then
-        echo -n $CMDLINE >"$TMP_CMDLINE"
-        VBOOT_CMDLINE="$TMP_CMDLINE"
+        temp="$(temp_file kernel.args)"
+        echo -n $CMDLINE >"$temp"
+        VBOOT_CMDLINE="$temp"
+        unset temp
     fi
 }
 
@@ -287,9 +274,10 @@ make_bootstub_file() {
         case "$VBOOT_ARCH" in
             arm*|aarch64)
                 info "Using dummy file for bootloader."
-                dd if=/dev/zero of="$TMP_BOOTSTUB" \
-                    count=1 bs=512 status=none
-                BOOTSTUB="$TMP_BOOTSTUB"
+                temp="$(temp_file bootstub)"
+                dd if=/dev/zero of="$temp" count=1 bs=512 status=none
+                BOOTSTUB="$temp"
+                unset temp
                 ;;
             x86|amd64|*)
                 error "Architecture '$VBOOT_ARCH' needs a bootstub binary."
@@ -308,6 +296,7 @@ pack_fit() {
             MKIMAGE_DTB_ARGS="$(printf -- "-b${SEP}%s${SEP}" $DTBS)"
         fi
         info "Running mkimage:"
+        temp="$(temp_file depthcharge.itb)"
         mkimage \
             -f auto \
             -A "$MKIMAGE_ARCH" \
@@ -317,9 +306,9 @@ pack_fit() {
             -d "$VMLINUZ" \
             $MKIMAGE_INITRAMFS_ARGS \
             $MKIMAGE_DTB_ARGS \
-            "$TMP_FIT_IMAGE" \
+            "$temp" \
             || error "Could not pack inputs into a FIT image."
-        FIT_IMAGE="$TMP_FIT_IMAGE"
+        FIT_IMAGE="$temp"
     fi
     IFS="$ORIG_IFS"
 }
@@ -327,6 +316,7 @@ pack_fit() {
 pack_depthcharge() {
     if [ -z "$DEPTHCHARGE_IMAGE" ]; then
         info "Running vbutil_kernel (pack):"
+        temp="$(temp_file depthcharge.img)"
         futility vbutil_kernel \
             --version 1 \
             --arch "$VBOOT_ARCH" \
@@ -335,9 +325,9 @@ pack_depthcharge() {
             --bootloader "$BOOTSTUB" \
             --keyblock "$VBOOT_KEYBLOCK" \
             --signprivate "$VBOOT_SIGNPRIVATE" \
-            --pack "$TMP_DEPTHCHARGE_IMAGE" \
+            --pack "$temp" \
             || error "Could not pack inputs into a depthcharge image."
-        DEPTHCHARGE_IMAGE="$TMP_DEPTHCHARGE_IMAGE"
+        DEPTHCHARGE_IMAGE="$temp"
     fi
 }
 
@@ -376,7 +366,6 @@ main() {
     set_mkimage_arch
     set_vboot_arch
 
-    setup_tmp_dir
     copy_inputs_to_tmp
     decompress_kernel
     compress_kernel
