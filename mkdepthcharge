@@ -30,6 +30,13 @@ Depthcharge image options:
 EOF
 }
 
+. "lib/msg.sh"
+. "lib/tmp.sh"
+. "lib/ifs.sh"
+
+# Use custom IFS so we can support paths with spaces, $(find ...), etc.
+IFS="$CUSTOM_IFS"
+
 
 # Set argument defaults
 # ---------------------
@@ -61,14 +68,6 @@ EOF
 : "${VBOOT_KEYBLOCK:=${VBOOT_DEVKEYS}/kernel.keyblock}"
 : "${VBOOT_SIGNPUBKEY:=${VBOOT_DEVKEYS}/kernel_subkey.vbpubk}"
 : "${VBOOT_SIGNPRIVATE:=${VBOOT_DEVKEYS}/kernel_data_key.vbprivk}"
-
-# Import common functions
-. "lib/msg.sh"
-. "lib/tmp.sh"
-. "lib/ifs.sh"
-
-# Use custom IFS so we can support paths with spaces, $(find ...), etc.
-IFS="$CUSTOM_IFS"
 
 
 # Parse options and arguments
@@ -174,216 +173,187 @@ file_arg() {
     esac
 }
 
-parse_args() {
-    # Check verbose options before printing anything.
-    for arg in "$@"; do
-        case "$arg" in
-            -v|--verbose) VERBOSE=yes ;;
-            --) break ;;
-        esac
-    done
+# Check verbose options before printing anything.
+for arg in "$@"; do
+    case "$arg" in
+        -v|--verbose) VERBOSE=yes ;;
+        --) break ;;
+    esac
+done
 
-    while [ "$#" -gt 0 ]; do
-        case "$1" in
-            # Options:
-            -h|--help)          usage;                      exit 0 ;;
-            -v|--verbose)       VERBOSE=yes;                shift 1 ;;
-            -o|--output)        OUTPUT="$2";                shift 2 ;;
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        # Options:
+        -h|--help)          usage;                      exit 0 ;;
+        -v|--verbose)       VERBOSE=yes;                shift 1 ;;
+        -o|--output)        OUTPUT="$2";                shift 2 ;;
 
-            # FIT image options:
-            -A)                 set_mkimage_arch "$2";      shift 2 ;;
-            -C|--compress)      COMPRESS="$2";              shift 2 ;;
-            -n|--description)   DESCRIPTION="$2";           shift 2 ;;
+        # FIT image options:
+        -A)                 set_mkimage_arch "$2";      shift 2 ;;
+        -C|--compress)      COMPRESS="$2";              shift 2 ;;
+        -n|--description)   DESCRIPTION="$2";           shift 2 ;;
 
-            # Depthcharge options:
-            --arch)             set_vboot_arch "$2";        shift 2 ;;
-            -c|--cmdline)       add_cmdline "$2";           shift 2 ;;
-            --bootloader)       VBOOT_BOOTSTUB="$2";        shift 2 ;;
-            --keyblock)         VBOOT_KEYBLOCK="$2";        shift 2 ;;
-            --signpubkey)       VBOOT_SIGNPUBKEY="$2";      shift 2 ;;
-            --signprivate)      VBOOT_SIGNPRIVATE="$2";     shift 2 ;;
-            --max-size)         MAX_SIZE="$2";              shift 2 ;;
+        # Depthcharge options:
+        --arch)             set_vboot_arch "$2";        shift 2 ;;
+        -c|--cmdline)       add_cmdline "$2";           shift 2 ;;
+        --bootloader)       VBOOT_BOOTSTUB="$2";        shift 2 ;;
+        --keyblock)         VBOOT_KEYBLOCK="$2";        shift 2 ;;
+        --signpubkey)       VBOOT_SIGNPUBKEY="$2";      shift 2 ;;
+        --signprivate)      VBOOT_SIGNPRIVATE="$2";     shift 2 ;;
+        --max-size)         MAX_SIZE="$2";              shift 2 ;;
 
-            # End of options
-            --) shift; break ;;
-            -*) usage_error "Option '$1' not understood." ;;
-            *)  file_arg "$1"; shift ;;
-        esac
-    done
+        # End of options
+        --) shift; break ;;
+        -*) usage_error "Option '$1' not understood." ;;
+        *)  file_arg "$1"; shift ;;
+    esac
+done
 
-    # Assume arguments after "--" are files.
-    while [ "$#" -gt 0 ]; do
-        file_arg "$1"
-        shift
-    done
+# Assume arguments after "--" are files.
+while [ "$#" -gt 0 ]; do
+    file_arg "$1"
+    shift
+done
 
-    # Synchronize -A and --arch if only one is given, or set to defaults.
-    set_mkimage_arch
-    set_vboot_arch
+# Synchronize -A and --arch if only one is given, or set to defaults.
+set_mkimage_arch
+set_vboot_arch
 
-    if [ -z "$VMLINUZ" ]; then
-        usage_error "Input file vmlinuz is required."
-    fi
+if [ -z "$VMLINUZ" ]; then
+    usage_error "Input file vmlinuz is required."
+fi
 
-    if [ -z "$OUTPUT" ]; then
-        usage_error "Output argument is mandatory."
-    fi
-}
+if [ -z "$OUTPUT" ]; then
+    usage_error "Output argument is mandatory."
+fi
+
+
+# Prepare vmlinuz
+# ---------------
 
 # Decompress kernel if packaged as gzip compressed.
-decompress_kernel() {
-    if { command -v gzip && gzip -t "$VMLINUZ"; } >/dev/null 2>&1; then
-        temp="$(temp_file vmlinuz-gunzip)"
-        info "Kernel is gzip compressed, decompressing."
-        gzip -d <"$VMLINUZ" >"$temp"
+if { command -v gzip && gzip -t "$VMLINUZ"; } >/dev/null 2>&1; then
+    temp="$(temp_file vmlinuz-gunzip)"
+    info "Kernel is gzip compressed, decompressing."
+    gzip -d <"$VMLINUZ" >"$temp"
+    VMLINUZ="$temp"
+    unset temp
+fi
+
+case "$COMPRESS" in
+    lz4)
+        info "Compressing kernel with lz4."
+        temp="$(temp_file vmlinuz.lz4)"
+        lz4 -z -9 <"$VMLINUZ" >"$temp"
         VMLINUZ="$temp"
         unset temp
-    fi
-}
+        ;;
+    lzma)
+        info "Compressing kernel with lzma."
+        temp="$(temp_file vmlinuz.lzma)"
+        lzma -z <"$VMLINUZ" >"$temp"
+        VMLINUZ="$temp"
+        unset temp
+        ;;
+    none)
+        : # No need to do anything.
+        ;;
+    *)
+        error "Compression type '$COMPRESS' is not supported." \
+                "Valid values are: none, lz4, lzma."
+        ;;
+esac
 
-compress_kernel() {
-    case "$COMPRESS" in
-        lz4)
-            info "Compressing kernel with lz4."
-            temp="$(temp_file vmlinuz.lz4)"
-            lz4 -z -9 <"$VMLINUZ" >"$temp"
-            VMLINUZ="$temp"
+
+# Prepare additional files
+# ------------------------
+
+# vbutil_kernel --config argument and wants cmdline as a file.
+temp="$(temp_file kernel.args)"
+echo -n $CMDLINE >"$temp"
+VBOOT_CMDLINE="$temp"
+unset temp
+
+# vbutil_kernel --bootloader argument wants a bootstub binary, but it's
+# contents don't matter on arm systems.
+if [ -z "$VBOOT_BOOTSTUB" ]; then
+    case "$VBOOT_ARCH" in
+        arm*|aarch64)
+            info "Using dummy file for bootloader."
+            temp="$(temp_file bootstub)"
+            dd if=/dev/zero of="$temp" count=1 bs=512 status=none
+            VBOOT_BOOTSTUB="$temp"
             unset temp
             ;;
-        lzma)
-            info "Compressing kernel with lzma."
-            temp="$(temp_file vmlinuz.lzma)"
-            lzma -z <"$VMLINUZ" >"$temp"
-            VMLINUZ="$temp"
-            unset temp
-            ;;
-        none)
-            : # No need to do anything.
-            ;;
-        *)
-            error "Compression type '$COMPRESS' is not supported." \
-                    "Valid values are: none, lz4, lzma."
+        x86|amd64|*)
+            error "Architecture '$VBOOT_ARCH' needs a bootstub binary."
             ;;
     esac
-}
+fi
 
-make_cmdline_file() {
-    if [ -z "$VBOOT_CMDLINE" ]; then
-        temp="$(temp_file kernel.args)"
-        echo -n $CMDLINE >"$temp"
-        VBOOT_CMDLINE="$temp"
-        unset temp
-    fi
-}
 
-make_bootstub_file() {
-    if [ -z "$BOOTSTUB" ]; then
-        case "$VBOOT_ARCH" in
-            arm*|aarch64)
-                info "Using dummy file for bootloader."
-                temp="$(temp_file bootstub)"
-                dd if=/dev/zero of="$temp" count=1 bs=512 status=none
-                BOOTSTUB="$temp"
-                unset temp
-                ;;
-            x86|amd64|*)
-                error "Architecture '$VBOOT_ARCH' needs a bootstub binary."
-                ;;
-        esac
-    fi
-}
+# Make FIT image
+# --------------
 
-pack_fit() {
-    if [ -z "$FIT_IMAGE" ]; then
-        temp="$(temp_file depthcharge.itb)"
-        info "Running mkimage:"
-        (
-            set --
+temp="$(temp_file depthcharge.itb)"
+info "Running mkimage:"
+(
+    set --
 
-            if [ -n "${DTBS:-}" ]; then
-                for dtb in $DTBS; do
-                    set -- "$@" "-b" "$dtb"
-                done
-            fi
-
-            if [ -n "${INITRAMFS:-}" ]; then
-                set -- "-i" "$INITRAMFS" "$@"
-            fi
-
-            mkimage \
-                -f auto \
-                -A "$MKIMAGE_ARCH" \
-                -O linux \
-                -C "$COMPRESS" \
-                -n "$DESCRIPTION" \
-                -d "$VMLINUZ" \
-                "$@" \
-                "$temp"
-        ) || error "Could not pack inputs into a FIT image."
-        FIT_IMAGE="$temp"
-    fi
-}
-
-pack_depthcharge() {
-    if [ -z "$DEPTHCHARGE_IMAGE" ]; then
-        info "Running vbutil_kernel (pack):"
-        temp="$(temp_file depthcharge.img)"
-        futility vbutil_kernel \
-            --version 1 \
-            --arch "$VBOOT_ARCH" \
-            --vmlinuz "$FIT_IMAGE" \
-            --config "$VBOOT_CMDLINE" \
-            --bootloader "$BOOTSTUB" \
-            --keyblock "$VBOOT_KEYBLOCK" \
-            --signprivate "$VBOOT_SIGNPRIVATE" \
-            --pack "$temp" \
-            || error "Could not pack inputs into a depthcharge image."
-        DEPTHCHARGE_IMAGE="$temp"
-    fi
-}
-
-verify_depthcharge() {
-    info "Running vbutil_kernel (verify):"
-    futility vbutil_kernel \
-        --signpubkey "$VBOOT_SIGNPUBKEY" \
-        --verify "$DEPTHCHARGE_IMAGE" \
-        || error "Generated image cannot be verified by vbutil_kernel."
-}
-
-check_depthcharge_size() {
-    if [ "${MAX_SIZE}" -gt 0 ]; then
-        info "Checking if image fits into size limit."
-        size="$(stat -c '%s' "$DEPTHCHARGE_IMAGE")"
-        if [ "$size" -gt "${MAX_SIZE}" ]; then
-            error "Output image size too big to boot."
-        fi
-    fi
-}
-
-copy_depthcharge_to_output() {
-    info "Copying image to output '$OUTPUT'."
-    cp -f "$DEPTHCHARGE_IMAGE" "$OUTPUT" \
-        || error "Couldn't copy to output."
-}
-
-main() {
-    parse_args "$@"
-
-    if [ "$VERBOSE" != yes ]; then
-        exec >/dev/null
+    if [ -n "${DTBS:-}" ]; then
+        for dtb in $DTBS; do
+            set -- "$@" "-b" "$dtb"
+        done
     fi
 
-    decompress_kernel
-    compress_kernel
-    make_cmdline_file
-    make_bootstub_file
+    if [ -n "${INITRAMFS:-}" ]; then
+        set -- "-i" "$INITRAMFS" "$@"
+    fi
 
-    pack_fit
-    pack_depthcharge
+    mkimage \
+        -f auto \
+        -A "$MKIMAGE_ARCH" \
+        -O linux \
+        -C "$COMPRESS" \
+        -n "$DESCRIPTION" \
+        -d "$VMLINUZ" \
+        "$@" \
+        "$temp"
+) || error "Could not pack inputs into a FIT image."
+FIT_IMAGE="$temp"
 
-    verify_depthcharge
-    check_depthcharge_size
-    copy_depthcharge_to_output
-}
 
-main "$@"
+# Make depthcharge image
+# ----------------------
+
+info "Running vbutil_kernel (pack):"
+temp="$(temp_file depthcharge.img)"
+futility vbutil_kernel \
+    --version 1 \
+    --arch "$VBOOT_ARCH" \
+    --vmlinuz "$FIT_IMAGE" \
+    --config "$VBOOT_CMDLINE" \
+    --bootloader "$VBOOT_BOOTSTUB" \
+    --keyblock "$VBOOT_KEYBLOCK" \
+    --signprivate "$VBOOT_SIGNPRIVATE" \
+    --pack "$temp" \
+    || error "Could not pack inputs into a depthcharge image."
+DEPTHCHARGE_IMAGE="$temp"
+
+info "Running vbutil_kernel (verify):"
+futility vbutil_kernel \
+    --signpubkey "$VBOOT_SIGNPUBKEY" \
+    --verify "$DEPTHCHARGE_IMAGE" \
+    || error "Generated image cannot be verified by vbutil_kernel."
+
+if [ "${MAX_SIZE}" -gt 0 ]; then
+    info "Checking if image fits into size limit."
+    size="$(stat -c '%s' "$DEPTHCHARGE_IMAGE")"
+    if [ "$size" -gt "${MAX_SIZE}" ]; then
+        error "Output image size too big to boot."
+    fi
+fi
+
+info "Copying image to output '$OUTPUT'."
+cp -f "$DEPTHCHARGE_IMAGE" "$OUTPUT" \
+    || error "Couldn't copy to output."
