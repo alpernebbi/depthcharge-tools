@@ -325,8 +325,7 @@ readonly VBOOT_CMDLINE VBOOT_BOOTSTUB
 # --------------
 
 temp="$(temp_file depthcharge.itb)"
-info "Running mkimage:"
-(
+make_fit() (
     set --
 
     if [ -n "${DTBS:-}" ]; then
@@ -348,7 +347,15 @@ info "Running mkimage:"
         -d "$VMLINUZ" \
         "$@" \
         "$temp"
-) || error "Could not pack inputs into a FIT image."
+)
+
+info "Running mkimage:"
+if [ "$VERBOSE" = "yes" ]; then
+    make_fit >&2
+else
+    make_fit >/dev/null
+fi || error "Could not pack inputs into a FIT image."
+
 FIT_IMAGE="$temp"
 unset temp
 
@@ -358,18 +365,26 @@ readonly FIT_IMAGE
 # Make depthcharge image
 # ----------------------
 
-info "Running vbutil_kernel (pack):"
 temp="$(temp_file depthcharge.img)"
-futility vbutil_kernel \
-    --version 1 \
-    --arch "$VBOOT_ARCH" \
-    --vmlinuz "$FIT_IMAGE" \
-    --config "$VBOOT_CMDLINE" \
-    --bootloader "$VBOOT_BOOTSTUB" \
-    --keyblock "$VBOOT_KEYBLOCK" \
-    --signprivate "$VBOOT_SIGNPRIVATE" \
-    --pack "$temp" \
-    || error "Could not pack inputs into a depthcharge image."
+pack_depthcharge() {
+    futility vbutil_kernel \
+        --version 1 \
+        --arch "$VBOOT_ARCH" \
+        --vmlinuz "$FIT_IMAGE" \
+        --config "$VBOOT_CMDLINE" \
+        --bootloader "$VBOOT_BOOTSTUB" \
+        --keyblock "$VBOOT_KEYBLOCK" \
+        --signprivate "$VBOOT_SIGNPRIVATE" \
+        --pack "$temp"
+}
+
+info "Running vbutil_kernel (pack):"
+if [ "$VERBOSE" = "yes" ]; then
+    pack_depthcharge >&2
+else
+    pack_depthcharge >/dev/null
+fi || error "Could not pack inputs into a depthcharge image."
+
 DEPTHCHARGE_IMAGE="$temp"
 unset temp
 
@@ -379,11 +394,18 @@ readonly DEPTHCHARGE_IMAGE
 # Verify and output depthcharge image
 # -----------------------------------
 
+verify_depthcharge() {
+    futility vbutil_kernel \
+        --signpubkey "$VBOOT_SIGNPUBKEY" \
+        --verify "$DEPTHCHARGE_IMAGE"
+}
+
 info "Running vbutil_kernel (verify):"
-futility vbutil_kernel \
-    --signpubkey "$VBOOT_SIGNPUBKEY" \
-    --verify "$DEPTHCHARGE_IMAGE" \
-    || error "Generated image cannot be verified by vbutil_kernel."
+if [ "$VERBOSE" = "yes" ]; then
+    verify_depthcharge >&2
+else
+    verify_depthcharge >/dev/null
+fi || error "Generated image cannot be verified by vbutil_kernel."
 
 if [ "${MAX_SIZE:-0}" -gt 0 ]; then
     info "Checking if image fits into size limit."
