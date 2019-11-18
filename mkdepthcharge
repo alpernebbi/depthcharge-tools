@@ -30,7 +30,7 @@ EOF
 
 # We can optionally enable a size check from the environment variable,
 # but let's keep it disabled by default.
-: "${DEPTHCHARGE_MAX_SIZE:=0}"
+: "${MAX_SIZE:=0}"
 
 # These are distro-specific paths for necessary files.
 : "${VBOOT_DEVKEYS:=/usr/share/vboot/devkeys}"
@@ -323,10 +323,10 @@ verify_depthcharge() {
 }
 
 check_depthcharge_size() {
-    if [ "${DEPTHCHARGE_MAX_SIZE}" -gt 0 ]; then
+    if [ "${MAX_SIZE}" -gt 0 ]; then
         info "Checking if image fits into size limit."
         size="$(stat -c '%s' "$DEPTHCHARGE_IMAGE")"
-        if [ "$size" -gt "${DEPTHCHARGE_MAX_SIZE}" ]; then
+        if [ "$size" -gt "${MAX_SIZE}" ]; then
             error "Output image size too big to boot."
         fi
     fi
