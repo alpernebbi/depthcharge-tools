@@ -1,5 +1,5 @@
 #!/bin/sh
-set -e
+set -eu
 
 usage() {
 cat <<EOF
@@ -36,6 +36,7 @@ EOF
 
 # Use custom IFS so we can support paths with spaces, $(find ...), etc.
 IFS="$CUSTOM_IFS"
+readonly IFS
 
 
 # Parse options and arguments
@@ -46,13 +47,15 @@ set_mkimage_arch() {
         ARCH="$1"
     fi
 
-    case "${1:-${MKIMAGE_ARCH:-$ARCH}}" in
+    arch="${1:-${MKIMAGE_ARCH:-$ARCH}}"
+    case "$arch" in
         arm64|aarch64)  MKIMAGE_ARCH=arm64 ;;
         arm*)           MKIMAGE_ARCH=arm ;;
         amd64|x86_64)   MKIMAGE_ARCH=x86_64 ;;
         x86|i386)       MKIMAGE_ARCH=x86 ;;
-        *) error "Architecture '$1' is not supported for mkimage." ;;
+        *) error "Architecture '$arch' is not supported (mkimage)." ;;
     esac
+    unset arch
 }
 
 set_vboot_arch() {
@@ -60,27 +63,29 @@ set_vboot_arch() {
         ARCH="$1"
     fi
 
-    case "${1:-${VBOOT_ARCH:-$ARCH}}" in
+    arch="${1:-${VBOOT_ARCH:-$ARCH}}"
+    case "$arch" in
         arm64|aarch64)  VBOOT_ARCH=aarch64 ;;
         arm*)           VBOOT_ARCH=arm ;;
         amd64|x86_64)   VBOOT_ARCH=amd64 ;;
         x86|i386)       VBOOT_ARCH=x86 ;;
-        *) error "Architecture '$1' is not supported for vbutil_kernel." ;;
+        *) error "Architecture '$arch' is not supported (vboot)." ;;
     esac
+    unset arch
 }
 
 add_cmdline() {
-    if has_newline "$1"; then
+    if has_newline "${1:-}"; then
         error "Can't have newlines in cmdline '$1'."
-    else
+    elif [ -n "${1:-}" ]; then
         CMDLINE="${CMDLINE:-}${CMDLINE:+$NEWLINE}${1}"
     fi
 }
 
 set_vmlinuz() {
     if [ -n "${VMLINUZ:-}" ]; then
-        error "Can't have vmlinuz multiple times ('$VMLINUZ', '$1')."
-    else
+        error "Can't have vmlinuz multiple times ('$VMLINUZ', '${1:-}')."
+    elif [ -n "${1:-}" ]; then
         VMLINUZ="$1"
     fi
 }
@@ -88,18 +93,20 @@ set_vmlinuz() {
 set_initramfs() {
     if [ -n "${INITRAMFS:-}" ]; then
         error "Can't have vmlinuz multiple times ('$INITRAMFS', '$1')."
-    else
+    elif [ -n "${1:-}" ]; then
         INITRAMFS="$1"
     fi
 }
 
 add_dtb() {
-    DTBS="${DTBS:-}${DTBS:+$NEWLINE}${1}"
+    if [ -n "${1:-}" ]; then
+        DTBS="${DTBS:-}${DTBS:+$NEWLINE}${1}"
+    fi
 }
 
 file_arg() {
-    if [ ! -r "$1" ]; then
-        error "File input '$1' is not found or not readable."
+    if [ ! -r "${1:-}" ]; then
+        error "File input '${1:-}' is not found or not readable."
     fi
 
     if has_newline "$1"; then
@@ -143,7 +150,7 @@ file_arg() {
 
 # Check verbose options before printing anything.
 for arg in "$@"; do
-    case "$arg" in
+    case "${arg:-}" in
         -v|--verbose) VERBOSE=yes ;;
         --) break ;;
     esac
@@ -183,20 +190,23 @@ while [ "$#" -gt 0 ]; do
     shift
 done
 
-if [ -z "$VMLINUZ" ]; then
-    usage_error "Input file vmlinuz is required."
-fi
-
-if [ -z "$OUTPUT" ]; then
-    usage_error "Output argument is mandatory."
-fi
-
 # Normalize CMDLINE to a single line.
 CMDLINE="$(
-    set -- $CMDLINE
+    set -- ${CMDLINE:-}
     printf "%s " "$@"
 )"
 CMDLINE="${CMDLINE% }"
+
+# Check necessary options/arguments.
+if [ -z "${VMLINUZ:-}" ]; then
+    usage_error "Input file vmlinuz is required."
+fi
+
+if [ -z "${OUTPUT:-}" ]; then
+    usage_error "Output argument is mandatory."
+fi
+
+readonly OUTPUT
 
 
 # Set argument defaults
@@ -220,6 +230,9 @@ set_vboot_arch
 # should be set to none in that case.
 : "${COMPRESS:=none}"
 
+# Default description can be empty, but needs to be set (sh -o nounset).
+: "${DESCRIPTION:=}"
+
 # If kernel.args is empty, vbutil_kernel returns an error. We can
 # use "--" instead of putting a newline or a space into the cmdline.
 : "${CMDLINE:=--}"
@@ -232,6 +245,11 @@ set_vboot_arch
 : "${VBOOT_KEYBLOCK:=${VBOOT_DEVKEYS}/kernel.keyblock}"
 : "${VBOOT_SIGNPUBKEY:=${VBOOT_DEVKEYS}/kernel_subkey.vbpubk}"
 : "${VBOOT_SIGNPRIVATE:=${VBOOT_DEVKEYS}/kernel_data_key.vbprivk}"
+
+readonly VERBOSE QUIET SILENT
+readonly ARCH MKIMAGE_ARCH VBOOT_ARCH
+readonly COMPRESS DESCRIPTION CMDLINE MAX_SIZE
+readonly VBOOT_DEVKEYS VBOOT_KEYBLOCK VBOOT_SIGNPUBKEY VBOOT_SIGNPRIVATE
 
 
 # Prepare vmlinuz
@@ -246,7 +264,8 @@ if { command -v gzip && gzip -t "$VMLINUZ"; } >/dev/null 2>&1; then
     unset temp
 fi
 
-case "$COMPRESS" in
+# Compress kernel as appropriate.
+case "${COMPRESS:-none}" in
     lz4)
         info "Compressing kernel with lz4."
         temp="$(temp_file vmlinuz.lz4)"
@@ -265,10 +284,12 @@ case "$COMPRESS" in
         : # No need to do anything.
         ;;
     *)
-        error "Compression type '$COMPRESS' is not supported." \
+        error "Compression type '${COMPRESS:-}' is not supported." \
                 "Valid values are: none, lz4, lzma."
         ;;
 esac
+
+readonly VMLINUZ
 
 
 # Prepare additional files
@@ -282,7 +303,7 @@ unset temp
 
 # vbutil_kernel --bootloader argument wants a bootstub binary, but it's
 # contents don't matter on arm systems.
-if [ -z "$VBOOT_BOOTSTUB" ]; then
+if [ -z "${VBOOT_BOOTSTUB:-}" ]; then
     case "$VBOOT_ARCH" in
         arm*|aarch64)
             info "Using dummy file for bootloader."
@@ -296,6 +317,8 @@ if [ -z "$VBOOT_BOOTSTUB" ]; then
             ;;
     esac
 fi
+
+readonly VBOOT_CMDLINE VBOOT_BOOTSTUB
 
 
 # Make FIT image
@@ -327,6 +350,9 @@ info "Running mkimage:"
         "$temp"
 ) || error "Could not pack inputs into a FIT image."
 FIT_IMAGE="$temp"
+unset temp
+
+readonly FIT_IMAGE
 
 
 # Make depthcharge image
@@ -345,6 +371,13 @@ futility vbutil_kernel \
     --pack "$temp" \
     || error "Could not pack inputs into a depthcharge image."
 DEPTHCHARGE_IMAGE="$temp"
+unset temp
+
+readonly DEPTHCHARGE_IMAGE
+
+
+# Verify and output depthcharge image
+# -----------------------------------
 
 info "Running vbutil_kernel (verify):"
 futility vbutil_kernel \
@@ -352,7 +385,7 @@ futility vbutil_kernel \
     --verify "$DEPTHCHARGE_IMAGE" \
     || error "Generated image cannot be verified by vbutil_kernel."
 
-if [ "${MAX_SIZE}" -gt 0 ]; then
+if [ "${MAX_SIZE:-0}" -gt 0 ]; then
     info "Checking if image fits into size limit."
     size="$(stat -c '%s' "$DEPTHCHARGE_IMAGE")"
     if [ "$size" -gt "${MAX_SIZE}" ]; then
