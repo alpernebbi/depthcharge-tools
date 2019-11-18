@@ -14,10 +14,12 @@ Options:
  -o, --output FILE          Write resulting image to FILE.
 
 FIT image options:
+ -A, --arch ARCH            Architecture to build for (prefers -A).
  -C, --compress TYPE        Compress vmlinuz with lz4 or lzma.
  -n, --description DESC     Description of vmlinuz to put in the FIT.
 
 Depthcharge image options:
+ -A, --arch ARCH            Architecture to build for (prefers --arch).
  -c, --cmdline CMD          Command-line parameters for the kernel.
                             be used multiple times to append new values.
      --bootloader FILE      Bootloader stub binary to use.
@@ -31,6 +33,7 @@ EOF
 # We should be able to make an image for other architectures, but the
 # default should be this machine's. Use this variable for that.
 : "${ARCH:=$(arch)}"
+: "${ARCH:=unknown}"
 
 # If --compress option isn't given, COMPRESS wouldn't be set, but it
 # should be set to none in that case.
@@ -61,6 +64,34 @@ IFS="$CUSTOM_IFS"
 
 # Parse options and arguments
 # ---------------------------
+
+set_mkimage_arch() {
+    if [ -n "${1:-}" ] && [ -z "${VBOOT_ARCH:-}" ]; then
+        ARCH="$1"
+    fi
+
+    case "${1:-${MKIMAGE_ARCH:-$ARCH}}" in
+        arm64|aarch64)  MKIMAGE_ARCH=arm64 ;;
+        arm*)           MKIMAGE_ARCH=arm ;;
+        amd64|x86_64)   MKIMAGE_ARCH=x86_64 ;;
+        x86|i386)       MKIMAGE_ARCH=x86 ;;
+        *) error "Architecture '$1' is not supported for mkimage." ;;
+    esac
+}
+
+set_vboot_arch() {
+    if [ -n "${1:-}" ] && [ -z "${MKIMAGE_ARCH:-}" ]; then
+        ARCH="$1"
+    fi
+
+    case "${1:-${VBOOT_ARCH:-$ARCH}}" in
+        arm64|aarch64)  VBOOT_ARCH=aarch64 ;;
+        arm*)           VBOOT_ARCH=arm ;;
+        amd64|x86_64)   VBOOT_ARCH=amd64 ;;
+        x86|i386)       VBOOT_ARCH=x86 ;;
+        *) error "Architecture '$1' is not supported for vbutil_kernel." ;;
+    esac
+}
 
 add_cmdline() {
     if has_newline "$1"; then
@@ -143,10 +174,12 @@ parse_args() {
             -o|--output)        OUTPUT="$2";                shift 2 ;;
 
             # FIT image options:
+            -A)                 set_mkimage_arch "$2";      shift 2 ;;
             -C|--compress)      COMPRESS="$2";              shift 2 ;;
             -n|--description)   DESCRIPTION="$2";           shift 2 ;;
 
             # Depthcharge options:
+            --arch)             set_vboot_arch "$2";        shift 2 ;;
             -c|--cmdline)       add_cmdline "$2";           shift 2 ;;
             --bootloader)       VBOOT_BOOTSTUB="$2";        shift 2 ;;
             --keyblock)         VBOOT_KEYBLOCK="$2";        shift 2 ;;
@@ -167,36 +200,16 @@ parse_args() {
         shift
     done
 
+    # Synchronize -A and --arch if only one is given, or set to defaults.
+    set_mkimage_arch
+    set_vboot_arch
+
     if [ -z "$VMLINUZ" ]; then
         usage_error "Input file vmlinuz is required."
     fi
 
     if [ -z "$OUTPUT" ]; then
         usage_error "Output argument is mandatory."
-    fi
-}
-
-set_mkimage_arch() {
-    if [ -z "$MKIMAGE_ARCH" ]; then
-        case "$ARCH" in
-            arm64|aarch64) MKIMAGE_ARCH=arm64 ;;
-            arm*)          MKIMAGE_ARCH=arm ;;
-            amd64|x86_64)  MKIMAGE_ARCH=x86_64 ;;
-            x86|i386)      MKIMAGE_ARCH=x86 ;;
-            *) error "Architecture '$ARCH' is not supported." ;;
-        esac
-    fi
-}
-
-set_vboot_arch() {
-    if [ -z "$VBOOT_ARCH" ]; then
-        case "$ARCH" in
-            arm64|aarch64) VBOOT_ARCH=aarch64 ;;
-            arm*)          VBOOT_ARCH=arm ;;
-            amd64|x86_64)  VBOOT_ARCH=amd64 ;;
-            x86|i386)      VBOOT_ARCH=x86 ;;
-            *) error "Architecture '$ARCH' is not supported." ;;
-        esac
     fi
 }
 
@@ -342,9 +355,6 @@ main() {
     if [ "$VERBOSE" != yes ]; then
         exec >/dev/null
     fi
-
-    set_mkimage_arch
-    set_vboot_arch
 
     decompress_kernel
     compress_kernel
