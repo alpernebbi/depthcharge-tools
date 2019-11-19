@@ -73,20 +73,21 @@ main() {
         exec >/dev/null
     fi
 
-    partdev="$(cgpt find -u "$PARTUUID" 2>/dev/null)" \
+    partdev="$(cgpt_ find -1 -u "$PARTUUID" 2>/dev/null)" \
         || error "No partition with PARTUUID='$PARTUUID' found."
-    pair="$(disk_part_from_dev "$partdev")"
-    disk="${pair%,*}"
-    part="${pair#*,}"
+    disk="$(disk_from_partdev "$partdev")"
+    partno="$(partno_from_partdev "$partdev")"
 
-    typeguid="$(cgpt show -i "$part" -t "$disk")"
+    typeguid="$(cgpt_ show -i "$partno" -t "$disk")"
     if [ "$typeguid" != "FE3A2A5D-4F32-41A7-B725-ACCC3285A309" ]; then
         error "Partition '$partdev' is not a ChromeOS kernel partition."
     fi
 
-    cgpt add -i "$part" -T 1 -S 1 "$disk"
-    cgpt prioritize -i "$part" "$disk"
-    cgpt show -i "$part" "$disk"
+    cgpt_ add -i "$partno" -T 1 -S 1 "$disk" \
+        || error "Failed to set partition '$target' as successful."
+    cgpt_ prioritize -i "$partno" "$disk" \
+        || error "Failed to prioritize partition '$target'."
+    cgpt_ show -i "$partno" "$disk"
 }
 
 main "$@"

@@ -282,15 +282,14 @@ write_image() {
     fi
     info "Chose partition '$target' as the target partition."
 
-    pair="$(disk_part_from_dev "$target")"
-    disk="${pair%,*}"
-    part="${pair#*,}"
+    disk="$(disk_from_partdev "$target")"
+    partno="$(partno_from_partdev "$target")"
     if [ ! -b "$disk" ]; then
         error "Target disk '$disk' is not a valid block device."
     elif [ ! -w "$disk" ]; then
         error "Target disk '$disk' is not writable."
     fi
-    case "$part" in
+    case "$partno" in
         *[!0-9]*)
             error "Parsed invalid partition number for '$target'."
             ;;
@@ -305,9 +304,9 @@ write_image() {
         || error "Failed to write image '$image' to partition '$target'."
 
     info "Setting '$target' as the highest-priority bootable partition."
-    cgpt add -i "$part" -T 1 -S 0 "$disk" \
+    cgpt_ add -i "$partno" -T 1 -S 0 "$disk" \
         || error "Failed to set partition '$target' as bootable."
-    cgpt prioritize -i "$part" "$disk" \
+    cgpt_ prioritize -i "$partno" "$disk" \
         || error "Failed to prioritize partition '$target'."
 }
 
