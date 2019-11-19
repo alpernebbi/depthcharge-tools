@@ -5,6 +5,7 @@ ORIG_IFS="$IFS"
 CUSTOM_IFS="$(printf "\n\t")"
 NEWLINE="${CUSTOM_IFS%?}"
 TAB="${CUSTOM_IFS#?}"
+COMMA=","
 
 has_newline() {
     case "$1" in
