@@ -20,7 +20,7 @@ EOF
 }
 
 . "lib/msg.sh"
-. "lib/cgpt.sh"
+. "lib/disks.sh"
 . "lib/ifs.sh"
 
 # Supporting a comma separated list of columns needs a comma in IFS.

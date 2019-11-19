@@ -262,19 +262,16 @@ write_image() {
     # Disks containing /boot and / should be available during boot,
     # so we can look there for a partition to write our boot image.
     info "Identifying disks containing root and boot partitions."
-    root="$(findmnt --fstab -M "/" --evaluate -n -o SOURCE)" || :
-    boot="$(findmnt --fstab -M "/boot" --evaluate -n -o SOURCE)" || :
-    if [ -z "$root" ] && [ -z "$boot" ]; then
-        error "Couldn't find devices for neither / nor /boot from fstab."
-    else
-        disks="$(find_disks "$boot" "$root")" \
-            || error "Couldn't find physical disks for neither" \
-                "/ device '$root' nor /boot device '$boot'."
-    fi
+    disks="$(bootable_disks)" \
+        || error "Couldn't find physical disks for neither / nor /boot."
 
     info "Searching for ChromeOS kernel partitions (on $disks)."
-    target="$(find_depthcharge_part $disks)" \
-        || error "No usable ChromeOS kernel partition found (on $disks)."
+    target="$(
+        depthcharge_parts_table "$disks" \
+            | sort \
+            | head -1  \
+            | { read -r S P T dev && printf "%s" "$dev"; } \
+    )" || error "No usable ChromeOS kernel partition found (on $disks)."
     if [ ! -b "$target" ]; then
         error "Target device '$target' is not a valid block device."
     elif [ ! -w "$target" ]; then
