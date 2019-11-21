@@ -15,48 +15,85 @@ EOF
 }
 
 . "lib/msg.sh"
+. "lib/disks.sh"
+. "lib/ifs.sh"
 
 
 # Parse options and arguments
 # ---------------------------
 
+set_cmd() {
+    if [ -n "${COMMAND:-}" ]; then
+        error "Can't set command twice ('$COMMAND', '$1')."
+    fi
+
+    COMMAND="$1"
+    readonly COMMAND
+
+    cmd="lib/depthchargectl/$COMMAND.sh"
+    if [ ! -r "$cmd" ]; then
+        usage_error "'$COMMAND' is not a valid depthchargectl command."
+    fi
+
+    # This should give us cmd_args, cmd_defaults and cmd_main functions.
+    # It also replaces the usage text with its own.
+    . "$cmd"
+}
+
+# Check verbose options before printing anything.
+for arg in "$@"; do
+    case "${arg:-}" in
+        -v|--verbose) VERBOSE=yes ;;
+        --) break ;;
+    esac
+done
+
 while [ "$#" -gt 0 ]; do
     case "$1" in
         # Global options:
         -h|--help)      usage;          exit 0 ;;
-        -v|--verbose)   VERBOSE=yes;    shift 1 ;;
+        -v|--verbose)   VERBOSE=yes;    shift; continue ;;
 
-        # End of options.
-        -*) usage_error "Global option '$1' not understood." ;;
-        *)  COMMAND="$1"; shift; break ;;
+        # May be command options, but not commands themselves.
+        -*) if [ -z "${COMMAND:-}" ]; then
+                usage_error "Global option '$1' not understood."
+            fi
+            ;;
     esac
+
+    # Commands or command arguments.
+    if [ -z "${COMMAND:-}" ]; then
+        set_cmd "$1"
+        shift
+    else
+        # Should return number of elemets to shift, never zero.
+        if cmd_args "$@"; then
+            error "Parser for command '$COMMAND' couldn't parse args."
+        else
+            shift "$?"
+        fi
+    fi
 done
 
 
 # Set argument defaults
 # ---------------------
 
+# List partitions by default.
+if [ -z "${COMMAND:-}" ]; then
+    set_cmd list
+fi
+
+# Set defaults for the active command.
+cmd_defaults
+
 # Verbosity options.
 : "${VERBOSE:=no}"
 : "${QUIET:=no}"
 : "${SILENT:=no}"
 
-# List partitions by default.
-: "${COMMAND:=list}"
-
-export VERBOSE QUIET SILENT
-readonly COMMAND
-
 
 # Execute chosen command
 # ----------------------
 
-cmd="lib/depthchargectl/${COMMAND}.sh"
-if [ ! -r "$cmd" ]; then
-    usage_error "'$COMMAND' is not a valid depthchargectl command."
-elif [ ! -x "$cmd" ]; then
-    error "Script for '$COMMAND' isn't executable."
-fi
-
-# We've only parsed arguments upto and including the command.
-"$cmd" "$@"
+cmd_main
