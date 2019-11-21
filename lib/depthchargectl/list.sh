@@ -11,6 +11,7 @@ Options:
  -h, --help                 Show this help message.
  -v, --verbose              Print info messages to stderr.
  -n, --noheadings           Don't print column headings.
+ -a, --all-disks            List partitions on all disks.
  -o, --output COLUMNS       Comma separated list of columns to output.
 
 Supported columns:
@@ -55,6 +56,7 @@ add_disk() {
 cmd_args() {
     case "$1" in
         # Options:
+        -a|--all-disks)     ALL_DISKS=yes;      return 1 ;;
         -n|--noheadings)    HEADINGS=no;        return 1 ;;
         -o|--output)        add_column "$2";    return 2 ;;
 
@@ -75,11 +77,12 @@ cmd_defaults() {
     # Add heading by default.
     : "${HEADINGS:=yes}"
 
-    # Can be empty (for all disks) but needs to be set.
+    # Show only the disks containing root and boot.
+    : "${ALL_DISKS:=no}"
     : "${DISKS:=}"
 
     readonly COLUMNS HEADINGS
-    readonly DISKS
+    readonly ALL_DISKS
 }
 
 
@@ -87,6 +90,13 @@ cmd_defaults() {
 # ---------------------
 
 cmd_main() {
+    if [ -z "${DISKS:-}" ] && [ "${ALL_DISKS:-no}" = no ]; then
+        DISKS="$(bootable_disks)" \
+            || error "Could not find real disks containing root or boot."
+        info "Using bootable disks: $DISKS"
+    fi
+    readonly DISKS
+
     # Columns is comma separated
     IFS=","
     set -- $COLUMNS
@@ -107,7 +117,13 @@ cmd_main() {
 
     info "Printing table:"
     (
-        set -- $DISKS
+        if [ "${ALL_DISKS:-no}" = no ]; then
+            IFS=","
+            set -- $DISKS
+            IFS="$ORIG_IFS"
+        else
+            set --
+        fi
         depthcharge_parts_table "$@"
     ) | {
         while read -r S P T DEVICE; do
