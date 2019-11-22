@@ -23,6 +23,7 @@ Depthcharge image options:
  -c, --cmdline CMD          Command-line parameters for the kernel.
                             be used multiple times to append new values.
      --bootloader FILE      Bootloader stub binary to use.
+     --devkeys DIR          Directory containing developer keys to use.
      --keyblock FILE        The key block file (.keyblock).
      --signprivate FILE     Private key (.vbprivk) to sign the image.
      --signpubkey FILE      Public key (.vbpubk) to verify the image.
@@ -172,6 +173,7 @@ while [ "$#" -gt 0 ]; do
         --arch)             set_vboot_arch "$2";        shift 2 ;;
         -c|--cmdline)       add_cmdline "$2";           shift 2 ;;
         --bootloader)       VBOOT_BOOTSTUB="$2";        shift 2 ;;
+        --devkeys)          VBOOT_DEVKEYS="$2";         shift 2 ;;
         --keyblock)         VBOOT_KEYBLOCK="$2";        shift 2 ;;
         --signpubkey)       VBOOT_SIGNPUBKEY="$2";      shift 2 ;;
         --signprivate)      VBOOT_SIGNPRIVATE="$2";     shift 2 ;;
