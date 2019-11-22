@@ -20,7 +20,7 @@ FIT image options:
 
 Depthcharge image options:
  -A, --arch ARCH            Architecture to build for (prefers --arch).
- -c, --cmdline CMD          Command-line parameters for the kernel.
+ -c, --cmdline CMD          Command-line parameters for the kernel. Can
                             be used multiple times to append new values.
      --bootloader FILE      Bootloader stub binary to use.
      --devkeys DIR          Directory containing developer keys to use.
