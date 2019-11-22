@@ -219,7 +219,7 @@ readonly OUTPUT
 
 # We should be able to make an image for other architectures, but the
 # default should be this machine's. Use this variable for that.
-: "${ARCH:=$(arch)}"
+: "${ARCH:=$(uname -m)}"
 : "${ARCH:=unknown}"
 
 # Synchronize -A and --arch if only one is given, or set to defaults.
