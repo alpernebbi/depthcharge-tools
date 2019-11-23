@@ -103,7 +103,13 @@ cmd_main() {
 
     # TODO: valid image check
 
-    # TODO: machine size check
+    if [ "${MACHINE_MAX_SIZE:-0}" -gt 0 ]; then
+        info "Checking if image fits into size limit for this machine."
+        size="$(stat -c '%s' "$IMAGE")"
+        if [ "$size" -gt "${MACHINE_MAX_SIZE}" ]; then
+            error "Depthcharge image size too big to boot."
+        fi
+    fi
 
     # Disks containing /boot and / should be available during boot,
     # so we can look there for a partition to write our boot image.
