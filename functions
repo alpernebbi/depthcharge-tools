@@ -2,6 +2,7 @@
 
 . "lib/msg.sh"
 . "lib/disks.sh"
+. "lib/config.sh"
 
 # ChromeOS firmware injects one of these values into the cmdline based
 # on which boot mechanism is used. A 'secure' argument allows us to
@@ -17,65 +18,6 @@ is_cros_machine() {
             ;;
     esac
     return 1
-}
-
-# Finds values for a key, among input lines of "<key>: <values>".
-parse_config() {
-    field="$1"
-    set --
-
-    while IFS=":$IFS" read -r key values; do
-        if [ "$key" = "$field" ]; then
-            set -- "$values"
-        fi
-    done
-
-    if [ "$#" -gt 0 ]; then
-        echo "$@"
-    else
-        return 1
-    fi
-}
-
-# Like parse_config, but only considers blocks of lines whose first line
-# is a certain "Machine: <machine>".
-parse_db() {
-    field="$1"
-    machine="$2"
-    set --
-
-    if [ -z "$field" ] || [ -z "$machine" ]; then
-        return 1
-    fi
-
-    while IFS=":$IFS" read -r key value; do
-        # Skip to "Machine: $machine"
-        if [ "$key" != "Machine" ] || [ "$value" != "$machine" ]; then
-            continue
-        fi
-
-        # Try fields until the end of machine (empty line).
-        while IFS=":$IFS" read -r key values && [ "$key" != "" ]; do
-            if [ "$key" = "$field" ]; then
-                set -- "$values"
-            fi
-        done
-    done
-
-    if [ "$#" -gt 0 ]; then
-        echo "$@"
-    else
-        return 1
-    fi
-}
-
-# Read files but ignore commented lines. Insert newlines between files
-# since parse_db uses an empty line as a block delimiter and two files
-# could accidentally merge into one block otherwise.
-read_files() {
-    for f in "$@"; do
-        grep -sv '^#' "$f" && echo || :
-    done
 }
 
 # Check if file is less than a maximum size.

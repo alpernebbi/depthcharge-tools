@@ -17,6 +17,7 @@ EOF
 . "lib/msg.sh"
 . "lib/disks.sh"
 . "lib/ifs.sh"
+. "lib/config.sh"
 
 
 # Parse options and arguments
@@ -74,6 +75,79 @@ while [ "$#" -gt 0 ]; do
         fi
     fi
 done
+
+
+# User configuration
+# ------------------
+
+CONFIG_FILE="conf/config"
+CONFIG="$(read_files "$CONFIG_FILE" "${CONFIG_FILE}.d"/*)" \
+    || error "Could not read configuration files."
+
+readonly CONFIG_FILE CONFIG
+
+config() {
+    printf "%s\n" "$CONFIG" | parse_field "$1"
+}
+
+# User configuration.
+CONFIG_MACHINE="$(config Machine)" || :
+CONFIG_COMPRESS="$(config Kernel-Compression)" || :
+CONFIG_CMDLINE="$(config Kernel-Cmdline)" || :
+
+: "${CONFIG_CMDLINE:=quiet splash}"
+: "${CONFIG_COMPRESS:=none lz4 lzma}"
+
+readonly CONFIG_MACHINE CONFIG_COMPRESS CONFIG_CMDLINE
+
+
+# Machine database
+# ----------------
+
+DB_FILE="conf/db"
+USERDB_FILE="conf/userdb"
+MACHINEDB="$(read_files "$DB_FILE" "$USERDB_FILE" "${USERDB_FILE}.d"/*)" \
+    || error "Could not read machine database."
+
+readonly DB_FILE USERDB_FILE MACHINEDB
+
+machine_config() {
+    printf "%s\n" "$MACHINEDB" \
+        | parse_machine_field "${2:-$MACHINE}" "$1"
+}
+
+detect_machine() {
+    if machine="$(cat /proc/device-tree/model)" && [ -n "$machine" ]; then
+        info "Detected machine from device-tree: '$machine'"
+        printf "%s\n" "$machine"
+    else
+        return 1
+    fi
+}
+
+# We will check this in subcommands, not here, since only some commands
+# are machine-dependent.
+machine_is_supported() {
+    printf "%s\n" "$MACHINEDB" \
+        | parse_machine_exists "${1:-$MACHINE}"
+}
+
+DETECTED_MACHINE="$(detect_machine)"
+if [ -n "$CONFIG_MACHINE" ] ; then
+    info "Overriding detected machine '$DETECTED_MACHINE' with" \
+        "'$CONFIG_MACHINE' from user configuration."
+    MACHINE="$CONFIG_MACHINE"
+else
+    MACHINE="$DETECTED_MACHINE"
+fi
+
+MACHINE_DTB_NAME="$(machine_config DTB-Name)" || :
+MACHINE_MAX_SIZE="$(machine_config Max-Size)" || :
+
+: "${MACHINE_DTB_NAME:=*.dtb}"
+: "${MACHINE_MAX_SIZE:=}"
+
+readonly DETECTED_MACHINE MACHINE MACHINE_DTB_NAME MACHINE_MAX_SIZE
 
 
 # Set argument defaults

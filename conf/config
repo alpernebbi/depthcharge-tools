@@ -5,4 +5,4 @@
 #Kernel-Compression: none lz4 lzma
 
 # Override automatic machine detection.
-#Force-Machine: <machine>
+#Machine: <machine>

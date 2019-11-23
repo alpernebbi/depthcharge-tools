@@ -122,8 +122,8 @@ get_config() {
     field="$1"
     machine="${2:-$MACHINE}"
 
-    echo "$CONFIG" | parse_config "$field" \
-        || echo "$MACHINE_DB" | parse_db "$field" "$machine"
+    echo "$CONFIG" | parse_field "$field" \
+        || echo "$MACHINE_DB" | parse_machine_field "$machine" "$field"
 }
 
 # Detect machine, but allow overriding via user config.
