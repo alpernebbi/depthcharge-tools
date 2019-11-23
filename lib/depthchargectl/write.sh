@@ -11,8 +11,7 @@ Options:
  -h, --help                 Show this help message.
  -v, --verbose              Print info messages to stderr.
  -f, --force                Allow overwriting the current partition.
- -t, --target PARTITION     Specify a partition to write the image to.
- -T, --target-disk DISK     Specify disks to choose a partition from.
+ -t, --target DISK|PART     Specify a disk or partition to write to.
      --no-prioritize        Don't set any flags on the partition.
 EOF
 }
@@ -22,18 +21,9 @@ EOF
 # ---------------------------
 
 set_target() {
-    if [ -n "${TARGET:-}" ]; then
-        usage_error "Can't have target multiple times ('$TARGET', '${1:-}')."
-    elif [ -n "${1:-}" ]; then
-        info "Targeting partition: $1"
-        TARGET="$1"
-    fi
-}
-
-add_disk() {
     if [ -n "${1:-}" ]; then
-        info "Searching disk: $1"
-        DISKS="${DISKS:-}${DISKS:+,}${1}"
+        info "Targeting disk or partition: $1"
+        TARGET="${TARGET:-}${TARGET:+,}${1}"
     fi
 }
 
@@ -52,7 +42,6 @@ cmd_args() {
         # Options:
         -f|--force)         FORCE=yes;          return 1 ;;
         -t|--target)        set_target "$2";    return 2 ;;
-        -T|--target-disk)   add_disk "$2";      return 2 ;;
         --no-prioritize)    PRIORITIZE=no;      return 1 ;;
 
         # End of options.
@@ -78,10 +67,9 @@ cmd_defaults() {
     fi
 
     # Can be empty (for auto), but needs to be set.
-    : "${DISKS:=}"
     : "${TARGET:=}"
 
-    readonly FORCE PRIORITIZE IMAGE
+    readonly FORCE PRIORITIZE IMAGE TARGET
 }
 
 
@@ -94,6 +82,21 @@ worst_partition() {
     depthcharge_parts_table "$@" | sort | head -1 | {
         read S P T dev && printf "%s" "$dev";
     }
+}
+
+set_target_part() {
+    if [ -n "${TARGET_PART:-}" ]; then
+        error "Can't have target partition multiple times" \
+            "('$TARGET_PART', '${1:-}')."
+    elif [ -n "${1:-}" ]; then
+        TARGET_PART="$1"
+    fi
+}
+
+add_target_disk() {
+    if [ -n "${1:-}" ]; then
+        TARGET_DISKS="${TARGET_DISKS:-}${TARGET_DISKS:+,}${1}"
+    fi
 }
 
 cmd_main() {
@@ -113,61 +116,82 @@ cmd_main() {
 
     # Disks containing /boot and / should be available during boot,
     # so we can look there for a partition to write our boot image.
-    if [ -z "${TARGET:-}" ] && [ -z "${DISKS:-}" ]; then
-        info "Identifying disks containing root and boot partitions."
-        DISKS="$(bootable_disks)" \
-            || error "Couldn't find a real disk containing root or boot."
-    fi
-    readonly DISKS
-
-    IFS="${IFS},"
-    set -- $DISKS
-    IFS="$ORIG_IFS"
-
     if [ -z "${TARGET:-}" ]; then
-        info "Searching for ChromeOS kernel partitions (on $DISKS)."
-        TARGET="$(worst_partition "$@")" \
-            || error "No usable ChromeOS kernel partition found on $DISKS."
-        info "Chose partition '$TARGET' as the target partition."
-    fi
-    readonly TARGET
+        info "Identifying disks containing root and boot partitions."
+        TARGET_DISKS="$(bootable_disks)" \
+            || error "Couldn't find a real disk containing root or boot."
+    else
+        IFS="${IFS},"
+        set -- $TARGET
+        IFS="$ORIG_IFS"
 
-    if [ ! -b "$TARGET" ]; then
-        error "Target '$TARGET' is not a valid block device."
-    elif [ ! -w "$TARGET" ]; then
-        error "Target '$TARGET' is not writable."
+        for target in "$@"; do
+            if depthcharge_parts "$target" >/dev/null; then
+                info "Using target '$target' as a disk."
+                add_target_disk "$target"
+            else
+                info "Using target '$target' as a partition."
+                set_target_part "$target"
+            fi
+        done
+    fi
+    readonly TARGET_DISKS
+
+    # Targeting disks and targeting parts are mutually exclusive.
+    if [ -n "${TARGET_PART:-}" ] && [ -n "${TARGET_DISKS:-}" ]; then
+        error "Cannot target both a disk and a partition."
+    elif [ -z "${TARGET_PART:-}" ] && [ -z "${TARGET_DISKS:-}" ]; then
+        error "Could not find a partition or a disk from targets '$TARGET'."
     fi
 
-    disk="$(disk_from_partdev "$TARGET")"
-    partno="$(partno_from_partdev "$TARGET")"
+    if [ -z "${TARGET_PART:-}" ]; then
+        IFS="${IFS},"
+        set -- $TARGET_DISKS
+        IFS="$ORIG_IFS"
+
+        info "Searching for ChromeOS kernel partitions on $TARGET_DISKS."
+        TARGET_PART="$(worst_partition "$@")" \
+            || error "No usable ChromeOS kernel part found on $TARGET_DISKS."
+        info "Chose partition '$TARGET_PART' as the target partition."
+    fi
+    readonly TARGET_PART
+
+    if [ ! -b "$TARGET_PART" ]; then
+        error "Target '$TARGET_PART' is not a valid block device."
+    elif [ ! -w "$TARGET_PART" ]; then
+        error "Target '$TARGET_PART' is not writable."
+    fi
+
+    disk="$(disk_from_partdev "$TARGET_PART")"
+    partno="$(partno_from_partdev "$TARGET_PART")"
     if [ ! -b "$disk" ]; then
         error "Target disk '$disk' is not a valid block device."
     elif [ ! -w "$disk" ]; then
         error "Target disk '$disk' is not writable."
     fi
     case "$partno" in
-        *[!0-9]*) error "Parsed invalid partition number for '$TARGET'." ;;
+        *[!0-9]*) error "Parsed invalid partition no for '$TARGET_PART'." ;;
     esac
 
     # TODO: partition size check
 
     typeguid="$(cgpt_ show -i "$partno" -t "$disk")"
     if [ "$typeguid" != "FE3A2A5D-4F32-41A7-B725-ACCC3285A309" ]; then
-        error "Partition '$TARGET' is not a ChromeOS kernel partition."
+        error "Partition '$TARGET_PART' is not a ChromeOS kernel partition."
     fi
 
     # TODO: currently booted partition check
 
-    info "Writing depthcharge image '$IMAGE' to partition '$TARGET':"
-    dd if="$IMAGE" of="$TARGET" \
-        || error "Failed to write image '$IMAGE' to partition '$TARGET'."
+    info "Writing depthcharge image '$IMAGE' to partition '$TARGET_PART':"
+    dd if="$IMAGE" of="$TARGET_PART" \
+        || error "Failed to write image '$IMAGE' to partition '$TARGET_PART'."
 
     if [ "${PRIORITIZE:-yes}" = "yes" ]; then
-        info "Setting '$TARGET' as the highest-priority bootable partition."
+        info "Setting '$TARGET_PART' as the highest-priority bootable part."
         cgpt_ add -i "$partno" -T 1 -S 0 "$disk" \
-            || error "Failed to set partition '$TARGET' as bootable."
+            || error "Failed to set partition '$TARGET_PART' as bootable."
         cgpt_ prioritize -i "$partno" "$disk" \
-            || error "Failed to prioritize partition '$TARGET'."
+            || error "Failed to prioritize partition '$TARGET_PART'."
     fi
 
 }
