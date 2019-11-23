@@ -42,7 +42,7 @@ add_column() {
     IFS="$ORIG_IFS"
 
     info "Adding column: $1"
-    COLUMNS="${COLUMNS:-}${COLUMNS:+,}${1}"
+    OUTPUTS="${OUTPUTS:-}${OUTPUTS:+,}${1}"
 }
 
 add_disk() {
@@ -72,7 +72,7 @@ cmd_args() {
 
 cmd_defaults() {
     # Output all columns by default.
-    : "${COLUMNS:=SUCCESSFUL,PRIORITY,TRIES,DEVICE}"
+    : "${OUTPUTS:=SUCCESSFUL,PRIORITY,TRIES,DEVICE}"
 
     # Add heading by default.
     : "${HEADINGS:=yes}"
@@ -81,7 +81,7 @@ cmd_defaults() {
     : "${ALL_DISKS:=no}"
     : "${DISKS:=}"
 
-    readonly COLUMNS HEADINGS
+    readonly OUTPUTS HEADINGS
     readonly ALL_DISKS
 }
 
@@ -99,7 +99,7 @@ cmd_main() {
 
     # Columns is comma separated
     IFS=","
-    set -- $COLUMNS
+    set -- $OUTPUTS
     IFS="$ORIG_IFS"
 
     if [ "$HEADINGS" = "yes" ]; then
