@@ -220,7 +220,7 @@ set_vboot_arch
 : "${COMPRESS:=none}"
 
 # Default description can be empty, but needs to be set (sh -o nounset).
-: "${DESCRIPTION:=}"
+: "${DESCRIPTION:=unavailable}"
 
 # If kernel.args is empty, vbutil_kernel returns an error. We can
 # use "--" instead of putting a newline or a space into the cmdline.
