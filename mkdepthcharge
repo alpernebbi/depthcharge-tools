@@ -34,10 +34,6 @@ EOF
 . "lib/tmp.sh"
 . "lib/ifs.sh"
 
-# Use custom IFS so we can support paths with spaces, $(find ...), etc.
-IFS="$CUSTOM_IFS"
-readonly IFS
-
 
 # Parse options and arguments
 # ---------------------------
@@ -78,7 +74,7 @@ add_cmdline() {
     if has_newline "${1:-}"; then
         error "Can't have newlines in cmdline '$1'."
     elif [ -n "${1:-}" ]; then
-        CMDLINE="${CMDLINE:-}${CMDLINE:+$NEWLINE}${1}"
+        CMDLINE="${CMDLINE:-}${CMDLINE:+${NEWLINE}}${1}"
     fi
 }
 
@@ -100,7 +96,7 @@ set_initramfs() {
 
 add_dtb() {
     if [ -n "${1:-}" ]; then
-        DTBS="${DTBS:-}${DTBS:+$NEWLINE}${1}"
+        DTBS="${DTBS:-}${DTBS:+${NEWLINE}}${1}"
     fi
 }
 
@@ -289,7 +285,9 @@ readonly VMLINUZ
 
 # Normalize CMDLINE to a single line.
 cmdline="$(
+    IFS="${NEWLINE}${TAB}"
     set -- ${CMDLINE:-}
+    IFS="$ORIG_IFS"
     printf "%s " "$@"
 )"
 cmdline="${cmdline% }"
@@ -335,9 +333,11 @@ make_fit() (
     set --
 
     if [ -n "${DTBS:-}" ]; then
+        IFS="${NEWLINE}${TAB}"
         for dtb in $DTBS; do
             set -- "$@" "-b" "$dtb"
         done
+        IFS="$ORIG_IFS"
     fi
 
     if [ -n "${INITRAMFS:-}" ]; then

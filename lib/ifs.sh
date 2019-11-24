@@ -2,10 +2,9 @@
 # ----------
 
 ORIG_IFS="$IFS"
-CUSTOM_IFS="$(printf "\n\t")"
-NEWLINE="${CUSTOM_IFS%?}"
-TAB="${CUSTOM_IFS#?}"
-COMMA=","
+NEWLINE="$(printf "\n\t")"
+NEWLINE="${NEWLINE%?}"
+TAB="$(printf "\t")"
 
 has_newline() {
     case "$1" in
@@ -14,4 +13,4 @@ has_newline() {
     esac
 }
 
-readonly ORIG_IFS CUSTOM_IFS NEWLINE TAB
+readonly ORIG_IFS NEWLINE TAB

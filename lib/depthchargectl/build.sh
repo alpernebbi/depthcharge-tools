@@ -104,7 +104,7 @@ build_image() {
         if [ -z "$dtbs" ]; then
             error "No dtb file '$MACHINE_DTB_NAME' found in '$dtbs_path'."
         else
-            IFS="$CUSTOM_IFS"
+            IFS="${NEWLINE}${TAB}"
             set -- "$@" $dtbs
             IFS="$ORIG_IFS"
         fi
