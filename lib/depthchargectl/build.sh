@@ -141,9 +141,6 @@ build_image() {
             cmdline="${rootcmd}${cmdline:+ }${cmdline:-}"
         fi
     fi
-
-    # We need this for the firmware to tell us the booted partition.
-    cmdline="kern_guid=%U${cmdline:+ }${cmdline:-}"
     if [ -n "$cmdline" ]; then
         set -- "--cmdline" "$cmdline" "$@"
     fi

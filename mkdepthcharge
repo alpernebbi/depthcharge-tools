@@ -22,6 +22,7 @@ Depthcharge image options:
  -A, --arch ARCH            Architecture to build for (prefers --arch).
  -c, --cmdline CMD          Command-line parameters for the kernel. Can
                             be used multiple times to append new values.
+     --no-kern-guid         Don't prepend kern_guid=%U to the cmdline.
      --bootloader FILE      Bootloader stub binary to use.
      --devkeys DIR          Directory containing developer keys to use.
      --keyblock FILE        The key block file (.keyblock).
@@ -172,6 +173,7 @@ while [ "$#" -gt 0 ]; do
         # Depthcharge options:
         --arch)             set_vboot_arch "$2";        shift 2 ;;
         -c|--cmdline)       add_cmdline "$2";           shift 2 ;;
+        --no-kern-guid)     ADD_KERN_GUID=no;           shift 1 ;;
         --bootloader)       VBOOT_BOOTSTUB="$2";        shift 2 ;;
         --devkeys)          VBOOT_DEVKEYS="$2";         shift 2 ;;
         --keyblock)         VBOOT_KEYBLOCK="$2";        shift 2 ;;
@@ -191,13 +193,6 @@ while [ "$#" -gt 0 ]; do
     file_arg "$1"
     shift
 done
-
-# Normalize CMDLINE to a single line.
-CMDLINE="$(
-    set -- ${CMDLINE:-}
-    printf "%s " "$@"
-)"
-CMDLINE="${CMDLINE% }"
 
 # Check necessary options/arguments.
 if [ -z "${VMLINUZ:-}" ]; then
@@ -238,6 +233,9 @@ set_vboot_arch
 # If kernel.args is empty, vbutil_kernel returns an error. We can
 # use "--" instead of putting a newline or a space into the cmdline.
 : "${CMDLINE:=--}"
+
+# Prepend kern_guid=%U by default
+: "${ADD_KERN_GUID:=yes}"
 
 # Keep the size check disabled by default.
 : "${MAX_SIZE:=0}"
@@ -297,11 +295,25 @@ readonly VMLINUZ
 # Prepare additional files
 # ------------------------
 
+# Normalize CMDLINE to a single line.
+cmdline="$(
+    set -- ${CMDLINE:-}
+    printf "%s " "$@"
+)"
+cmdline="${cmdline% }"
+
+# The firmware replaces any '%U' in the kernel cmdline with the PARTUUID
+# of the partition it booted from. ChromeOS uses kern_guid=%U in their
+# cmdline and it's useful information, so prepend it to cmdline.
+if [ "$ADD_KERN_GUID" = "yes" ]; then
+    cmdline="kern_guid=%U${cmdline:+ }${cmdline:-}"
+fi
+
 # vbutil_kernel --config argument and wants cmdline as a file.
 temp="$(temp_file kernel.args)"
-printf "%s" "$CMDLINE" >"$temp"
+printf "%s" "$cmdline" >"$temp"
 VBOOT_CMDLINE="$temp"
-unset temp
+unset temp cmdline
 
 # vbutil_kernel --bootloader argument wants a bootstub binary, but it's
 # contents don't matter on arm systems.

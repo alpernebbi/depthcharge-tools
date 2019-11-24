@@ -60,10 +60,8 @@ is_cros_machine() {
 }
 
 # Returns the PARTUUID of the ChromeOS kernel partition we booted from.
-# The firmware replaces any instances of '%U' in the kernel cmdline with
-# the PARTUUID of the partition it booted from. We'll need to know that
-# to set the partition as successfully booted on boot. ChromeOS uses
-# kern_guid=%U in their cmdline, so we use that too.
+# mkdepthcharge puts "kern_guid=%U" in the cmdline, and the firmware
+# should have replaced it with this partuuid.
 get_kern_guid() {
     guid="$(sed -n -e 's/.*kern_guid=\([^ ]*\).*/\1/p' "/proc/cmdline")"
     if [ -n "$guid" ] && [ "$guid" != "%U" ]; then

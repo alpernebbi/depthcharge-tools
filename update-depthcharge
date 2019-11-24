@@ -199,12 +199,6 @@ generate_image() {
         esac
     fi
 
-    # The firmware replaces any instances of '%U' in the kernel cmdline
-    # with the PARTUUID of the partition it booted from. We'll need to
-    # know that to set the partition as successfully booted on boot.
-    # ChromeOS uses kern_guid=%U in their cmdline, so use that.
-    CMDLINE="kern_guid=%U $CMDLINE"
-
     COMPRESS_TYPES="$CONFIG_COMPRESS"
     if [ -z "$COMPRESS_TYPES" ]; then
         warn "Compression is set to nothing in config, assuming 'none'."
