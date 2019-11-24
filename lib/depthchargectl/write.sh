@@ -181,7 +181,16 @@ cmd_main() {
         error "Partition '$TARGET_PART' is not a ChromeOS kernel partition."
     fi
 
-    # TODO: currently booted partition check
+    current="$(cgpt_ find -1 -u "$(get_kern_guid)")"
+    if [ "$TARGET_PART" = "$current" ]; then
+        if [ "$FORCE" = "yes" ]; then
+            warn "Overwriting the currently booted partition '$TARGET_PART'." \
+                "This might make your system unbootable."
+        else
+            error "Refusing to overwrite the currently booted partition" \
+                "'$TARGET_PART' as that might make your system unbootable."
+        fi
+    fi
 
     info "Writing depthcharge image '$IMAGE' to partition '$TARGET_PART':"
     dd if="$IMAGE" of="$TARGET_PART" \
