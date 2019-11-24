@@ -112,7 +112,7 @@ file_arg() {
     # mkimage can't open files when they are read-only for some reason.
     # Copy them into a temp dir in fear of modifying the originals.
     # We can add write permissions after we copy the files to temp.
-    temp=$(temp_copy "$1")
+    temp="$(temp_copy "$1")"
     chmod +w "$temp"
 
     case "$(basename "$1")" in
