@@ -1,8 +1,0 @@
-#!/bin/sh
-
-. "lib/msg.sh"
-. "lib/disks.sh"
-. "lib/config.sh"
-. "lib/kernel.sh"
-
-
