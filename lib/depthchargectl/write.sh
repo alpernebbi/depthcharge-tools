@@ -104,14 +104,8 @@ cmd_main() {
         error "Depthcharge image '$IMAGE' not found or is not readable."
     fi
 
-    # TODO: valid image check
-
-    if [ "${MACHINE_MAX_SIZE:-0}" -gt 0 ]; then
-        info "Checking if image fits into size limit for this machine."
-        size="$(stat -c '%s' "$IMAGE")"
-        if [ "$size" -gt "${MACHINE_MAX_SIZE}" ]; then
-            error "Depthcharge image size too big to boot."
-        fi
+    if ! depthchargectl check "$IMAGE"; then
+        error "Depthcharge image '$IMAGE' is not bootable on this machine."
     fi
 
     # Disks containing /boot and / should be available during boot,

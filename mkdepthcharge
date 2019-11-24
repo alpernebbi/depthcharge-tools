@@ -27,8 +27,6 @@ Depthcharge image options:
      --devkeys DIR          Directory containing developer keys to use.
      --keyblock FILE        The key block file (.keyblock).
      --signprivate FILE     Private key (.vbprivk) to sign the image.
-     --signpubkey FILE      Public key (.vbpubk) to verify the image.
-     --max-size SIZE        Fail if image is bigger than SIZE bytes.
 EOF
 }
 
@@ -177,9 +175,7 @@ while [ "$#" -gt 0 ]; do
         --bootloader)       VBOOT_BOOTSTUB="$2";        shift 2 ;;
         --devkeys)          VBOOT_DEVKEYS="$2";         shift 2 ;;
         --keyblock)         VBOOT_KEYBLOCK="$2";        shift 2 ;;
-        --signpubkey)       VBOOT_SIGNPUBKEY="$2";      shift 2 ;;
         --signprivate)      VBOOT_SIGNPRIVATE="$2";     shift 2 ;;
-        --max-size)         MAX_SIZE="$2";              shift 2 ;;
 
         # End of options
         --) shift; break ;;
@@ -237,19 +233,15 @@ set_vboot_arch
 # Prepend kern_guid=%U by default
 : "${ADD_KERN_GUID:=yes}"
 
-# Keep the size check disabled by default.
-: "${MAX_SIZE:=0}"
-
 # These are distro-specific paths for necessary files.
 : "${VBOOT_DEVKEYS:=/usr/share/vboot/devkeys}"
 : "${VBOOT_KEYBLOCK:=${VBOOT_DEVKEYS}/kernel.keyblock}"
-: "${VBOOT_SIGNPUBKEY:=${VBOOT_DEVKEYS}/kernel_subkey.vbpubk}"
 : "${VBOOT_SIGNPRIVATE:=${VBOOT_DEVKEYS}/kernel_data_key.vbprivk}"
 
 readonly VERBOSE QUIET SILENT
 readonly ARCH MKIMAGE_ARCH VBOOT_ARCH
 readonly COMPRESS DESCRIPTION CMDLINE MAX_SIZE
-readonly VBOOT_DEVKEYS VBOOT_KEYBLOCK VBOOT_SIGNPUBKEY VBOOT_SIGNPRIVATE
+readonly VBOOT_DEVKEYS VBOOT_KEYBLOCK VBOOT_SIGNPRIVATE
 
 
 # Prepare vmlinuz
@@ -405,29 +397,8 @@ unset temp
 readonly DEPTHCHARGE_IMAGE
 
 
-# Verify and output depthcharge image
-# -----------------------------------
-
-verify_depthcharge() {
-    futility vbutil_kernel \
-        --signpubkey "$VBOOT_SIGNPUBKEY" \
-        --verify "$DEPTHCHARGE_IMAGE"
-}
-
-info "Running vbutil_kernel (verify):"
-if [ "$VERBOSE" = "yes" ]; then
-    verify_depthcharge >&2
-else
-    verify_depthcharge >/dev/null
-fi || error "Generated image cannot be verified by vbutil_kernel."
-
-if [ "${MAX_SIZE:-0}" -gt 0 ]; then
-    info "Checking if image fits into size limit."
-    size="$(stat -c '%s' "$DEPTHCHARGE_IMAGE")"
-    if [ "$size" -gt "${MAX_SIZE}" ]; then
-        error "Output image size too big to boot."
-    fi
-fi
+# Output depthcharge image
+# ------------------------
 
 info "Copying image to output '$OUTPUT'."
 cp -f "$DEPTHCHARGE_IMAGE" "$OUTPUT" \

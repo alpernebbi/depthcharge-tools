@@ -173,25 +173,26 @@ build_image() {
         info "Trying with compression set to '$compress'."
         mkdepthcharge --output "$output" --compress "$compress" "$@" \
             || error "Failed to create depthcharge image."
-        if size_check "$output" "$MACHINE_MAX_SIZE"; then
+
+        if depthchargectl check "$output" >/dev/null 2>/dev/null; then
             break
         else
-            warn "Image built with compression '$compress' is too big."
+            warn "Image with compression '$compress' is not bootable."
         fi
     done
 
     # This is redundant now, but here just to raise an error.
-    info "Checking built image size against firmware limits."
-    size_check "$output" "$MACHINE_MAX_SIZE" \
-        || error "Depthcharge image '$output' is too big to boot."
+    info "Checking again if final image is bootable."
+    depthchargectl check "$output" \
+        || error "Couldn't build a bootable image for this machine" \
+            "even with maximum allowed compression."
 }
 
 cmd_main() {
     if [ "$ALL_IMAGES" = "yes" ]; then
         for kversion in $(kversions); do
             output="$(temp_file "depthcharge.img-$kversion")"
-            build_image "$kversion" "$output" \
-                || warn "Couldn't generate image for version '$kversion'."
+            build_image "$kversion" "$output"
             msg "built $output"
         done
         return
@@ -199,8 +200,7 @@ cmd_main() {
 
     kversion="${KVERSION:-$(kversions | head -1)}"
     output="$(temp_file "depthcharge.img-$kversion")"
-    build_image "$kversion" "$output" \
-        || error "Couldn't build image for version '$kversion'."
-        msg "built $output"
+    build_image "$kversion" "$output"
+    msg "built $output"
 }
 
