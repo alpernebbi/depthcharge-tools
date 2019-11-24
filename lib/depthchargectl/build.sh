@@ -64,19 +64,6 @@ cmd_defaults() {
 # Write image to partition
 # ------------------------
 
-# Check if file is less than a maximum size.
-size_check() {
-    image="$1"
-    max_size="${2:-${MAX_SIZE:-0}}"
-
-    if [ "${max_size}" -gt 0 ]; then
-        size="$(stat -c '%s' "$image")"
-        if [ "$size" -gt "$max_size" ]; then
-            return 1
-        fi
-    fi
-}
-
 build_image() {
     kversion="$1"
     output="$2"
