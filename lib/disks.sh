@@ -132,6 +132,7 @@ cgpt_() {
 
     # cgpt prints its output twice when called with no disk arguments
     # and output is redirected or captured so we need to deduplicate.
+    # See: https://crbug.com/463414
     if [ "${1:-}" = "find" ]; then
         printf "%s" "$output" | sort -u
     else
