@@ -198,7 +198,7 @@ cmd_main() {
 
     if [ "${PRIORITIZE:-yes}" = "yes" ]; then
         info "Setting '$TARGET_PART' as the highest-priority bootable part."
-        cgpt_ add -i "$partno" -T 1 -S 0 "$disk" \
+        cgpt_ add -i "$partno" -P 1 -T 1 -S 0 "$disk" \
             || error "Failed to set partition '$TARGET_PART' as bootable."
         cgpt_ prioritize -i "$partno" "$disk" \
             || error "Failed to prioritize partition '$TARGET_PART'."
