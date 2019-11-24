@@ -182,16 +182,12 @@ build_image() {
 cmd_main() {
     if [ "$ALL_IMAGES" = "yes" ]; then
         for kversion in $(kversions); do
-            output="$(temp_file "depthcharge.img-$kversion")"
-            build_image "$kversion" "$output"
-            msg "built $output"
+            build_image "$kversion" "${IMAGES_DIR}/${kversion}.img"
         done
         return
     fi
 
     kversion="${KVERSION:-$(kversions | head -1)}"
-    output="$(temp_file "depthcharge.img-$kversion")"
-    build_image "$kversion" "$output"
-    msg "built $output"
+    build_image "$kversion" "${IMAGES_DIR}/${kversion}.img"
 }
 

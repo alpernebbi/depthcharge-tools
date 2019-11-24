@@ -14,6 +14,11 @@ Global options:
 EOF
 }
 
+STATE_DIR="/home/alpernebbi/.cache/depthchargectl"
+IMAGES_DIR="${STATE_DIR}/images"
+mkdir -p "$STATE_DIR" "$IMAGES_DIR"
+readonly STATE_DIR IMAGES_DIR
+
 . "lib/msg.sh"
 . "lib/disks.sh"
 . "lib/ifs.sh"
