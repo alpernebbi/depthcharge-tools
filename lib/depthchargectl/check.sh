@@ -45,8 +45,6 @@ cmd_defaults() {
         usage_error "Input file image is required."
     fi
 
-    VBOOT_SIGNPUBKEY="/usr/share/vboot/devkeys/kernel_subkey.vbpubk"
-
     readonly IMAGE
 }
 
@@ -68,7 +66,7 @@ check_size() {
 check_signature() {
     info "Checking image signatures."
     if ! futility vbutil_kernel >/dev/null \
-            --signpubkey "$VBOOT_SIGNPUBKEY" \
+            --signpubkey "$CONFIG_VBOOT_SIGNPUBKEY" \
             --verify "${1:-$IMAGE}"; then
         error "Depthcharge image cannot be verified by vbutil_kernel." || :
         return 2

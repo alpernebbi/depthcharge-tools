@@ -96,9 +96,17 @@ config() {
 CONFIG_MACHINE="$(config Machine)" || :
 CONFIG_COMPRESS="$(config Kernel-Compression)" || :
 CONFIG_CMDLINE="$(config Kernel-Cmdline)" || :
+CONFIG_VBOOT_DEVKEYS="$(config Vboot-Keys-Dir)" || :
+CONFIG_VBOOT_KEYBLOCK="$(config Vboot-Keyblock)" || :
+CONFIG_VBOOT_SIGNPRIVATE="$(config Vboot-Private-Key)" || :
+CONFIG_VBOOT_SIGNPUBKEY="$(config Vboot-Public-Key)" || :
 
 : "${CONFIG_CMDLINE:=quiet splash}"
 : "${CONFIG_COMPRESS:=none lz4 lzma}"
+: "${CONFIG_VBOOT_DEVKEYS:=/usr/share/vboot/devkeys}"
+: "${CONFIG_VBOOT_KEYBLOCK:=${CONFIG_VBOOT_DEVKEYS}/kernel.keyblock}"
+: "${CONFIG_VBOOT_SIGNPUBKEY:=${CONFIG_VBOOT_DEVKEYS}/kernel_subkey.vbpubk}"
+: "${CONFIG_VBOOT_SIGNPRIVATE:=${CONFIG_VBOOT_DEVKEYS}/kernel_data_key.vbprivk}"
 
 readonly CONFIG_MACHINE CONFIG_COMPRESS CONFIG_CMDLINE
 

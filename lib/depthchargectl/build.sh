@@ -152,6 +152,10 @@ build_image() {
         set -- "--description" "$description" "$@"
     fi
 
+    # Signing keys to use.
+    set -- "--keyblock" "$CONFIG_VBOOT_KEYBLOCK" "$@"
+    set -- "--signprivate" "$CONFIG_VBOOT_SIGNPRIVATE" "$@"
+
     # If we are verbose, set mkdepthcharge to verbose too.
     if [ "$VERBOSE" = "yes" ]; then
         set -- "--verbose" "$@"
