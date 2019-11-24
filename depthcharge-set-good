@@ -26,15 +26,6 @@ fi
 # Import common functions.
 . "$FUNCTIONS"
 
-get_kern_guid() {
-    guid="$(sed -n -e 's/.*kern_guid=\([^ ]*\).*/\1/p' "$PROC_CMDLINE")"
-    if [ -n "$guid" ] && [ "$guid" != "%U" ]; then
-        echo "$guid"
-    else
-        return 1
-    fi
-}
-
 parse_args() {
     while [ "$#" -gt 0 ]; do
         case "$1" in

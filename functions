@@ -3,67 +3,6 @@
 . "lib/msg.sh"
 . "lib/disks.sh"
 . "lib/config.sh"
+. "lib/kernel.sh"
 
-# ChromeOS firmware injects one of these values into the cmdline based
-# on which boot mechanism is used. A 'secure' argument allows us to
-# select for devices where a cros partition is absolutely necessary.
-is_cros_machine() {
-    case "$(cat /proc/cmdline)" in
-        *cros_secure*)
-            return 0
-            ;;
-        *cros_efi*|*cros_legacy*)
-            [ "$1" = "secure" ] && return 1
-            return 0
-            ;;
-    esac
-    return 1
-}
 
-# Check if file is less than a maximum size.
-size_check() {
-    image="$1"
-    max_size="${2:-${MAX_SIZE:-0}}"
-
-    if [ "${max_size}" -gt 0 ]; then
-        size="$(stat -c '%s' "$image")"
-        if [ "$size" -gt "$max_size" ]; then
-            return 1
-        fi
-    fi
-}
-
-# Tries to validate the root=* kernel cmdline parameter.
-# See init/do_mounts.c in Linux tree.
-check_root_cmdline() {
-    d="[0-9]"
-    x="[0-9a-f]"
-    a="[0-9a-z]"
-    uuid="$x{8}-$x{4}-$x{4}-$x{4}-$x{12}"
-    ntsig="$x{8}-$x{2}"
-
-    echo "$1" | grep -E -q -x \
-        -e "root=$x{4}" \
-        -e "root=/dev/nfs" \
-        -e "root=/dev/$a+" \
-        -e "root=/dev/$a+$d+" \
-        -e "root=/dev/$a+p$d+" \
-        -e "root=PARTUUID=($uuid|$ntsig)" \
-        -e "root=PARTUUID=($uuid|$ntsig)/PARTNROFF=$d+" \
-        -e "root=$d+:$d+" \
-        -e "root=PARTLABEL=.*"
-}
-
-# Gets a kernel cmdline for our root, for when we don't have an initramfs.
-get_root_cmdline() {
-    rootdev="$(
-        findmnt --fstab -M "/" -n -o SOURCE \
-            | sed -e 's/\="\(.*\)"$/\=\1/' -e 's/ /\\x20/g' \
-    )"
-
-    if [ -n "$rootdev" ]; then
-        echo "root=$rootdev"
-    else
-        return 1
-    fi
-}

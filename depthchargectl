@@ -17,7 +17,9 @@ EOF
 . "lib/msg.sh"
 . "lib/disks.sh"
 . "lib/ifs.sh"
+. "lib/tmp.sh"
 . "lib/config.sh"
+. "lib/kernel.sh"
 
 
 # Parse options and arguments
