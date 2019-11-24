@@ -79,9 +79,17 @@ cmd_defaults() {
 # Get the least-successful, least-priority, least-tries-left partition
 # in that order of preference. Can take disks-to-search as arguments.
 worst_partition() {
-    depthcharge_parts_table "$@" | sort | head -1 | {
-        read S P T dev && printf "%s" "$dev";
-    }
+    image_size="$(stat -c "%s" "$IMAGE")"
+    depthcharge_parts_table "$@" | {
+        # Ignore partitions smaller than the image.
+        while read -r S P T size dev; do
+            if [ "$size" -gt "$image_size" ]; then
+                printf "%d %d %d %s\n" "$S" "$P" "$T" "$dev"
+            else
+                warn "Ignoring partition '$dev' smaller than image '$IMAGE'."
+            fi
+        done
+    } | sort | head -1 | cut -d' ' -f4
 }
 
 set_target_part() {
@@ -145,6 +153,7 @@ cmd_main() {
 
         info "Searching for ChromeOS kernel partitions on $TARGET_DISKS."
         TARGET_PART="$(worst_partition "$@")" \
+            && [ -n "$TARGET_PART" ] \
             || error "No usable ChromeOS kernel part found on $TARGET_DISKS."
         info "Chose partition '$TARGET_PART' as the target partition."
     fi
@@ -166,8 +175,6 @@ cmd_main() {
     case "$partno" in
         *[!0-9]*) error "Parsed invalid partition no for '$TARGET_PART'." ;;
     esac
-
-    # TODO: partition size check
 
     typeguid="$(cgpt_ show -i "$partno" -t "$disk")"
     if [ "$typeguid" != "FE3A2A5D-4F32-41A7-B725-ACCC3285A309" ]; then

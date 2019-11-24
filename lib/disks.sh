@@ -145,7 +145,7 @@ depthcharge_parts() {
 }
 
 # Print a table of ChromeOS kernel partitions along with their success
-# flag, priority and remaining tries.
+# flag, priority, remaining tries and partition size.
 depthcharge_parts_table() {
     for partdev in $(depthcharge_parts "$@"); do
         partno="$(partno_from_partdev "$partdev")"
@@ -165,7 +165,11 @@ depthcharge_parts_table() {
         T="$((attr >> 4 & 0xF))"
         S="$((attr >> 8 & 0x1))"
 
-        printf "%-2d %-2d %-2d %-20s\n" "$S" "$P" "$T" "$partdev"
+        # Size of the partition in bytes.
+        size="$(blockdev --getsize64 "$partdev")"
+
+        printf "%d %d %d %d %s\n" \
+            "$S" "$P" "$T" "$size" "$partdev"
     done
 }
 

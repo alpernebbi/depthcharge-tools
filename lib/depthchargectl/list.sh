@@ -15,7 +15,7 @@ Options:
  -o, --output COLUMNS       Comma separated list of columns to output.
 
 Supported columns:
-    SUCCESSFUL (S), TRIES (T), PRIORITY (P), DEVICE
+    SUCCESSFUL (S), TRIES (T), PRIORITY (P), DEVICE, SIZE
 EOF
 }
 
@@ -35,6 +35,7 @@ add_column() {
         S|SUCCESSFUL) : ;;
         T|TRIES) : ;;
         P|PRIORITY) : ;;
+        SIZE) : ;;
         DEVICE) : ;;
         '') return ;;
         *) usage_error "Unsupported output column '$1'." ;;
@@ -71,7 +72,7 @@ cmd_args() {
 # ---------------------
 
 cmd_defaults() {
-    # Output all columns by default.
+    # Output all flags and device name by default.
     : "${OUTPUTS:=SUCCESSFUL,PRIORITY,TRIES,DEVICE}"
 
     # Add heading by default.
@@ -109,6 +110,7 @@ cmd_main() {
                 S|SUCCESSFUL)   printf "%-2s " S ;;
                 T|TRIES)        printf "%-2s " T ;;
                 P|PRIORITY)     printf "%-2s " P ;;
+                SIZE)           printf "%-10s " SIZE ;;
                 DEVICE)         printf "%-20s " DEVICE ;;
             esac
         done
@@ -126,12 +128,13 @@ cmd_main() {
         fi
         depthcharge_parts_table "$@"
     ) | {
-        while read -r S P T DEVICE; do
+        while read -r S P T SIZE DEVICE; do
             for c in "$@"; do
                 case "$c" in
-                    S|SUCCESSFUL)   printf "%-2s "  "$S" ;;
-                    T|TRIES)        printf "%-2s "  "$T" ;;
-                    P|PRIORITY)     printf "%-2s "  "$P" ;;
+                    S|SUCCESSFUL)   printf "%-2d "  "$S" ;;
+                    T|TRIES)        printf "%-2d "  "$T" ;;
+                    P|PRIORITY)     printf "%-2d "  "$P" ;;
+                    SIZE)           printf "%-10d " "$SIZE" ;;
                     DEVICE)         printf "%-20s " "$DEVICE" ;;
                 esac
             done
