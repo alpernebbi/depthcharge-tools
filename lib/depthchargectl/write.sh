@@ -193,7 +193,7 @@ cmd_main() {
     fi
 
     info "Writing depthcharge image '$IMAGE' to partition '$TARGET_PART':"
-    dd if="$IMAGE" of="$TARGET_PART" \
+    dd if="$IMAGE" of="$TARGET_PART" status=none \
         || error "Failed to write image '$IMAGE' to partition '$TARGET_PART'."
 
     if [ "${PRIORITIZE:-yes}" = "yes" ]; then
