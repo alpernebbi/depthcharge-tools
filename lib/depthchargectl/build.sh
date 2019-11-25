@@ -182,12 +182,15 @@ build_image() {
 cmd_main() {
     if [ "$ALL_IMAGES" = "yes" ]; then
         for kversion in $(kversions); do
-            build_image "$kversion" "${IMAGES_DIR}/${kversion}.img"
+            image="${IMAGES_DIR}/${kversion}.img"
+            build_image "$kversion" "$image"
+            printf "%s\n" "$image"
         done
-        return
+    else
+        kversion="${KVERSION:-$(kversions | head -1)}"
+        image="${IMAGES_DIR}/${kversion}.img"
+        build_image "$kversion" "$image"
+        printf "%s\n" "$image"
     fi
-
-    kversion="${KVERSION:-$(kversions | head -1)}"
-    build_image "$kversion" "${IMAGES_DIR}/${kversion}.img"
 }
 
