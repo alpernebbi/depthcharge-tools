@@ -142,8 +142,12 @@ cmd_main() {
 
     if [ ! -r "$IMAGE" ]; then
         if [ -n "$KVERSION" ]; then
-            error "Depthcharge image for version '$KVERSION' ('$IMAGE')" \
-                "not found or is not readable."
+            info "No depthcharge image for '$KVERSION', building."
+            if [ "$VERBOSE" = "yes" ]; then
+                depthchargectl build --verbose "$KVERSION"
+            else
+                depthchargectl build "$KVERSION"
+            fi
         else
             error "Depthcharge image '$IMAGE' not found or is not readable."
         fi
