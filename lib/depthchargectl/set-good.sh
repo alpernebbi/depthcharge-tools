@@ -41,24 +41,14 @@ cmd_defaults() {
 cmd_main() {
     partuuid="$(get_kern_guid)" \
         || error "Couldn't figure out the currently booted partition."
-    partdev="$(cgpt find -1 -u "$partuuid" 2>/dev/null)" \
+    partdev="$(cgpt_ find -1 -u "$partuuid" 2>/dev/null)" \
         || error "No partition with PARTUUID='$partuuid' found."
+
+    depthchargectl target --allow-current "$partdev" >/dev/null \
+        || error "Partition '$partdev' is not a usable partition."
 
     disk="$(disk_from_partdev "$partdev")"
     partno="$(partno_from_partdev "$partdev")"
-    if [ ! -b "$disk" ]; then
-        error "Currently booted disk '$disk' is not a valid block device."
-    elif [ ! -w "$disk" ]; then
-        error "Currently booted disk '$disk' is not writable."
-    fi
-    case "$partno" in
-        *[!0-9]*) error "Parsed invalid partition no for '$partdev'." ;;
-    esac
-
-    typeguid="$(cgpt_ show -i "$partno" -t "$disk")"
-    if [ "$typeguid" != "FE3A2A5D-4F32-41A7-B725-ACCC3285A309" ]; then
-        error "Partition '$partdev' is not a ChromeOS kernel partition."
-    fi
 
     info "Setting '$partdev' as the highest-priority bootable part."
     cgpt_ add -i "$partno" -P 1 -T 1 -S 1 "$disk" \
