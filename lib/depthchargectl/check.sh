@@ -52,13 +52,20 @@ cmd_defaults() {
 # Check if image is bootable
 # --------------------------
 
+check_readable() {
+    if [ ! -r "${1:-$IMAGE}" ]; then
+        error "Depthcharge image '${1:-$IMAGE}' is not readable." || :
+        return 2
+    fi
+}
+
 check_size() {
     info "Checking if image fits into size limit."
     if [ "${MACHINE_MAX_SIZE:-0}" -gt 0 ]; then
         size="$(stat -c '%s' "${1:-$IMAGE}")"
         if [ "$size" -gt "${MACHINE_MAX_SIZE}" ]; then
             error "Depthcharge image size too big for this machine." || :
-            return 1
+            return 3
         fi
     fi
 }
@@ -69,11 +76,12 @@ check_signature() {
             --signpubkey "$CONFIG_VBOOT_SIGNPUBKEY" \
             --verify "${1:-$IMAGE}"; then
         error "Depthcharge image cannot be verified by vbutil_kernel." || :
-        return 2
+        return 4
     fi
 }
 
 cmd_main() {
+    check_readable
     check_size
     check_signature
 }
