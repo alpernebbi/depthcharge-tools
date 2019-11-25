@@ -3,7 +3,7 @@
 usage() {
 cat <<EOF
 Usage:
- depthchargectl write [options] image
+ depthchargectl write [options] [kernel-version | image]
 
 Write an image to a ChromeOS kernel partition.
 
@@ -36,6 +36,31 @@ set_image() {
     fi
 }
 
+set_kversion() {
+    if [ -n "${KVERSION:-}" ]; then
+        usage_error "Can't have kernel version multiple times" \
+            "('$KVERSION', '${1:-}')."
+    elif [ -n "${1:-}" ]; then
+        info "Using kernel version: $1"
+        KVERSION="$1"
+    fi
+}
+
+set_source() {
+    if [ -n "${KVERSION:-}" ] || [ -n "${IMAGE:-}" ]; then
+        usage_error "Can't have multiple inputs " \
+            "('${KVERSION:-$IMAGE}', '${1:-}'."
+    elif [ -n "${1:-}" ]; then
+        for kversion in $(kversions); do
+            if [ "$kversion" = "$1" ]; then
+                set_kversion "$1"
+                return
+            fi
+        done
+        set_image "$1"
+    fi
+}
+
 # Should return number of elemets to shift, never zero.
 cmd_args() {
     case "$1" in
@@ -46,7 +71,7 @@ cmd_args() {
 
         # End of options.
         -*) usage_error "Option '$1' not understood." ;;
-        *)  set_image "$1"; return 1 ;;
+        *)  set_source "$1"; return 1 ;;
     esac
 }
 
@@ -61,15 +86,14 @@ cmd_defaults() {
     # Set priority to max (in disk) and tries to one.
     : "${PRIORITIZE:=yes}"
 
-    # Mandatory argument.
-    if [ -z "${IMAGE:-}" ]; then
-        usage_error "Input file image is required."
-    fi
+    # Can be empty (for latest kernel version), but needs to be set.
+    : "${KVERSION:=}"
+    : "${IMAGE:=}"
 
     # Can be empty (for auto), but needs to be set.
     : "${TARGET:=}"
 
-    readonly FORCE PRIORITIZE IMAGE TARGET
+    readonly FORCE PRIORITIZE TARGET
 }
 
 
@@ -108,12 +132,31 @@ add_target_disk() {
 }
 
 cmd_main() {
+    if [ -z "$IMAGE" ]; then
+        if [ -z "$KVERSION" ]; then
+            KVERSION="$(kversions | head -1)"
+        fi
+        IMAGE="${IMAGES_DIR}/${KVERSION}.img"
+    fi
+    readonly KVERSION IMAGE
+
     if [ ! -r "$IMAGE" ]; then
-        error "Depthcharge image '$IMAGE' not found or is not readable."
+        if [ -n "$KVERSION" ]; then
+            error "Depthcharge image for version '$KVERSION' ('$IMAGE')" \
+                "not found or is not readable."
+        else
+            error "Depthcharge image '$IMAGE' not found or is not readable."
+        fi
     fi
 
     if ! depthchargectl check "$IMAGE"; then
-        error "Depthcharge image '$IMAGE' is not bootable on this machine."
+        if [ -n "$KVERSION" ]; then
+            error "Depthcharge image for version '$KVERSION' ('$IMAGE')" \
+                "is not bootable on this machine."
+        else
+            error "Depthcharge image '$IMAGE' is not bootable" \
+                "on this machine."
+        fi
     fi
 
     # Disks containing /boot and / should be available during boot,
