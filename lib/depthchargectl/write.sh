@@ -104,26 +104,21 @@ cmd_defaults() {
 # ------------------------
 
 cmd_main() {
+    # Collect arguments for depthchargectl build.
+    set --
+
+    # No image given, try creating one.
     if [ -z "$IMAGE" ]; then
-        if [ -z "$KVERSION" ]; then
-            KVERSION="$(kversions | head -1)"
+        if [ -n "$KVERSION" ]; then
+            set -- "$KVERSION" "$@"
         fi
-        IMAGE="${IMAGES_DIR}/${KVERSION}.img"
+        if [ "$VERBOSE" = "yes" ]; then
+            set -- "--verbose" "$@"
+        fi
+        IMAGE="$(depthchargectl build "$@")" \
+            || error "Couldn't build an image to write."
     fi
     readonly KVERSION IMAGE
-
-    if [ ! -r "$IMAGE" ]; then
-        if [ -n "$KVERSION" ]; then
-            info "No depthcharge image for '$KVERSION', building."
-            if [ "$VERBOSE" = "yes" ]; then
-                depthchargectl build --verbose "$KVERSION"
-            else
-                depthchargectl build "$KVERSION"
-            fi
-        else
-            error "Depthcharge image '$IMAGE' not found or is not readable."
-        fi
-    fi
 
     if ! depthchargectl check "$IMAGE"; then
         if [ -n "$KVERSION" ]; then
@@ -135,33 +130,34 @@ cmd_main() {
         fi
     fi
 
+    # Collect arguments for depthchargectl target.
     IFS="${ORIG_IFS},"
     set -- $TARGETS
     IFS="$ORIG_IFS"
 
-    image_size="$(stat -c "%s" "$IMAGE")"
-    info "Searching disks for a target partition."
     if [ "$VERBOSE" = "yes" ]; then
-        TARGET_PART="$(
-            depthchargectl target \
-                --verbose \
-                --allow-current \
-                --min-size "$image_size" \
-                "$@" \
-        )"
-    else
-        TARGET_PART="$(
-            depthchargectl target \
-                --allow-current \
-                --min-size "$image_size" \
-                "$@" \
-        )"
+        set -- "--verbose" "$@"
     fi
+
+    # We don't want to abort if current partition is targeted since we
+    # will handle that error here. But the partition must be bigger than
+    # the image we'll write to it.
+    info "Searching disks for a target partition."
+    TARGET_PART="$( \
+        depthchargectl target \
+            --allow-current \
+            --min-size "$(stat -c "%s" "$IMAGE")" \
+            "$@" \
+    )" || error "Couldn't find a usable partition to write to."
     readonly TARGET_PART
 
-    if depthchargectl target "$TARGET_PART" >/dev/null; then
+    # Check again without --allow-current to see if we targeted the
+    # currently booted partition.
+    if depthchargectl target "$TARGET_PART" >/dev/null 2>/dev/null; then
         info "Targeted partition '$TARGET_PART' is usable."
     elif [ "$?" -ne 6 ]; then
+        # This case shouldn't happen as the previous call should've
+        # failed and caused an exit (unless errexit was ignored).
         error "Targeted invalid partition '$TARGET_PART'."
     elif [ "$ALLOW_CURRENT" = "yes" ]; then
         warn "Overwriting the currently booted partition '$TARGET_PART'." \
