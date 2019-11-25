@@ -3,7 +3,7 @@
 usage() {
 cat <<EOF
 Usage:
- depthchargectl list [options] [disk ...]
+ depthchargectl partitions [options] [disk ...]
 
 List ChromeOS kernel partitions.
 

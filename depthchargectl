@@ -170,7 +170,7 @@ readonly DETECTED_MACHINE MACHINE MACHINE_DTB_NAME MACHINE_MAX_SIZE
 
 # List partitions by default.
 if [ -z "${COMMAND:-}" ]; then
-    set_cmd list
+    set_cmd partitions
 fi
 
 # Set defaults for the active command.
