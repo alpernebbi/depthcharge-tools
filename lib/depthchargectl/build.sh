@@ -11,6 +11,7 @@ Options:
  -h, --help                 Show this help message.
  -v, --verbose              Print info messages to stderr.
  -a, --all                  Rebuild images for all kernel versions.
+     --reproducible         Try to build a reproducible image.
 EOF
 }
 
@@ -34,6 +35,7 @@ cmd_args() {
         # Options:
         -f|--force)         FORCE=yes;          return 1 ;;
         -a|--all)           ALL_IMAGES=yes;     return 1 ;;
+        --reproducible)     REPRODUCIBLE=yes;   return 1 ;;
 
         # End of options.
         -*) usage_error "Option '$1' not understood." ;;
@@ -56,6 +58,9 @@ cmd_defaults() {
     if [ "$ALL_IMAGES" = "yes" ] && [ -n "$KVERSION" ]; then
         usage_error "Can't specify both --all and a version ('$KVERSION')."
     fi
+
+    # Embed current date into the image.
+    : "${REPRODUCIBLE:=no}"
 
     readonly ALL_IMAGES KVERSION
 }
@@ -150,7 +155,7 @@ build_image() {
 
     # Try to keep the output reproducible. Initramfs date is bound to be
     # later than vmlinuz date, so prefer that if possible.
-    if [ -z "${SOURCE_DATE_EPOCH:-}" ]; then
+    if [ "${REPRODUCIBLE}" = yes ] && [ -z "${SOURCE_DATE_EPOCH:-}" ]; then
         SOURCE_DATE_EPOCH="$(
             stat -c "%Y" "$initramfs" || stat -c "%Y" "$vmlinuz" \
         )" || error "Couldn't determine a date from initramfs nor vmlinuz."
