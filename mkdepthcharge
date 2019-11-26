@@ -12,14 +12,14 @@ Options:
  -h, --help                 Show this help message.
  -v, --verbose              Print more detailed output.
  -o, --output FILE          Write resulting image to FILE.
+ -A, --arch ARCH            Architecture to build for.
+     --format FORMAT        Kernel image format to use: fit or zimage.
 
 FIT image options:
- -A, --arch ARCH            Architecture to build for (prefers -A).
  -C, --compress TYPE        Compress vmlinuz with lz4 or lzma.
  -n, --description DESC     Description of vmlinuz to put in the FIT.
 
 Depthcharge image options:
- -A, --arch ARCH            Architecture to build for (prefers --arch).
  -c, --cmdline CMD          Command-line parameters for the kernel. Can
                             be used multiple times to append new values.
      --no-kern-guid         Don't prepend kern_guid=%U to the cmdline.
@@ -37,38 +37,6 @@ EOF
 
 # Parse options and arguments
 # ---------------------------
-
-set_mkimage_arch() {
-    if [ -n "${1:-}" ] && [ -z "${VBOOT_ARCH:-}" ]; then
-        ARCH="$1"
-    fi
-
-    arch="${1:-${MKIMAGE_ARCH:-$ARCH}}"
-    case "$arch" in
-        arm64|aarch64)  MKIMAGE_ARCH=arm64 ;;
-        arm*)           MKIMAGE_ARCH=arm ;;
-        amd64|x86_64)   MKIMAGE_ARCH=x86_64 ;;
-        x86|i386)       MKIMAGE_ARCH=x86 ;;
-        *) error "Architecture '$arch' is not supported (mkimage)." ;;
-    esac
-    unset arch
-}
-
-set_vboot_arch() {
-    if [ -n "${1:-}" ] && [ -z "${MKIMAGE_ARCH:-}" ]; then
-        ARCH="$1"
-    fi
-
-    arch="${1:-${VBOOT_ARCH:-$ARCH}}"
-    case "$arch" in
-        arm64|aarch64)  VBOOT_ARCH=aarch64 ;;
-        arm*)           VBOOT_ARCH=arm ;;
-        amd64|x86_64)   VBOOT_ARCH=amd64 ;;
-        x86|i386)       VBOOT_ARCH=x86 ;;
-        *) error "Architecture '$arch' is not supported (vboot)." ;;
-    esac
-    unset arch
-}
 
 add_cmdline() {
     if has_newline "${1:-}"; then
@@ -158,14 +126,14 @@ while [ "$#" -gt 0 ]; do
         -h|--help)          usage;                      exit 0 ;;
         -v|--verbose)       VERBOSE=yes;                shift 1 ;;
         -o|--output)        OUTPUT="$2";                shift 2 ;;
+        -A|--arch)          ARCH="$2";                  shift 2 ;;
+        --format)           FORMAT="$2";                shift 2 ;;
 
         # FIT image options:
-        -A)                 set_mkimage_arch "$2";      shift 2 ;;
         -C|--compress)      COMPRESS="$2";              shift 2 ;;
         -n|--description)   DESCRIPTION="$2";           shift 2 ;;
 
         # Depthcharge options:
-        --arch)             set_vboot_arch "$2";        shift 2 ;;
         -c|--cmdline)       add_cmdline "$2";           shift 2 ;;
         --no-kern-guid)     ADD_KERN_GUID=no;           shift 1 ;;
         --bootloader)       VBOOT_BOOTSTUB="$2";        shift 2 ;;
@@ -211,9 +179,24 @@ readonly OUTPUT
 : "${ARCH:=$(uname -m)}"
 : "${ARCH:=unknown}"
 
-# Synchronize -A and --arch if only one is given, or set to defaults.
-set_mkimage_arch
-set_vboot_arch
+# Format defaults are based on architecture.
+case "$ARCH" in
+    arm*|aarch64)    : "${FORMAT:=fit}" ;;
+    x86*|i386|amd64) : "${FORMAT:=zimage}" ;;
+    *) error "Architecture '$ARCH' is not supported." ;;
+esac
+
+# AFAIK, depthcharge doesn't care about the arch set in the FIT image,
+# We can't set "fit|x86|arm" and "fit|arm|x86" cases with this, but they
+# are satisfiable with "fit|arm|arm". The zimage format doesn't call
+# mkimage so all its cases can be set with --arch x86|arm.
+case "$ARCH" in
+    arm64|aarch64)  MKIMAGE_ARCH=arm64;     VBOOT_ARCH=aarch64 ;;
+    arm*)           MKIMAGE_ARCH=arm;       VBOOT_ARCH=arm ;;
+    amd64|x86_64)   MKIMAGE_ARCH=x86_64;    VBOOT_ARCH=amd64 ;;
+    x86|i386)       MKIMAGE_ARCH=x86;       VBOOT_ARCH=x86 ;;
+    *) error "Architecture '$arch' is not supported" ;;
+esac
 
 # If --compress option isn't given, COMPRESS wouldn't be set, but it
 # should be set to none in that case.
@@ -235,9 +218,22 @@ set_vboot_arch
 : "${VBOOT_SIGNPRIVATE:=${VBOOT_DEVKEYS}/kernel_data_key.vbprivk}"
 
 readonly VERBOSE QUIET SILENT
-readonly ARCH MKIMAGE_ARCH VBOOT_ARCH
+readonly ARCH FORMAT MKIMAGE_ARCH VBOOT_ARCH
 readonly COMPRESS DESCRIPTION CMDLINE MAX_SIZE
 readonly VBOOT_DEVKEYS VBOOT_KEYBLOCK VBOOT_SIGNPRIVATE
+
+# Check invalid option combinations.
+if [ "$FORMAT" = "zimage" ]; then
+    if [ "$COMPRESS" != "none" ]; then
+        usage_error "--compress is incompatible with zimage format."
+    elif [ "$DESCRIPTION" != "unavailable" ]; then
+        usage_error "--description is incompatible with zimage format."
+    elif [ -n "${DTBS:-}" ]; then
+        error "Device tree files not supported with zimage format."
+    elif [ -n "${INITRAMFS:-}" ]; then
+        error "Initramfs image not supported with zimage format."
+    fi
+fi
 
 
 # Prepare vmlinuz
@@ -355,14 +351,18 @@ make_fit() (
         "$temp"
 )
 
-info "Running mkimage:"
-if [ "$VERBOSE" = "yes" ]; then
-    make_fit >&2
-else
-    make_fit >/dev/null
-fi || error "Could not pack inputs into a FIT image."
+if [ "$FORMAT" = "fit" ]; then
+    info "Running mkimage:"
+    if [ "$VERBOSE" = "yes" ]; then
+        make_fit >&2
+    else
+        make_fit >/dev/null
+    fi || error "Could not pack inputs into a FIT image."
 
-FIT_IMAGE="$temp"
+    FIT_IMAGE="$temp"
+fi
+
+unset make_fit
 unset temp
 
 readonly FIT_IMAGE
@@ -371,12 +371,21 @@ readonly FIT_IMAGE
 # Make depthcharge image
 # ----------------------
 
+if [ "$FORMAT" = "fit" ]; then
+    info "Using fit image as vboot kernel."
+    VBOOT_VMLINUZ="$FIT_IMAGE"
+elif [ "$FORMAT" = "zimage" ]; then
+    info "Using vmlinuz file as vboot kernel."
+    VBOOT_VMLINUZ="$VMLINUZ"
+fi
+readonly VBOOT_VMLINUZ
+
 temp="$(temp_file depthcharge.img)"
 pack_depthcharge() {
     futility vbutil_kernel \
         --version 1 \
         --arch "$VBOOT_ARCH" \
-        --vmlinuz "$FIT_IMAGE" \
+        --vmlinuz "$VBOOT_VMLINUZ" \
         --config "$VBOOT_CMDLINE" \
         --bootloader "$VBOOT_BOOTSTUB" \
         --keyblock "$VBOOT_KEYBLOCK" \
