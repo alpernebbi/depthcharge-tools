@@ -163,26 +163,89 @@ build_image() {
         export SOURCE_DATE_EPOCH
     fi
 
+    # Keep information about input files and configuration.
+    new_inputs="$(temp_file "${kversion}.img.inputs")"
+    (   printf "# Machine info:\n"
+        printf "%s: %s\n" \
+            Machine "$MACHINE" \
+            DTB-Name "$MACHINE_DTB_NAME" \
+            Max-Size "$MACHINE_MAX_SIZE"
+        printf "\n"
+
+        printf "# Image Configuration:\n"
+        printf "%s: %s\n" \
+            Kernel-Version "$kversion" \
+            Kernel-Cmdline "$cmdline" \
+            Kernel-Compress "${CONFIG_COMPRESS:-none}" \
+            Kernel-Description "$description" \
+            Source-Date-Epoch "${SOURCE_DATE_EPOCH:-unset}"
+        printf "\n"
+
+        printf "# Image Inputs:\n"
+        printf "%s: %s\n" \
+            Vmlinuz "$vmlinuz" \
+            Initramfs "${initramfs:-}"
+        IFS="${NEWLINE}${TAB}"
+        printf "DTB: %s\n" $dtbs
+        IFS="${ORIG_IFS}"
+        printf "\n"
+
+        printf "# Signing Keys:\n"
+        printf "%s: %s\n" \
+            Vboot-Keyblock "$CONFIG_VBOOT_KEYBLOCK" \
+            Vboot-Public-Key "$CONFIG_VBOOT_SIGNPUBKEY" \
+            Vboot-Private-Key "$CONFIG_VBOOT_SIGNPRIVATE"
+        printf "\n"
+
+        printf "# SHA256 Checksums:\n"
+        IFS="${NEWLINE}${TAB}"
+        sha256sum "$vmlinuz" $initramfs $dtbs \
+            "$CONFIG_VBOOT_KEYBLOCK" \
+            "$CONFIG_VBOOT_SIGNPUBKEY" \
+            "$CONFIG_VBOOT_SIGNPRIVATE"
+        IFS="${ORIG_IFS}"
+    ) >"$new_inputs"
+
+    if [ -r "${output}" ] && [ -r "${output}.inputs" ]; then
+        if diff "${output}.inputs" "$new_inputs" >/dev/null; then
+            info "Inputs are the same with those of existing image," \
+                "no need to rebuild the image."
+            return 0
+        fi
+    fi
+
+    # Build in a temporary location so we do not overwrite existing
+    # images with an unbootable image.
+    new_img="$(temp_file "${kversion}.img")"
+
     # We can't just put compress into "$@" since we need to try
     # different values one by one, here.
     info "Building depthcharge image for kernel version '$kversion':"
     for compress in ${CONFIG_COMPRESS:-none}; do
         info "Trying with compression set to '$compress'."
-        mkdepthcharge --output "$output" --compress "$compress" "$@" \
+        mkdepthcharge --output "$new_img" --compress "$compress" "$@" \
             || error "Failed to create depthcharge image."
 
-        if depthchargectl check "$output" >/dev/null 2>/dev/null; then
+        if depthchargectl check "$new_img" >/dev/null 2>/dev/null; then
             break
         else
-            warn "Image with compression '$compress' is not bootable."
+            warn "Image with compression '$compress' is not bootable," \
+                "will try a better one if possible."
         fi
     done
 
     # This is redundant now, but here just to raise an error.
     info "Checking again if final image is bootable."
-    depthchargectl check "$output" \
-        || error "Couldn't build a bootable image for this machine" \
+    if depthchargectl check "$new_img"; then
+        # Copy to final location.
+        info "Copying newly built image and info to output."
+        rm -f "${output}.inputs"
+        cp -f "$new_img" "$output"
+        cp -f "$new_inputs" "${output}.inputs"
+    else
+        error "Couldn't build a bootable image for this machine" \
             "even with maximum allowed compression."
+    fi
 }
 
 cmd_main() {
