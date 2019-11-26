@@ -123,20 +123,19 @@ build_image() {
     cmdline="$CONFIG_CMDLINE"
     # Custom kernels might still be able to boot without an initramfs,
     # but we need to inject a root= parameter for that.
-    if [ -z "$initramfs" ]; then
-        if cmdline_has_root "$CONFIG_CMDLINE"; then
-            info "No initramfs, but root is set in user configured cmdline."
-        else
-            info "No initramfs, trying to prepend root into cmdline."
-            rootcmd="$(get_root_cmdline)" \
-                || error "Couldn't figure out a root cmdline parameter."
-            check_root_cmdline "$rootcmd" \
-                || error "An initramfs is required for '$rootcmd'."
-
-            # Prepend it so that user-given cmdline overrides it.
-            info "Prepending '$rootcmd' to the kernel cmdline."
-            cmdline="${rootcmd}${cmdline:+ }${cmdline:-}"
+    if cmdline_has_root "$CONFIG_CMDLINE"; then
+        info "Using root as set in user configured cmdline."
+    else
+        info "Trying to prepend root into cmdline."
+        rootcmd="$(get_root_cmdline)" \
+            || error "Couldn't figure out a root cmdline parameter."
+        if [ -z "$initramfs" ] && ! check_root_cmdline "$rootcmd"; then
+            error "An initramfs is required for '$rootcmd'."
         fi
+
+        # Prepend it so that user-given cmdline overrides it.
+        info "Prepending '$rootcmd' to the kernel cmdline."
+        cmdline="${rootcmd}${cmdline:+ }${cmdline:-}"
     fi
     if [ -n "$cmdline" ]; then
         set -- "--cmdline" "$cmdline" "$@"
