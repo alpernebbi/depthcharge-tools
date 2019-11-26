@@ -11,6 +11,7 @@ Options:
  -h, --help                 Show this help message.
  -v, --verbose              Print info messages to stderr.
  -a, --all                  Rebuild images for all kernel versions.
+ -f, --force                Rebuild images even if unnecessary.
      --reproducible         Try to build a reproducible image.
 EOF
 }
@@ -63,7 +64,10 @@ cmd_defaults() {
     : "${REPRODUCIBLE:=${SOURCE_DATE_EPOCH:+yes}}"
     : "${REPRODUCIBLE:=no}"
 
-    readonly ALL_IMAGES KVERSION
+    # Don't rebuild images unless inputs have changed.
+    : "${FORCE:=no}"
+
+    readonly ALL_IMAGES KVERSION REPRODUCIBLE FORCE
 }
 
 
@@ -210,7 +214,12 @@ build_image() {
         if diff "${output}.inputs" "$new_inputs" >/dev/null; then
             info "Inputs are the same with those of existing image," \
                 "no need to rebuild the image."
-            return 0
+            if [ "${FORCE:-no}" = no ]; then
+                return 0
+            else
+                info "Rebuilding anyway."
+                forced_rebuild=yes
+            fi
         fi
     fi
 
@@ -233,6 +242,15 @@ build_image() {
                 "will try a better one if possible."
         fi
     done
+
+    # If we force-rebuilt the image, and we should've been reproducible,
+    # check if it changed.
+    if [ "$REPRODUCIBLE" = yes ] && [ "${forced_rebuild:-no}" = "yes" ]; then
+        if ! diff "${output}" "${new_img}" >/dev/null; then
+            warn "Force-rebuilding image changed it in reproducible mode." \
+                "This is most likely a bug."
+        fi
+    fi
 
     # This is redundant now, but here just to raise an error.
     info "Checking again if final image is bootable."
