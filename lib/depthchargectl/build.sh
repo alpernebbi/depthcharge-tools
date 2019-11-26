@@ -60,6 +60,7 @@ cmd_defaults() {
     fi
 
     # Embed current date into the image.
+    : "${REPRODUCIBLE:=${SOURCE_DATE_EPOCH:+yes}}"
     : "${REPRODUCIBLE:=no}"
 
     readonly ALL_IMAGES KVERSION
