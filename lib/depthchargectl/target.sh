@@ -200,17 +200,17 @@ cmd_main() {
     fi
     readonly PART
 
-    check_part_writable
-    check_disk_writable
-    check_integer_partno
-    check_type_guid
+    check_part_writable "$PART"
+    check_disk_writable "$PART"
+    check_integer_partno "$PART"
+    check_type_guid "$PART"
 
     if [ "$ALLOW_CURRENT" = "no" ]; then
-        check_current
+        check_current "$PART"
     fi
 
     if [ "${MIN_SIZE:-0}" -gt 0 ]; then
-        check_min_size
+        check_min_size "$PART"
     fi
 
     # Output the targeted partition.

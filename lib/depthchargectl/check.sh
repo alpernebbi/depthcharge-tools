@@ -85,7 +85,7 @@ cmd_main() {
         error "Cannot verify images for unsupported machine '$MACHINE'."
     fi
 
-    check_readable
-    check_size
-    check_signature
+    check_readable "$IMAGE"
+    check_size "$IMAGE"
+    check_signature "$IMAGE"
 }
