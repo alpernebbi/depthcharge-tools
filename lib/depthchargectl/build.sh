@@ -266,6 +266,10 @@ build_image() {
 }
 
 cmd_main() {
+    if ! machine_is_supported; then
+        error "Cannot build images for unsupported machine '$MACHINE'."
+    fi
+
     if [ "$ALL_IMAGES" = "yes" ]; then
         set -- $(kversions)
     elif [ -n "${KVERSION:-}" ]; then

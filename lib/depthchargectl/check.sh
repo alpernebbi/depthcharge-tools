@@ -81,6 +81,10 @@ check_signature() {
 }
 
 cmd_main() {
+    if ! machine_is_supported; then
+        error "Cannot verify images for unsupported machine '$MACHINE'."
+    fi
+
     check_readable
     check_size
     check_signature

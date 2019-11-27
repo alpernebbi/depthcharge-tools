@@ -128,6 +128,7 @@ cmd_main() {
         set -- "--verbose" "$@"
     fi
 
+    # This also checks if the machine is supported.
     if depthchargectl check "$@" "$IMAGE"; then
         info "Depthcharge image '$IMAGE' is usable."
     elif [ "${FORCE:-no}" = "yes" ]; then
