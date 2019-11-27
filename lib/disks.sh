@@ -173,4 +173,3 @@ depthcharge_parts_table() {
             "$S" "$P" "$T" "$size" "$partdev"
     done
 }
-

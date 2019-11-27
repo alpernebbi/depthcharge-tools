@@ -14,17 +14,43 @@ Global options:
 EOF
 }
 
-STATE_DIR="/home/alpernebbi/.cache/depthchargectl"
-IMAGES_DIR="${STATE_DIR}/images"
-mkdir -p "$STATE_DIR" "$IMAGES_DIR"
-readonly STATE_DIR IMAGES_DIR
+# These values are replaced by the makefile.
+PACKAGENAME="depthcharge-tools"
+DATADIR=""
+SYSCONFDIR=""
+LOCALSTATEDIR=""
+DEFAULT_CMDLINE="quiet splash"
+DEFAULT_COMPRESS="none lz4 lzma"
+DEFAULT_MAX_SIZE="33554432"
+DEFAULT_DTB_NAME=""
+DEFAULT_VBOOT_DEVKEYS="/usr/share/vboot/devkeys"
+DEFAULT_VBOOT_KEYBLOCK="${DEFAULT_VBOOT_DEVKEYS}/kernel.keyblock"
+DEFAULT_VBOOT_SIGNPUBKEY="${DEFAULT_VBOOT_DEVKEYS}/kernel_subkey.vbpubk"
+DEFAULT_VBOOT_SIGNPRIVATE="${DEFAULT_VBOOT_DEVKEYS}/kernel_data_key.vbprivk"
+# ---
 
-. "lib/msg.sh"
-. "lib/disks.sh"
-. "lib/ifs.sh"
-. "lib/tmp.sh"
-. "lib/config.sh"
-. "lib/kernel.sh"
+readonly PACKAGENAME DATADIR SYSCONFDIR LOCALSTATEDIR
+readonly DEFAULT_CMDLINE DEFAULT_COMPRESS DEFAULT_MAX_SIZE DEFAULT_DTB_NAME
+readonly DEFAULT_VBOOT_DEVKEYS DEFAULT_VBOOT_KEYBLOCK
+readonly DEFAULT_VBOOT_SIGNPUBKEY DEFAULT_VBOOT_SIGNPRIVATE
+
+# If system directories are set, use them, or use files in the repo.
+DB_FILE="${DATA_DIR:-./conf}${DATA_DIR:+/$PACKAGENAME}/db"
+USERDB_FILE="${SYSCONFDIR:-./conf}${SYSCONFDIR:+/$PACKAGENAME}/userdb"
+CONFIG_FILE="${SYSCONFDIR:-./conf}${SYSCONFDIR:+/$PACKAGENAME}/config"
+FUNCTIONS_DIR="${DATADIR:-./lib}${DATADIR:+/$PACKAGENAME}"
+COMMANDS_DIR="${DATADIR:-./lib}${DATADIR:+/$PACKAGENAME}/depthchargectl"
+IMAGES_DIR="${LOCALSTATEDIR:-.}${LOCALSTATEDIR:+/$PACKAGENAME}/images"
+
+readonly DB_FILE USERDB_FILE CONFIG_FILE
+readonly FUNCTIONS_DIR COMMANDS_DIR IMAGES_DIR
+
+. "${FUNCTIONS_DIR}/msg.sh"
+. "${FUNCTIONS_DIR}/disks.sh"
+. "${FUNCTIONS_DIR}/ifs.sh"
+. "${FUNCTIONS_DIR}/tmp.sh"
+. "${FUNCTIONS_DIR}/config.sh"
+. "${FUNCTIONS_DIR}/kernel.sh"
 
 
 # Parse options and arguments
@@ -38,7 +64,7 @@ set_cmd() {
     COMMAND="$1"
     readonly COMMAND
 
-    cmd="lib/depthchargectl/$COMMAND.sh"
+    cmd="${COMMANDS_DIR}/${COMMAND}.sh"
     if [ ! -r "$cmd" ]; then
         usage_error "'$COMMAND' is not a valid depthchargectl command."
     fi
@@ -87,11 +113,9 @@ done
 # User configuration
 # ------------------
 
-CONFIG_FILE="conf/config"
 CONFIG="$(read_files "$CONFIG_FILE" "${CONFIG_FILE}.d"/*)" \
     || error "Could not read configuration files."
-
-readonly CONFIG_FILE CONFIG
+readonly CONFIG
 
 config() {
     printf "%s\n" "$CONFIG" | parse_field "$1"
@@ -106,12 +130,18 @@ CONFIG_VBOOT_KEYBLOCK="$(config Vboot-Keyblock)" || :
 CONFIG_VBOOT_SIGNPRIVATE="$(config Vboot-Private-Key)" || :
 CONFIG_VBOOT_SIGNPUBKEY="$(config Vboot-Public-Key)" || :
 
-: "${CONFIG_CMDLINE:=quiet splash}"
-: "${CONFIG_COMPRESS:=none lz4 lzma}"
-: "${CONFIG_VBOOT_DEVKEYS:=/usr/share/vboot/devkeys}"
-: "${CONFIG_VBOOT_KEYBLOCK:=${CONFIG_VBOOT_DEVKEYS}/kernel.keyblock}"
-: "${CONFIG_VBOOT_SIGNPUBKEY:=${CONFIG_VBOOT_DEVKEYS}/kernel_subkey.vbpubk}"
-: "${CONFIG_VBOOT_SIGNPRIVATE:=${CONFIG_VBOOT_DEVKEYS}/kernel_data_key.vbprivk}"
+if [ -n "${CONFIG_VBOOT_DEVKEYS:-}" ]; then
+    : "${CONFIG_VBOOT_KEYBLOCK:="${CONFIG_VBOOT_DEVKEYS}/kernel.keyblock"}"
+    : "${CONFIG_VBOOT_SIGNPUBKEY:="${CONFIG_VBOOT_DEVKEYS}/kernel_subkey.vbpubk"}"
+    : "${CONFIG_VBOOT_SIGNPRIVATE:="${CONFIG_VBOOT_DEVKEYS}/kernel_data_key.vbprivk"}"
+fi
+
+: "${CONFIG_CMDLINE:="$DEFAULT_CMDLINE"}"
+: "${CONFIG_COMPRESS:="$DEFAULT_COMPRESS"}"
+: "${CONFIG_VBOOT_DEVKEYS:="$DEFAULT_VBOOT_DEVKEYS"}"
+: "${CONFIG_VBOOT_KEYBLOCK:="${DEFAULT_VBOOT_KEYBLOCK}"}"
+: "${CONFIG_VBOOT_SIGNPUBKEY:="${DEFAULT_VBOOT_SIGNPUBKEY}"}"
+: "${CONFIG_VBOOT_SIGNPRIVATE:="${DEFAULT_VBOOT_SIGNPRIVATE}"}"
 
 readonly CONFIG_MACHINE CONFIG_COMPRESS CONFIG_CMDLINE
 readonly CONFIG_VBOOT_DEVKEYS CONFIG_VBOOT_KEYBLOCK
@@ -121,12 +151,9 @@ readonly CONFIG_VBOOT_SIGNPUBKEY CONFIG_VBOOT_SIGNPRIVATE
 # Machine database
 # ----------------
 
-DB_FILE="conf/db"
-USERDB_FILE="conf/userdb"
 MACHINEDB="$(read_files "$DB_FILE" "$USERDB_FILE" "${USERDB_FILE}.d"/*)" \
     || error "Could not read machine database."
-
-readonly DB_FILE USERDB_FILE MACHINEDB
+readonly MACHINEDB
 
 machine_config() {
     printf "%s\n" "$MACHINEDB" \
@@ -161,8 +188,8 @@ fi
 MACHINE_DTB_NAME="$(machine_config DTB-Name)" || :
 MACHINE_MAX_SIZE="$(machine_config Max-Size)" || :
 
-: "${MACHINE_DTB_NAME:=*.dtb}"
-: "${MACHINE_MAX_SIZE:=}"
+: "${MACHINE_DTB_NAME:="${DEFAULT_DTB_NAME}"}"
+: "${MACHINE_MAX_SIZE:="${DEFAULT_MAX_SIZE}"}"
 
 readonly DETECTED_MACHINE MACHINE MACHINE_DTB_NAME MACHINE_MAX_SIZE
 

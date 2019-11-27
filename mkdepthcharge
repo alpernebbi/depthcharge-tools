@@ -30,9 +30,25 @@ Depthcharge image options:
 EOF
 }
 
-. "lib/msg.sh"
-. "lib/tmp.sh"
-. "lib/ifs.sh"
+# These values are replaced by the makefile.
+PACKAGENAME="depthcharge-tools"
+DATADIR=""
+DEFAULT_VBOOT_DEVKEYS="/usr/share/vboot/devkeys"
+DEFAULT_VBOOT_KEYBLOCK="${DEFAULT_VBOOT_DEVKEYS}/kernel.keyblock"
+DEFAULT_VBOOT_SIGNPRIVATE="${DEFAULT_VBOOT_DEVKEYS}/kernel_data_key.vbprivk"
+# ---
+
+readonly PACKAGENAME DATADIR DEFAULT_VBOOT_DEVKEYS
+readonly DEFAULT_VBOOT_KEYBLOCK DEFAULT_VBOOT_SIGNPRIVATE
+
+# If system directories are set, use them, or use files in the repo.
+FUNCTIONS_DIR="${DATADIR:-./lib}${DATADIR:+/$PACKAGENAME}"
+
+readonly FUNCTIONS_DIR
+
+. "${FUNCTIONS_DIR}/msg.sh"
+. "${FUNCTIONS_DIR}/tmp.sh"
+. "${FUNCTIONS_DIR}/ifs.sh"
 
 
 # Parse options and arguments
@@ -213,9 +229,14 @@ esac
 : "${ADD_KERN_GUID:=yes}"
 
 # These are distro-specific paths for necessary files.
-: "${VBOOT_DEVKEYS:=/usr/share/vboot/devkeys}"
-: "${VBOOT_KEYBLOCK:=${VBOOT_DEVKEYS}/kernel.keyblock}"
-: "${VBOOT_SIGNPRIVATE:=${VBOOT_DEVKEYS}/kernel_data_key.vbprivk}"
+if [ -n "${VBOOT_DEVKEYS:-}" ]; then
+    : "${VBOOT_KEYBLOCK:="${VBOOT_DEVKEYS}/kernel.keyblock"}"
+    : "${VBOOT_SIGNPRIVATE:="${VBOOT_DEVKEYS}/kernel_data_key.vbprivk"}"
+fi
+
+: "${VBOOT_DEVKEYS:="${DEFAULT_VBOOT_DEVKEYS}"}"
+: "${VBOOT_KEYBLOCK:="${DEFAULT_VBOOT_KEYBLOCK}"}"
+: "${VBOOT_SIGNPRIVATE:="${DEFAULT_VBOOT_SIGNPRIVATE}"}"
 
 readonly VERBOSE QUIET SILENT
 readonly ARCH FORMAT MKIMAGE_ARCH VBOOT_ARCH

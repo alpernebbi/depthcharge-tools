@@ -45,4 +45,3 @@ read_files() {
         grep -sv '^#' "$f" && echo || :
     done
 }
-

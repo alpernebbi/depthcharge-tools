@@ -1,4 +1,4 @@
-# Kernel Versions and Files
+# Kernel versions and files
 # -------------------------
 
 # Print available kernel versions, in descending priority.
@@ -40,8 +40,8 @@ kversion_description() {
 }
 
 
-# Kernel Cmdline Paramteters
-# --------------------------
+# Kernel command-line parameters
+# ------------------------------
 
 # ChromeOS firmware injects one of these values into the cmdline based
 # on which boot mechanism is used. A 'secure' argument allows us to
