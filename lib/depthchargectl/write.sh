@@ -10,6 +10,7 @@ Write an image to a ChromeOS kernel partition.
 Options:
  -h, --help                 Show this help message.
  -v, --verbose              Print info messages to stderr.
+ -f, --force                Write image even if it cannot be verified.
  -t, --target DISK|PART     Specify a disk or partition to write to.
      --no-prioritize        Don't set any flags on the partition.
      --allow-current        Allow overwriting the current partition.
@@ -65,6 +66,7 @@ set_source() {
 cmd_args() {
     case "$1" in
         # Options:
+        -f|--force)         FORCE=yes;          return 1 ;;
         -t|--target)        set_target "$2";    return 2 ;;
         --no-prioritize)    PRIORITIZE=no;      return 1 ;;
         --allow-current)    ALLOW_CURRENT=yes;  return 1 ;;
@@ -120,14 +122,19 @@ cmd_main() {
     fi
     readonly KVERSION IMAGE
 
-    if ! depthchargectl check "$IMAGE"; then
-        if [ -n "$KVERSION" ]; then
-            error "Depthcharge image for version '$KVERSION' ('$IMAGE')" \
-                "is not bootable on this machine."
-        else
-            error "Depthcharge image '$IMAGE' is not bootable" \
-                "on this machine."
-        fi
+    # Collect arguments for depthchargectl check.
+    set --
+    if [ "$VERBOSE" = "yes" ]; then
+        set -- "--verbose" "$@"
+    fi
+
+    if depthchargectl check "$@" "$IMAGE"; then
+        info "Depthcharge image '$IMAGE' is usable."
+    elif [ "${FORCE:-no}" = "yes" ]; then
+        warn "Depthcharge image '$IMAGE' is not bootable on this machine," \
+            "continuing due to --force."
+    else
+        error "Depthcharge image '$IMAGE' is not bootable on this machine."
     fi
 
     # Collect arguments for depthchargectl target.
