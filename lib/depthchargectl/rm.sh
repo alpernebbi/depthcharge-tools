@@ -116,7 +116,7 @@ cmd_main() {
             partno="$(partno_from_partdev "$partdev")"
 
             info "Deactivating '$partdev'."
-            cgpt_ add -T 0 -P 0 -S 0 -i "$partno" "$partdev"
+            cgpt_ add -T 0 -P 0 -S 0 -i "$partno" "$disk"
             printf "%s\n" "$partdev"
         fi
     done
