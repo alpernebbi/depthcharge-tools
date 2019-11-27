@@ -211,7 +211,7 @@ case "$ARCH" in
     arm*)           MKIMAGE_ARCH=arm;       VBOOT_ARCH=arm ;;
     amd64|x86_64)   MKIMAGE_ARCH=x86_64;    VBOOT_ARCH=amd64 ;;
     x86|i386)       MKIMAGE_ARCH=x86;       VBOOT_ARCH=x86 ;;
-    *) error "Architecture '$arch' is not supported" ;;
+    *) error "Architecture '$ARCH' is not supported" ;;
 esac
 
 # If --compress option isn't given, COMPRESS wouldn't be set, but it
