@@ -34,7 +34,12 @@ pattern = 's|^$(var)=".*"$$|$(var)="$(call $(var))"|1'
 patterns := $(foreach var, $(dirs) $(vars),-e $(pattern))
 substvars := sed $(patterns)
 
+functions := $(foreach f, $(wildcard lib/*.sh), $(basename $(notdir $(f))))
+pattern = '\|^\. "$${FUNCTIONS_DIR}/$(f)\.sh"$$| r lib/$(f).sh'
+patterns := $(foreach f, $(functions),-e $(pattern))
+includelibs := sed $(patterns) -e 's|^\. "$${FUNCTIONS_DIR}/.*\.sh"$$|\n|1'
+
 all:
 	mkdir -p bin
-	$(substvars) <mkdepthcharge >bin/mkdepthcharge
-	$(substvars) <depthchargectl >bin/depthchargectl
+	$(substvars) <mkdepthcharge | $(includelibs) >bin/mkdepthcharge
+	$(substvars) <depthchargectl | $(includelibs) >bin/depthchargectl
