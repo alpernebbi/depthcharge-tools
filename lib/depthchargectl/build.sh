@@ -278,6 +278,8 @@ cmd_main() {
         set -- "$(kversions | head -1)"
     fi
 
+    mkdir -p "$IMAGES_DIR"
+
     for kversion in "$@"; do
         image="${IMAGES_DIR}/${kversion}.img"
         build_image "$kversion" "$image"
