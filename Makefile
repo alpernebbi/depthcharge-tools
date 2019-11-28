@@ -39,7 +39,47 @@ pattern = '\|^\. "$${FUNCTIONS_DIR}/$(f)\.sh"$$| r lib/$(f).sh'
 patterns := $(foreach f, $(functions),-e $(pattern))
 includelibs := sed $(patterns) -e 's|^\. "$${FUNCTIONS_DIR}/.*\.sh"$$|\n|1'
 
-all:
+all: bin/depthchargectl bin/mkdepthcharge bin/mkdepthcharge-standalone
+
+bin/depthchargectl: depthchargectl
 	mkdir -p bin
-	$(substvars) <mkdepthcharge | $(includelibs) >bin/mkdepthcharge
-	$(substvars) <depthchargectl | $(includelibs) >bin/depthchargectl
+	$(substvars) <"$<" >"$@"
+
+bin/mkdepthcharge: mkdepthcharge
+	mkdir -p bin
+	$(substvars) <"$<" >"$@"
+
+# This builds mkdepthcharge into a single file.
+bin/mkdepthcharge-standalone: mkdepthcharge
+	$(substvars) <"$<" | $(includelibs) >"$@"
+
+install: bin/mkdepthcharge bin/depthchargectl
+	install -d '$(DESTDIR)$(BINDIR)'
+	install -d '$(DESTDIR)$(SBINDIR)'
+	install -d '$(DESTDIR)$(DATADIR)/$(PACKAGENAME)'
+	install -d '$(DESTDIR)$(DATADIR)/$(PACKAGENAME)'/depthchargectl
+	install -d '$(DESTDIR)$(SYSCONFDIR)/$(PACKAGENAME)'
+	install -d '$(DESTDIR)$(LOCALSTATEDIR)/$(PACKAGENAME)'
+	install -m 0755 bin/mkdepthcharge '$(DESTDIR)$(BINDIR)'
+	install -m 0755 bin/depthchargectl '$(DESTDIR)$(SBINDIR)'
+	install -m 0644 lib/*.sh '$(DESTDIR)$(DATADIR)/$(PACKAGENAME)'
+	install -m 0644 lib/depthchargectl/*.sh '$(DESTDIR)$(DATADIR)/$(PACKAGENAME)'/depthchargectl
+	install -m 0644 conf/db '$(DESTDIR)$(DATADIR)/$(PACKAGENAME)'
+	install -m 0644 conf/userdb '$(DESTDIR)$(SYSCONFDIR)/$(PACKAGENAME)'
+	install -m 0644 conf/config '$(DESTDIR)$(SYSCONFDIR)/$(PACKAGENAME)'
+
+uninstall:
+	rm -f '$(DESTDIR)$(BINDIR)'/mkdepthcharge
+	rm -f '$(DESTDIR)$(SBINDIR)'/depthchargectl
+	rm -rf '$(DESTDIR)$(DATADIR)/$(PACKAGENAME)'
+	rm -rf '$(DESTDIR)$(SYSCONFDIR)/$(PACKAGENAME)'
+	rm -rf '$(DESTDIR)$(LOCALSTATEDIR)/$(PACKAGENAME)'
+
+install-standalone: bin/mkdepthcharge-standalone
+	install -d '$(DESTDIR)$(BINDIR)'
+	install -m 0755 bin/mkdepthcharge-standalone -T '$(DESTDIR)$(BINDIR)'/mkdepthcharge
+
+clean:
+	rm -f bin/depthchargectl
+	rm -f bin/mkdepthcharge
+	rm -f bin/mkdepthcharge-standalone
