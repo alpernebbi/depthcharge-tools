@@ -111,6 +111,7 @@ cmd_main() {
     info "Searching for ChromeOS kernels containing '$IMAGE'."
     for partdev in $(cgpt_ find -t kernel -M "$IMAGE"); do
         info "Checking partition '$partdev'."
+        # This checks currently booted partition among other things.
         if depthchargectl target "$@" "$partdev" >/dev/null; then
             disk="$(disk_from_partdev "$partdev")"
             partno="$(partno_from_partdev "$partdev")"
@@ -118,14 +119,21 @@ cmd_main() {
             info "Deactivating '$partdev'."
             cgpt_ add -T 0 -P 0 -S 0 -i "$partno" "$disk"
             printf "%s\n" "$partdev"
+        else
+            warn "Couldn't deactivate '$partdev', will not delete image."
+            remove=no
         fi
     done
 
     case "$IMAGE" in
-        "${IMAGES_DIR}/${KVERSION}.img")
-            info "Image '$IMAGE' is in images dir, deleting."
-            rm -f "$IMAGE"
-            ;;
-        *) info "Not deleting image '$IMAGE'." ;;
+        "${IMAGES_DIR}/${KVERSION}.img") : "${remove:=yes}";;
+        *) remove=no ;;
     esac
+
+    if [ "${remove:-no}" = "yes" ]; then
+        info "Image '$IMAGE' is in images dir, deleting."
+        rm -f "${IMAGE}" "${IMAGE}.inputs"
+    else
+        info "Not deleting image '$IMAGE'."
+    fi
 }
