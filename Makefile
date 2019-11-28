@@ -59,7 +59,10 @@ install: bin/mkdepthcharge bin/depthchargectl
 	install -d '$(DESTDIR)$(DATADIR)/$(PACKAGENAME)'
 	install -d '$(DESTDIR)$(DATADIR)/$(PACKAGENAME)'/depthchargectl
 	install -d '$(DESTDIR)$(SYSCONFDIR)/$(PACKAGENAME)'
+	install -d '$(DESTDIR)$(SYSCONFDIR)/$(PACKAGENAME)'/config.d
+	install -d '$(DESTDIR)$(SYSCONFDIR)/$(PACKAGENAME)'/userdb.d
 	install -d '$(DESTDIR)$(LOCALSTATEDIR)/$(PACKAGENAME)'
+	install -d '$(DESTDIR)$(LOCALSTATEDIR)/$(PACKAGENAME)'/images
 	install -m 0755 bin/mkdepthcharge '$(DESTDIR)$(BINDIR)'
 	install -m 0755 bin/depthchargectl '$(DESTDIR)$(SBINDIR)'
 	install -m 0644 lib/*.sh '$(DESTDIR)$(DATADIR)/$(PACKAGENAME)'
