@@ -96,5 +96,6 @@ clean:
 	rm -f bin/depthchargectl
 	rm -f bin/mkdepthcharge
 	rm -f bin/mkdepthcharge-standalone
+	[ ! -d bin ] || rmdir bin
 
 .PHONY: all install install-systemd install-standalone uninstall clean
