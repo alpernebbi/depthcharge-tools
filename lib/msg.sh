@@ -6,7 +6,7 @@ msg() {
         printf "%s " "${PROG:-${0##*/}}:" "$@"
     fi
     printf "\n"
-}
+} >&2
 
 info() {
     if [ "${VERBOSE:-no}" = yes ] && [ "$#" -gt 0 ]; then

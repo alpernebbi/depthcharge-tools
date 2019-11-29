@@ -119,6 +119,7 @@ cmd_main() {
             info "Deactivating '$partdev'."
             cgpt_ add -T 0 -P 0 -S 0 -i "$partno" "$disk"
             printf "%s\n" "$partdev"
+            msg "Deactivated '$partdev'."
         else
             warn "Couldn't deactivate '$partdev', will not delete image."
             remove=no
@@ -133,6 +134,7 @@ cmd_main() {
     if [ "${remove:-no}" = "yes" ]; then
         info "Image '$IMAGE' is in images dir, deleting."
         rm -f "${IMAGE}" "${IMAGE}.inputs"
+        msg "Deleted image '$IMAGE'."
     else
         info "Not deleting image '$IMAGE'."
     fi

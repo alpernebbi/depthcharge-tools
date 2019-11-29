@@ -52,7 +52,8 @@ cmd_main() {
 
     info "Setting '$partdev' as the highest-priority bootable part."
     cgpt_ add -i "$partno" -P 1 -T 1 -S 1 "$disk" \
-        || error "Failed to set partition '$TARGET_PART' as bootable."
+        || error "Failed to set partition '$partdev' as bootable."
     cgpt_ prioritize -i "$partno" "$disk" \
-        || error "Failed to prioritize partition '$TARGET_PART'."
+        || error "Failed to prioritize partition '$partdev'."
+    msg "Set '$partdev' as next to boot, successful."
 }

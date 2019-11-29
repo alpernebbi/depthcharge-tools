@@ -182,12 +182,18 @@ cmd_main() {
     dd if="$IMAGE" of="$TARGET_PART" status=none \
         || error "Failed to write image '$IMAGE' to partition '$TARGET_PART'."
 
+    if [ -n "$KVERSION" ]; then
+        msg "Wrote image for kernel version '$kversion' to '$TARGET_PART'."
+    else
+        msg "Wrote image '$IMAGE' to '$TARGET_PART'."
+    fi
+
     if [ "${PRIORITIZE:-yes}" = "yes" ]; then
         info "Setting '$TARGET_PART' as the highest-priority bootable part."
         cgpt_ add -i "$partno" -P 1 -T 1 -S 0 "$disk" \
             || error "Failed to set partition '$TARGET_PART' as bootable."
         cgpt_ prioritize -i "$partno" "$disk" \
             || error "Failed to prioritize partition '$TARGET_PART'."
+        msg "Set '$TARGET_PART' as next to boot."
     fi
-
 }

@@ -213,6 +213,7 @@ build_image() {
         if diff "${output}.inputs" "$new_inputs" >/dev/null; then
             info "Inputs are the same with those of existing image," \
                 "no need to rebuild the image."
+            msg "Cached image valid for kernel version '$kversion'."
             if [ "${FORCE:-no}" = no ]; then
                 return 0
             else
@@ -263,6 +264,8 @@ build_image() {
         error "Couldn't build a bootable image for this machine" \
             "even with maximum allowed compression."
     fi
+
+    msg "Built image for kernel version '$kversion'."
 }
 
 cmd_main() {
