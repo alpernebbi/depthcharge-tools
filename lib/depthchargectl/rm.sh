@@ -1,5 +1,5 @@
 # This file is sourced by depthchargectl.
-
+PROG="depthchargectl rm"
 usage() {
 cat <<EOF
 Usage:
