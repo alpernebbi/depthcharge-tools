@@ -75,6 +75,10 @@ install: bin/mkdepthcharge bin/depthchargectl
 install-systemd: systemd/depthchargectl-set-good.service
 	install -d '$(DESTDIR)$(LIBDIR)/systemd/system'
 	install -m 0644 systemd/depthchargectl-set-good.service '$(DESTDIR)$(LIBDIR)/systemd/system'
+	@echo "This target only installs the service, does not enable it."
+	@echo "You might want to run:"
+	@echo "  systemctl daemon-reload"
+	@echo "  systemctl --enable depthchargectl-set-good"
 
 uninstall:
 	rm -f '$(DESTDIR)$(BINDIR)'/mkdepthcharge
