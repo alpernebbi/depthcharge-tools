@@ -86,6 +86,7 @@ uninstall:
 	rm -rf '$(DESTDIR)$(DATADIR)/$(PACKAGENAME)'
 	rm -rf '$(DESTDIR)$(SYSCONFDIR)/$(PACKAGENAME)'
 	rm -rf '$(DESTDIR)$(LOCALSTATEDIR)/$(PACKAGENAME)'
+	rm -rf '$(DESTDIR)$(LIBDIR)'/systemd/system/depthchargectl-set-good.service
 
 install-standalone: bin/mkdepthcharge-standalone
 	install -d '$(DESTDIR)$(BINDIR)'
