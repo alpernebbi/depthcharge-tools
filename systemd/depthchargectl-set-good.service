@@ -11,7 +11,7 @@ Before=shutdown.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/sbin/depthcharge-set-good
+ExecStart=depthchargectl set-good
 
 # systemd-bless-boot-generator symlinks its file to basic.target.wants.
 [Install]
