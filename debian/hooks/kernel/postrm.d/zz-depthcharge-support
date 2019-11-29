@@ -16,7 +16,7 @@ version="$2"
 
 # Run only once at the end.
 case "$action" in
-  "configure"|"'configure'"|'')
+  "remove"|"'remove'"|'')
     exec depthchargectl rm "$kversion"
   ;;
 esac
