@@ -9,8 +9,9 @@ SBINDIR ?= $(PREFIX)/sbin
 DATADIR ?= $(PREFIX)/share
 SYSCONFDIR ?= $(PREFIX)/etc
 LOCALSTATEDIR ?= $(PREFIX)/var
+LIBDIR ?= $(PREFIX)/lib
 
-dirs := PREFIX BINDIR SBINDIR DATADIR SYSCONFDIR LOCALSTATEDIR
+dirs := PREFIX BINDIR SBINDIR DATADIR SYSCONFDIR LOCALSTATEDIR LIBDIR
 
 # Default values for depthchargectl configuration.
 # These don't affect mkdepthcharge.
@@ -70,6 +71,10 @@ install: bin/mkdepthcharge bin/depthchargectl
 	install -m 0644 conf/db '$(DESTDIR)$(DATADIR)/$(PACKAGENAME)'
 	install -m 0644 conf/userdb '$(DESTDIR)$(SYSCONFDIR)/$(PACKAGENAME)'
 	install -m 0644 conf/config '$(DESTDIR)$(SYSCONFDIR)/$(PACKAGENAME)'
+
+install-systemd: systemd/depthchargectl-set-good.service
+	install -d '$(DESTDIR)$(LIBDIR)/systemd/system'
+	install -m 0644 systemd/depthchargectl-set-good.service '$(DESTDIR)$(LIBDIR)/systemd/system'
 
 uninstall:
 	rm -f '$(DESTDIR)$(BINDIR)'/mkdepthcharge
