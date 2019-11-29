@@ -3,7 +3,7 @@
 set -e
 
 # Disable if our package is not installed.
-if ! which update-depthcharge >/dev/null 2>&1; then
+if ! command -v depthchargectl >/dev/null 2>&1; then
     exit 0
 fi
 
@@ -17,6 +17,6 @@ version="$2"
 # Run only once at the end.
 case "$action" in
   "configure"|"'configure'"|'')
-    exec update-depthcharge -k "$kversion"
+    exec depthchargectl write "$kversion"
   ;;
 esac

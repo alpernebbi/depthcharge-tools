@@ -3,12 +3,12 @@
 set -e
 
 # Disable if our package is not installed.
-if ! which update-depthcharge >/dev/null 2>&1; then
+if ! command -v depthchargectl >/dev/null 2>&1; then
     exit 0
 fi
 
 kversion="$1"
 initrd="$2"
 
-exec update-depthcharge -k "$kversion"
+exec depthchargectl write "$kversion"
 
