@@ -1,11 +1,4 @@
-conf/userdb /etc/depthcharge-support
-conf/config /etc/depthcharge-support
-conf/db /usr/share/depthcharge-support
-functions /usr/share/depthcharge-support
-mkdepthcharge /usr/bin
-update-depthcharge /usr/sbin
-depthcharge-set-good /usr/sbin
-systemd/depthcharge-set-good.service /lib/systemd/system
+systemd/depthchargectl-set-good.service /lib/systemd/system
 debian/hooks/initramfs/post-update.d/depthcharge-support /etc/initramfs/post-update.d
 debian/hooks/kernel/postinst.d/zz-depthcharge-support /etc/kernel/postinst.d
 debian/hooks/kernel/postrm.d/zz-depthcharge-support /etc/kernel/postrm.d
