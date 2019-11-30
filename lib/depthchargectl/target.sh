@@ -137,7 +137,8 @@ check_type_guid() {
 
 check_current() {
     info "Checking if targeted partition is currently booted one."
-    current="$(cgpt_ find -1 -u "$(get_kern_guid)")"
+    kern_guid="$(get_kern_guid)" || return 0
+    current="$(cgpt_ find -1 -u "$kern_guid")"
     if [ "${1:-$PART}" = "$current" ]; then
         error "Partition '${1:-$PART}' is the currently booted partition." \
             || :
