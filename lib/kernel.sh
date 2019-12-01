@@ -1,38 +1,85 @@
 # Kernel versions and files
 # -------------------------
 
+os_release() {
+    if [ ! -f /etc/os-release ]; then
+        return 1
+    fi
+
+    sed -n -e "s/^$1=\"\?\([^\"]*\)\"\?/\1/1p" /etc/os-release
+}
+
 # Print available kernel versions, in descending priority.
 kversions() {
-    # Debian has a command for this.
-    if command -v linux-version >/dev/null; then
-        linux-version list | linux-version sort --reverse
-    fi
+    case "$(os_release ID)" in
+        debian)
+            # Debian has a command for this.
+            if command -v linux-version >/dev/null; then
+                linux-version list | linux-version sort --reverse
+            fi
+            ;;
+        archarm)
+            if [ ! -f /boot/Image ]; then
+                return 1
+            fi
+            printf "%s\n" linux
+            ;;
+        *) return 1 ;;
+    esac
 }
 
 # The path to the vmlinuz for a kernel version.
 kversion_vmlinuz() {
-    printf "/boot/vmlinuz-%s\n" "$1"
+    case "$(os_release ID)" in
+        debian)
+            printf "%s\n" "/boot/vmlinuz-$1"
+            ;;
+        archarm)
+            if [ ! -f /boot/Image ]; then
+                return 1
+            fi
+            printf "%s\n" "/boot/Image"
+            ;;
+        *) return 1 ;;
+    esac
 }
 
 # The path to the initramfs image for a kernel version.
 # Can be empty if the depthcharge image should be built without one.
 kversion_initramfs() {
-    printf "/boot/initrd.img-%s\n" "$1"
+    case "$(os_release ID)" in
+        debian)
+            printf "%s\n" "/boot/initrd.img-${1}"
+            ;;
+        archarm)
+            : # They build their images without an initramfs.
+            ;;
+        *) return 1 ;;
+    esac
 }
 
 # The directory containing the device-tree files for a kernel version.
 # Can be empty if the architecture has no such files.
 kversion_dtbs_path() {
-    dtbs_path="$(printf "/usr/lib/linux-image-%s\n" "$1")"
-    if [ -d "$dtbs_path" ]; then
-        printf "%s\n" "$dtbs_path"
-    fi
+    case "$(os_release ID)" in
+        debian)
+            dtbs_path="$(printf "/usr/lib/linux-image-%s\n" "$1")"
+            if [ -d "$dtbs_path" ]; then
+                printf "%s\n" "$dtbs_path"
+            fi
+            ;;
+        archarm)
+            if [ -d /boot/dtbs ]; then
+                printf "%s\n" "/boot/dtbs"
+            fi
+            ;;
+        *) return 1 ;;
+    esac
 }
 
 # Description for a kernel version.
 kversion_description() {
-    if [ -f /etc/os-release ]; then
-        name="$(sed -n -e 's/^NAME="\(.*\)"/\1/1p' /etc/os-release)"
+    if name="$(os_release NAME)"; then
         printf "%s with kernel %s" "$name" "$1"
     else
         printf "Kernel %s" "$1"
