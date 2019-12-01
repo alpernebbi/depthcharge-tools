@@ -161,7 +161,9 @@ machine_config() {
 }
 
 detect_machine() {
-    if machine="$(cat /proc/device-tree/model)" && [ -n "$machine" ]; then
+    if machine="$(tr -d "\0" </proc/device-tree/model)" \
+        && [ -n "$machine" ];
+    then
         info "Detected machine from device-tree: '$machine'"
         printf "%s\n" "$machine"
     else
