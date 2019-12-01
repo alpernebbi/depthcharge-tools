@@ -80,9 +80,9 @@ kversion_dtbs_path() {
 # Description for a kernel version.
 kversion_description() {
     if name="$(os_release NAME)"; then
-        printf "%s with kernel %s" "$name" "$1"
+        printf "%s, with Linux %s" "$name" "$1"
     else
-        printf "Kernel %s" "$1"
+        printf "Linux %s" "$1"
     fi
 }
 
