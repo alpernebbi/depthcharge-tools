@@ -121,8 +121,14 @@ cmd_main() {
     (
         if [ "${ALL_DISKS:-no}" = no ]; then
             IFS=","
-            set -- $DISKS
+            set -- $(find_disks $DISKS)
             IFS="$ORIG_IFS"
+            if [ "$#" -gt 0 ]; then
+                info "Found real disks '"$@"' from target disks '$DISKS'"
+            else
+                error "Targets '$DISKS' couldn't be resolved" \
+                    "to physical disks."
+            fi
         else
             set --
         fi
