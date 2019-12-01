@@ -17,6 +17,8 @@ disk_from_partdev() {
     case "$1" in
         # Don't consider mmcblk1rpmb, mmcblk1boot0 as partitions.
         *boot*|*rpmb*) echo "${1}" ;;
+        # Device mapper, loop, mtd devices aren't partitions.
+        *dm-*|*loop*|*mtd*) echo "${1}" ;;
         # mmcblk0p1 -> mmcblk0
         # nvme0n1p2 -> nvme0n1
         *[0-9]p[0-9]*) echo "${1%p*}" ;;
@@ -31,6 +33,10 @@ partno_from_partdev() {
     case "$1" in
         # Don't consider mmcblk1rpmb, mmcblk1boot0 as partitions.
         *boot*|*rpmb*) return 1 ;;
+        # Device mapper, loop, mtd devices aren't partitions.
+        *dm-*|*loop*|*mtd*) return 1 ;;
+        # Common disks that just end with numbers.
+        *mmcblk[0-9]|*nvme[0-9]n[0-9]) return 1 ;;
         # mmcblk0p1 -> 1
         # nvme0n1p2 -> 2
         *[0-9]p[0-9]*) echo "${1##*p}" ;;

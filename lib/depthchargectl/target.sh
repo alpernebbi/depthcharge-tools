@@ -169,12 +169,12 @@ cmd_main() {
         IFS="$ORIG_IFS"
 
         for target in "$@"; do
-            if depthcharge_parts "$target" >/dev/null; then
-                info "Using target '$target' as a disk."
-                add_disk "$target"
-            else
+            if partno_from_partdev "$target" >/dev/null; then
                 info "Using target '$target' as a partition."
                 set_part "$target"
+            else
+                info "Using target '$target' as a disk."
+                add_disk "$target"
             fi
         done
     fi
@@ -189,14 +189,20 @@ cmd_main() {
 
     if [ -z "${PART:-}" ]; then
         IFS="${IFS},"
-        set -- $DISKS
+        set -- $(find_disks $DISKS)
         IFS="$ORIG_IFS"
 
-        info "Searching for ChromeOS kernel partitions on disks '$DISKS'."
+        if [ "$#" -gt 0 ]; then
+            info "Found real disks '"$@"' from target disks '$DISKS'"
+        else
+            error "Targets '$DISKS' couldn't be resolved to physical disks."
+        fi
+
+        info "Searching for ChromeOS kernel partitions on disks '$@'."
         if PART="$(worst_partition "$@")" && [ -n "$PART" ]; then
             info "Chose partition '$PART' as the target partition."
         else
-            error "No usable ChromeOS kernel part found on disks '$DISKS'."
+            error "No usable ChromeOS kernel part found on disks '$@'."
         fi
     fi
     readonly PART
