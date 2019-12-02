@@ -16,7 +16,9 @@ version="$2"
 
 # Run only once at the end.
 case "$action" in
-  "remove"|"'remove'"|'')
-    exec depthchargectl rm "$kversion"
-  ;;
+    "remove"|"'remove'"|'')
+        # We are either not removing the running kernel, or the user has
+        # explicitly agreed to removing the running kernel.
+        exec depthchargectl rm --force "$kversion"
+    ;;
 esac
