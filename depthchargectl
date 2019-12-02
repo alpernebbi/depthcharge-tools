@@ -8,9 +8,18 @@ Usage:
 
 Manage ChromeOS kernel partitions.
 
+Supported commands:
+ build          Buld a depthcharge image for the running system.
+ check          Check if a depthcharge image can be booted.
+ partitions     List ChromeOS kernel partitions.
+ rm             Remove images and disable partitions containing them.
+ set-good       Set the current partition as successfully booted.
+ target         Choose or validate a ChromeOS Kernel partition to use.
+ write          Write an image to a ChromeOS kernel partition.
+
 Global options:
- -h, --help                 Show this help message.
- -v, --verbose              Print more detailed output.
+ -h, --help                 Show the help message for the given command.
+ -v, --verbose              Print info messages to stderr.
 EOF
 }
 
