@@ -10,5 +10,9 @@ fi
 kversion="$1"
 initrd="$2"
 
-exec depthchargectl write "$kversion"
-
+count="$(depthchargectl partitions -n -o DEVICE 2>/dev/null | wc -l)"
+if [ "$count" -gt 1 ]; then
+    exec depthchargectl write "$kversion"
+else
+    exec depthchargectl write --allow-current "$kversion"
+fi

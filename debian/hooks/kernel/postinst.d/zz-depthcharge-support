@@ -25,7 +25,12 @@ version="$2"
 
 # Run only once at the end.
 case "$action" in
-  "configure"|"'configure'"|'')
-    exec depthchargectl write "$kversion"
-  ;;
+    "configure"|"'configure'"|'')
+        count="$(depthchargectl partitions -n -o DEVICE 2>/dev/null | wc -l)"
+        if [ "$count" -gt 1 ]; then
+            exec depthchargectl write "$kversion"
+        else
+            exec depthchargectl write --allow-current "$kversion"
+        fi
+        ;;
 esac
