@@ -1,6 +1,7 @@
 #! /usr/bin/make -f
 
 PACKAGENAME ?= depthcharge-tools
+VERSION ?= 0.3.0-dev
 DESTDIR ?=
 
 PREFIX ?= /usr/local
@@ -11,7 +12,7 @@ SYSCONFDIR ?= $(PREFIX)/etc
 LOCALSTATEDIR ?= $(PREFIX)/var
 LIBDIR ?= $(PREFIX)/lib
 
-vars := PACKAGENAME
+vars := PACKAGENAME VERSION
 vars += PREFIX BINDIR SBINDIR DATADIR SYSCONFDIR LOCALSTATEDIR LIBDIR
 
 # Default values for depthchargectl configuration.

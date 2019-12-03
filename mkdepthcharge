@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-
+PROG="mkdepthcharge"
 usage() {
 cat <<EOF
 Usage:
@@ -10,6 +10,7 @@ Build boot images for the ChromeOS firmware.
 
 Options:
  -h, --help                 Show this help message.
+     --version              Print program version.
  -v, --verbose              Print more detailed output.
  -o, --output FILE          Write resulting image to FILE.
  -A, --arch ARCH            Architecture to build for.
@@ -30,8 +31,16 @@ Depthcharge image options:
 EOF
 }
 
+version() {
+    printf "%s %s %s" \
+        "${PACKAGENAME:-depthcharge-tools}" \
+        "${PROG:-mkdepthcharge}" \
+        "${VERSION:+version }${VERSION:-(unversioned)}"
+}
+
 # These values are replaced by the makefile.
 PACKAGENAME="depthcharge-tools"
+VERSION=""
 DATADIR=""
 DEFAULT_VBOOT_DEVKEYS="/usr/share/vboot/devkeys"
 DEFAULT_VBOOT_KEYBLOCK="${DEFAULT_VBOOT_DEVKEYS}/kernel.keyblock"
@@ -140,6 +149,7 @@ while [ "$#" -gt 0 ]; do
     case "$1" in
         # Options:
         -h|--help)          usage;                      exit 0 ;;
+        --version)          version;                    exit 0 ;;
         -v|--verbose)       VERBOSE=yes;                shift 1 ;;
         -o|--output)        OUTPUT="$2";                shift 2 ;;
         -A|--arch)          ARCH="$2";                  shift 2 ;;

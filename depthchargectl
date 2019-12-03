@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-
+PROG="depthchargectl"
 usage() {
 cat <<EOF
 Usage:
@@ -19,12 +19,21 @@ Supported commands:
 
 Global options:
  -h, --help                 Show the help message for the given command.
+     --version              Print program version.
  -v, --verbose              Print info messages to stderr.
 EOF
 }
 
+version() {
+    printf "%s %s %s" \
+        "${PACKAGENAME:-depthcharge-tools}" \
+        "${PROG:-depthchargectl}" \
+        "${VERSION:+version }${VERSION:-(unversioned)}"
+}
+
 # These values are replaced by the makefile.
 PACKAGENAME="depthcharge-tools"
+VERSION=""
 DATADIR=""
 SYSCONFDIR=""
 LOCALSTATEDIR=""
@@ -95,6 +104,7 @@ while [ "$#" -gt 0 ]; do
     case "$1" in
         # Global options:
         -h|--help)      usage;          exit 0 ;;
+        --version)      version;        exit 0 ;;
         -v|--verbose)   VERBOSE=yes;    shift; continue ;;
 
         # May be command options, but not commands themselves.
