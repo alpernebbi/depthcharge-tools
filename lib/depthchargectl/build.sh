@@ -168,7 +168,14 @@ build_image() {
 
     # Keep information about input files and configuration.
     new_inputs="$(temp_file "${kversion}.img.inputs")"
-    (   printf "# Machine info:\n"
+    (
+        printf "# Software versions:\n"
+        printf "%s: %s\n" \
+            Depthchargectl-Version "$(depthchargectl --version)" \
+            Mkdepthcharge-Version "$(mkdepthcharge --version)"
+        printf "\n"
+
+        printf "# Machine info:\n"
         printf "%s: %s\n" \
             Machine "$MACHINE" \
             DTB-Name "$MACHINE_DTB_NAME" \
