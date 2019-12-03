@@ -11,7 +11,8 @@ SYSCONFDIR ?= $(PREFIX)/etc
 LOCALSTATEDIR ?= $(PREFIX)/var
 LIBDIR ?= $(PREFIX)/lib
 
-dirs := PREFIX BINDIR SBINDIR DATADIR SYSCONFDIR LOCALSTATEDIR LIBDIR
+vars := PACKAGENAME
+vars += PREFIX BINDIR SBINDIR DATADIR SYSCONFDIR LOCALSTATEDIR LIBDIR
 
 # Default values for depthchargectl configuration.
 # These don't affect mkdepthcharge.
@@ -26,9 +27,9 @@ DEFAULT_VBOOT_KEYBLOCK ?= $${DEFAULT_VBOOT_DEVKEYS}/kernel.keyblock
 DEFAULT_VBOOT_SIGNPUBKEY ?= $${DEFAULT_VBOOT_DEVKEYS}/kernel_subkey.vbpubk
 DEFAULT_VBOOT_SIGNPRIVATE ?= $${DEFAULT_VBOOT_DEVKEYS}/kernel_data_key.vbprivk
 
-vars := CMDLINE COMPRESS MAX_SIZE DTB_NAME
-vars += VBOOT_DEVKEYS VBOOT_KEYBLOCK VBOOT_SIGNPUBKEY VBOOT_SIGNPRIVATE
-vars := $(foreach var,$(vars),DEFAULT_$(var))
+d_vars := CMDLINE COMPRESS MAX_SIZE DTB_NAME
+d_vars += VBOOT_DEVKEYS VBOOT_KEYBLOCK VBOOT_SIGNPUBKEY VBOOT_SIGNPRIVATE
+vars += $(foreach var,$(d_vars),DEFAULT_$(var))
 
 # Search lines of 'VAR="value"' and replace them with ours.
 pattern = 's|^$(var)=".*"$$|$(var)="$(call $(var))"|1'
