@@ -243,10 +243,15 @@ build_image() {
             || error "Failed to create depthcharge image."
 
         if depthchargectl check "$new_img" >/dev/null 2>/dev/null; then
+            image_ok=yes
             break
-        else
+        elif [ "$?" -eq 3 ]; then
+            image_ok=too_big
             warn "Image with compression '$compress' is not bootable," \
                 "will try a better one if possible."
+        else
+            image_ok=no
+            break
         fi
     done
 
@@ -259,20 +264,30 @@ build_image() {
         fi
     fi
 
-    # This is redundant now, but here just to raise an error.
-    info "Checking again if final image is bootable."
-    if depthchargectl check "$new_img"; then
-        # Copy to final location.
+    if [ "${image_ok:-no}" = "yes" ]; then
         info "Copying newly built image and info to output."
         rm -f "${output}.inputs"
         cp -f "$new_img" "$output"
         cp -f "$new_inputs" "${output}.inputs"
-    else
-        error "Couldn't build a bootable image for this machine" \
-            "even with maximum allowed compression."
-    fi
+        msg "Built image for kernel version '$kversion'."
+        return 0
 
-    msg "Built image for kernel version '$kversion'."
+    elif [ "${image_ok:-no}" = "no" ]; then
+        error "Couldn't build a bootable image for this machine." || :
+        return 2
+
+    elif [ "${image_ok:-no}" = "too_big" ] && [ -n "$initramfs" ]; then
+        warn "The initramfs might be too big for this machine."
+        warn "Usually this can be resolved by including less modules in" \
+             "the initramfs and/or compressing it with a better algorithm."
+        warn "Please check your distro's documentation for how to do this."
+        error "Couldn't build a small enough image for this machine." || :
+        return 3
+
+    elif [ "${image_ok:-no}" = "too_big" ]; then
+        error "Couldn't build a small enough image for this machine." || :
+        return 4
+    fi
 }
 
 cmd_main() {
