@@ -141,6 +141,19 @@ build_image() {
         set -- "--cmdline" "$cmdline" "$@"
     fi
 
+    # Allowed compression levels. Not doing 'set -- --compress $c' here
+    # because we will call mkdepthcharge by hand multiple times for it.
+    compress="${CONFIG_COMPRESS:-"${MACHINE_COMPRESS:-none}"}"
+    for c in $compress; do
+        if [ "$compress" != "none" ]; then
+            case "$MACHINE_COMPRESS" in
+                "$c"|"$c "*|*" $c "*|*" $c") : ;;
+                *) error "Configured to use compression '$c', but this" \
+                    "machine doesn't support it." ;;
+            esac
+        fi
+    done
+
     # Human readable description for the image.
     description="$(kversion_description "$kversion")" \
         || error "Version '$kversion' can't be resolved to a description."
@@ -179,14 +192,15 @@ build_image() {
         printf "%s: %s\n" \
             Machine "$MACHINE" \
             DTB-Name "$MACHINE_DTB_NAME" \
-            Max-Size "$MACHINE_MAX_SIZE"
+            Max-Size "$MACHINE_MAX_SIZE" \
+            Kernel-Compression "$MACHINE_COMPRESS"
         printf "\n"
 
         printf "# Image Configuration:\n"
         printf "%s: %s\n" \
             Kernel-Version "$kversion" \
             Kernel-Cmdline "$cmdline" \
-            Kernel-Compress "${CONFIG_COMPRESS:-none}" \
+            Kernel-Compression "$compress" \
             Kernel-Description "$description" \
             Source-Date-Epoch "${SOURCE_DATE_EPOCH:-unset}"
         printf "\n"
@@ -237,9 +251,9 @@ build_image() {
     # We can't just put compress into "$@" since we need to try
     # different values one by one, here.
     info "Building depthcharge image for kernel version '$kversion':"
-    for compress in ${CONFIG_COMPRESS:-none}; do
-        info "Trying with compression set to '$compress'."
-        mkdepthcharge --output "$new_img" --compress "$compress" "$@" \
+    for c in $compress; do
+        info "Trying with compression set to '$c'."
+        mkdepthcharge --output "$new_img" --compress "$c" "$@" \
             || error "Failed to create depthcharge image."
 
         if depthchargectl check "$new_img" >/dev/null 2>/dev/null; then
@@ -247,8 +261,7 @@ build_image() {
             break
         elif [ "$?" -eq 3 ]; then
             image_ok=too_big
-            warn "Image with compression '$compress' is not bootable," \
-                "will try a better one if possible."
+            warn "Image with compression '$c' is too big for this machine."
         else
             image_ok=no
             break

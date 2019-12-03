@@ -3,4 +3,5 @@
 
 Machine: Google Kevin
 DTB-Name: rk3399-gru-kevin.dtb
+Kernel-Compression: none lz4 lzma
 Max-Size: 33554432
