@@ -1,12 +1,17 @@
 #!/usr/bin/make -f
 
+VERSION = $(shell dpkg-parsechangelog -SVersion)
+SOURCE = $(shell dpkg-parsechangelog -SSource)
+
 %:
 	dh $@
 
 override_dh_auto_build:
 	dh_auto_build \
-		-- PREFIX=/usr SYSCONFDIR=/etc LOCALSTATEDIR=/var/lib
+		-- PREFIX=/usr SYSCONFDIR=/etc LOCALSTATEDIR=/var/lib \
+		PACKAGENAME='$(SOURCE)' VERSION='$(VERSION)'
 
 override_dh_auto_install:
 	dh_auto_install --destdir=debian/depthcharge-tools \
-		-- PREFIX=/usr SYSCONFDIR=/etc LOCALSTATEDIR=/var/lib
+		-- PREFIX=/usr SYSCONFDIR=/etc LOCALSTATEDIR=/var/lib \
+		PACKAGENAME='$(SOURCE)' VERSION='$(VERSION)'
