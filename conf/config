@@ -4,6 +4,9 @@
 # Set a preferred compression level for the kernel.
 #Kernel-Compression: none lz4 lzma
 
+# Whether to use initramfs or not. Adds 'noinitrd' to command line.
+#Ignore-Initramfs: no
+
 # Override automatic machine detection.
 #Machine: <machine>
 

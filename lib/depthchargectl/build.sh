@@ -92,6 +92,10 @@ build_image() {
     # Initramfs is optional if this succeeds but is empty.
     initramfs="$(kversion_initramfs "$kversion")" \
         || error "Version '$kversion' can't be resolved to an initramfs."
+    if [ "$CONFIG_NOINITRAMFS" = "yes" ] && [ -n "$initramfs" ]; then
+        warn "Ignoring initramfs '$initramfs' as configured."
+        initramfs=""
+    fi
     if [ "$MACHINE_FORMAT" = "fit" ]; then
         if [ -n "$initramfs" ]; then
             if [ ! -r "$initramfs" ]; then
@@ -146,6 +150,10 @@ build_image() {
         # Prepend it so that user-given cmdline overrides it.
         info "Prepending '$rootcmd' to the kernel cmdline."
         cmdline="${rootcmd}${cmdline:+ }${cmdline:-}"
+    fi
+    if [ "$CONFIG_NOINITRAMFS" = "yes" ]; then
+        info "Appending 'noinitrd' to the kernel cmdline."
+        cmdline="${cmdline:-}${cmdline:+ }noinitrd"
     fi
     if [ -n "$cmdline" ]; then
         set -- "--cmdline" "$cmdline" "$@"
