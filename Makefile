@@ -17,6 +17,7 @@ vars += PREFIX BINDIR SBINDIR DATADIR SYSCONFDIR LOCALSTATEDIR LIBDIR
 
 # Default values for depthchargectl configuration.
 # These don't affect mkdepthcharge.
+DEFAULT_FORMAT ?= fit
 DEFAULT_CMDLINE ?= quiet splash
 DEFAULT_COMPRESS ?= none lz4 lzma
 DEFAULT_MAX_SIZE ?= 33554432
@@ -28,7 +29,7 @@ DEFAULT_VBOOT_KEYBLOCK ?= $${DEFAULT_VBOOT_DEVKEYS}/kernel.keyblock
 DEFAULT_VBOOT_SIGNPUBKEY ?= $${DEFAULT_VBOOT_DEVKEYS}/kernel_subkey.vbpubk
 DEFAULT_VBOOT_SIGNPRIVATE ?= $${DEFAULT_VBOOT_DEVKEYS}/kernel_data_key.vbprivk
 
-d_vars := CMDLINE COMPRESS MAX_SIZE DTB_NAME
+d_vars := FORMAT CMDLINE COMPRESS MAX_SIZE DTB_NAME
 d_vars += VBOOT_DEVKEYS VBOOT_KEYBLOCK VBOOT_SIGNPUBKEY VBOOT_SIGNPRIVATE
 vars += $(foreach var,$(d_vars),DEFAULT_$(var))
 

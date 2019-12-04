@@ -92,32 +92,42 @@ build_image() {
     # Initramfs is optional if this succeeds but is empty.
     initramfs="$(kversion_initramfs "$kversion")" \
         || error "Version '$kversion' can't be resolved to an initramfs."
-    if [ -n "$initramfs" ]; then
-        if [ ! -r "$initramfs" ]; then
-            error "Initramfs ('$initramfs') for '$kversion is unusable'."
+    if [ "$MACHINE_FORMAT" = "fit" ]; then
+        if [ -n "$initramfs" ]; then
+            if [ ! -r "$initramfs" ]; then
+                error "Initramfs ('$initramfs') for '$kversion is unusable'."
+            fi
+            set -- "$@" "$initramfs"
         fi
-        set -- "$@" "$initramfs"
+    elif [ -n "$initramfs" ]; then
+        error "Image format '$MACHINE_FORMAT' doesn't support an initramfs," \
+            "required by kernel-version '$kversion'."
     fi
 
     # Device trees are optional based on machine configuration.
     dtbs_path="$(kversion_dtbs_path "$kversion")" \
         || error "Version '$kversion' can't be resolved to a dtbs dir."
-    if [ -n "$MACHINE_DTB_NAME" ]; then
-        if [ -z "$dtbs_path" ]; then
-            error "No dtbs exist, but this machine needs one."
-        fi
+    if [ "$MACHINE_FORMAT" = "fit" ]; then
+        if [ -n "$MACHINE_DTB_NAME" ]; then
+            if [ -z "$dtbs_path" ]; then
+                error "No dtbs exist, but this machine needs one."
+            fi
 
-        info "Searching '$dtbs_path' for '$MACHINE_DTB_NAME'."
-        dtbs="$(find "$dtbs_path" -iname "$MACHINE_DTB_NAME")" \
-            || error "Couldn't search for dtbs in '$dtbs_path'."
+            info "Searching '$dtbs_path' for '$MACHINE_DTB_NAME'."
+            dtbs="$(find "$dtbs_path" -iname "$MACHINE_DTB_NAME")" \
+                || error "Couldn't search for dtbs in '$dtbs_path'."
 
-        if [ -z "$dtbs" ]; then
-            error "No dtb file '$MACHINE_DTB_NAME' found in '$dtbs_path'."
-        else
-            IFS="${NEWLINE}${TAB}"
-            set -- "$@" $dtbs
-            IFS="$ORIG_IFS"
+            if [ -z "$dtbs" ]; then
+                error "No dtb file '$MACHINE_DTB_NAME' found in '$dtbs_path'."
+            else
+                IFS="${NEWLINE}${TAB}"
+                set -- "$@" $dtbs
+                IFS="$ORIG_IFS"
+            fi
         fi
+    elif [ -n "$MACHINE_DTB_NAME" ]; then
+        error "Image format '$MACHINE_FORMAT' doesn't support dtb files" \
+            "('$MACHINE_DTB_NAME') required by your machine."
     fi
 
     cmdline="$CONFIG_CMDLINE"
@@ -144,21 +154,28 @@ build_image() {
     # Allowed compression levels. Not doing 'set -- --compress $c' here
     # because we will call mkdepthcharge by hand multiple times for it.
     compress="${CONFIG_COMPRESS:-"${MACHINE_COMPRESS:-none}"}"
-    for c in $compress; do
-        if [ "$compress" != "none" ]; then
-            case "$MACHINE_COMPRESS" in
-                "$c"|"$c "*|*" $c "*|*" $c") : ;;
-                *) error "Configured to use compression '$c', but this" \
-                    "machine doesn't support it." ;;
-            esac
-        fi
-    done
+    if [ "$MACHINE_FORMAT" = "fit" ]; then
+        for c in $compress; do
+            if [ "$c" != "none" ]; then
+                case "$MACHINE_COMPRESS" in
+                    "$c"|"$c "*|*" $c "*|*" $c") : ;;
+                    *) error "Configured to use compression '$c', but this" \
+                        "machine doesn't support it." ;;
+                esac
+            fi
+        done
+    elif [ "$compress" != none ]; then
+        error "Image format '$MACHINE_FORMAT' doesn't support kernel" \
+            "compression '$compress'."
+    fi
 
     # Human readable description for the image.
     description="$(kversion_description "$kversion")" \
         || error "Version '$kversion' can't be resolved to a description."
-    if [ -n "$description" ]; then
-        set -- "--description" "$description" "$@"
+    if [ "$MACHINE_FORMAT" = "fit" ]; then
+        if [ -n "$description" ]; then
+            set -- "--description" "$description" "$@"
+        fi
     fi
 
     # Signing keys to use.
@@ -169,6 +186,9 @@ build_image() {
     if [ "$VERBOSE" = "yes" ]; then
         set -- "--verbose" "$@"
     fi
+
+    # Image format to use.
+    set -- "--format" "$MACHINE_FORMAT" "$@"
 
     # Try to keep the output reproducible. Initramfs date is bound to be
     # later than vmlinuz date, so prefer that if possible.
@@ -193,10 +213,11 @@ build_image() {
             Machine "$MACHINE" \
             DTB-Name "$MACHINE_DTB_NAME" \
             Max-Size "$MACHINE_MAX_SIZE" \
-            Kernel-Compression "$MACHINE_COMPRESS"
+            Kernel-Compression "$MACHINE_COMPRESS" \
+            Image-Format "$MACHINE_FORMAT"
         printf "\n"
 
-        printf "# Image Configuration:\n"
+        printf "# Image configuration:\n"
         printf "%s: %s\n" \
             Kernel-Version "$kversion" \
             Kernel-Cmdline "$cmdline" \
@@ -205,7 +226,7 @@ build_image() {
             Source-Date-Epoch "${SOURCE_DATE_EPOCH:-unset}"
         printf "\n"
 
-        printf "# Image Inputs:\n"
+        printf "# Image inputs:\n"
         printf "%s: %s\n" \
             Vmlinuz "$vmlinuz" \
             Initramfs "${initramfs:-}"
@@ -214,14 +235,14 @@ build_image() {
         IFS="${ORIG_IFS}"
         printf "\n"
 
-        printf "# Signing Keys:\n"
+        printf "# Signing keys:\n"
         printf "%s: %s\n" \
             Vboot-Keyblock "$CONFIG_VBOOT_KEYBLOCK" \
             Vboot-Public-Key "$CONFIG_VBOOT_SIGNPUBKEY" \
             Vboot-Private-Key "$CONFIG_VBOOT_SIGNPRIVATE"
         printf "\n"
 
-        printf "# SHA256 Checksums:\n"
+        printf "# SHA256 checksums:\n"
         IFS="${NEWLINE}${TAB}"
         sha256sum "$vmlinuz" $initramfs $dtbs \
             "$CONFIG_VBOOT_KEYBLOCK" \
