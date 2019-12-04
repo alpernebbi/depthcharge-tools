@@ -6,3 +6,8 @@
 
 # Override automatic machine detection.
 #Machine: <machine>
+
+# Use different keys for signing and verification.
+#Vboot-Keyblock: /usr/share/vboot/devkeys/kernel.keyblock
+#Vboot-Public-Key: /usr/share/vboot/devkeys/kernel_subkey.vbpubk
+#Vboot-Private-Key: /usr/share/vboot/devkeys/kernel_data_key.vbprivk
