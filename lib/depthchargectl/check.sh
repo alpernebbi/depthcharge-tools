@@ -91,6 +91,22 @@ check_signature() {
     fi
 }
 
+check_fit_format() {
+    if [ "$MACHINE_FORMAT" != "fit" ]; then
+        return
+    fi
+
+    info "Checking FIT image format."
+    itb="$(temp_file)"
+    vbutil_kernel --get-vmlinuz "${1:-$IMAGE}" --vmlinuz-out "$itb"
+    if mkimage -l "$itb" | head -1 | grep -qs '^FIT description:'; then
+        : # FIT image.
+    else
+        error "Depthcharge image not created from a FIT image." || :
+        return 6
+    fi
+}
+
 cmd_main() {
     if ! machine_is_supported; then
         error "Cannot verify images for unsupported machine '$MACHINE'."
@@ -100,4 +116,5 @@ cmd_main() {
     check_size "$IMAGE"
     check_depthcharge_image "$IMAGE"
     check_signature "$IMAGE"
+    check_fit_format "$IMAGE"
 }
