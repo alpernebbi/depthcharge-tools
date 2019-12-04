@@ -70,13 +70,24 @@ check_size() {
     fi
 }
 
-check_signature() {
-    info "Checking image signatures."
-    if ! futility vbutil_kernel >/dev/null \
-            --signpubkey "$CONFIG_VBOOT_SIGNPUBKEY" \
-            --verify "${1:-$IMAGE}"; then
-        error "Depthcharge image cannot be verified by vbutil_kernel." || :
+check_depthcharge_image() {
+    info "Checking depthcharge image validity."
+    if ! futility vbutil_kernel >/dev/null 2>&1 \
+        --verify "${1:-$IMAGE}"
+    then
+        error "Image couldn't be interpreted by vbutil_kernel." || :
         return 4
+    fi
+}
+
+check_signature() {
+    info "Checking depthcharge image signatures."
+    if ! futility vbutil_kernel >/dev/null 2>&1 \
+            --signpubkey "$CONFIG_VBOOT_SIGNPUBKEY" \
+            --verify "${1:-$IMAGE}"
+    then
+        error "Depthcharge image not signed by configured keys." || :
+        return 5
     fi
 }
 
@@ -87,5 +98,6 @@ cmd_main() {
 
     check_readable "$IMAGE"
     check_size "$IMAGE"
+    check_depthcharge_image "$IMAGE"
     check_signature "$IMAGE"
 }
