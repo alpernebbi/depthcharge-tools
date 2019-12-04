@@ -102,3 +102,25 @@ The rm subcommand disables partitions that contain a specific image.
 This is most useful when you are removing a kernel version (and its
 modules) from your machine and know images built with that kernel will
 fail to boot from that point on.
+
+Installation
+------------
+These tools depend on ``mkimage``, ``vbutil_kernel``, ``cgpt``, and other
+utilities (``util-linux``, ``coreutils``, etc.) that are usually
+installed by default on most Linux systems.
+
+To install depthcharge-tools to ``/usr/local/``, run::
+
+    $ make
+    $ sudo make install
+
+Hopefully, you should be able to use depthchargectl with just that::
+
+    $ sudo depthchargectl partitions /dev/mmcblk0
+    S  P  T  DEVICE
+    1  2  0  /dev/mmcblk0p2
+    1  1  0  /dev/mmcblk0p4
+    0  0  15 /dev/mmcblk0p6
+
+After that, you can edit ``/usr/local/etc/depthcharge-tools/config`` to
+set the kernel command line or vboot keys to be used.
