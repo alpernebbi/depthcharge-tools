@@ -33,7 +33,7 @@ Here, mkdepthcharge automates some stuff for us:
 - Sets common unchanging arguments to mkimage and vbutil_kernel.
 - Adds ``kern_guid=%U`` to cmdline to know which partition we booted from.
 - Writes the cmdline paramters to a file as vbutil_kernel expects.
-- Uses a dummy 'bootloader' (on arm/arm64) as vbutil_kernel requires one.
+- Uses an empty file as 'bootloader' since vbutil_kernel requires one.
 - Uses the vbutil_kernel key paths provided at installation time.
 
 .. _mkimage: https://dyn.manpages.debian.org/jump?q=unstable/mkimage

@@ -332,21 +332,14 @@ printf "%s" "$cmdline" >"$temp"
 VBOOT_CMDLINE="$temp"
 unset temp cmdline
 
-# vbutil_kernel --bootloader argument wants a bootstub binary, but it's
-# contents don't matter on arm systems.
+# vbutil_kernel --bootloader argument is mandatory, but it's contents
+# don't matter at least on arm systems.
 if [ -z "${VBOOT_BOOTSTUB:-}" ]; then
-    case "$VBOOT_ARCH" in
-        arm*|aarch64)
-            info "Using dummy file for bootloader."
-            temp="$(temp_file bootstub)"
-            dd if=/dev/zero of="$temp" count=1 bs=512 status=none
-            VBOOT_BOOTSTUB="$temp"
-            unset temp
-            ;;
-        x86|amd64|*)
-            error "Architecture '$VBOOT_ARCH' needs a bootstub binary."
-            ;;
-    esac
+    info "Using dummy file for bootloader."
+    temp="$(temp_file bootstub)"
+    dd if=/dev/zero of="$temp" count=1 bs=512 status=none
+    VBOOT_BOOTSTUB="$temp"
+    unset temp
 fi
 
 readonly VBOOT_CMDLINE VBOOT_BOOTSTUB
