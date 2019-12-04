@@ -43,18 +43,62 @@ depthchargectl
 --------------
 The depthchargectl tool goes a step further and aims to fully automate
 bootable image creation and ChromeOS kernel partition management, even
-the machine-specific and distro-specific parts.
+the machine-specific and distro-specific parts. With proper integration
+with your distribution, depthchargectl can keep your system bootable
+across kernel and initramfs changes without any interaction on your
+part.
 
-Internally, depthchargectl keeps track of known ChromeOS machines with
-their requirements for and restrictions on bootable images. Using these,
-it can automatically build an image from the running system that will
-work on your device. For example, it will choose the correct device-tree
-file for your machine, embed an appropriate root command-line parameter,
-and try increasing compression levels until the image fits the maximum
-size your firmware supports (if it supports such compression).
+depthchargectl check
+~~~~~~~~~~~~~~~~~~~~
+The check subcommand can verify that an image is bootable on your
+machine by keeping track of known ChromeOS machines with their
+requirements and restrictions.
 
-With proper integration with your distribution, depthchargectl can keep
-your system bootable across kernel and initramfs changes without any
-interaction on your part. When you have more than one ChromeOS kernel
-partition, they will be utilized in rotation so that an unsuccessful
-boot will revert to the last good version.
+depthchargectl build
+~~~~~~~~~~~~~~~~~~~~
+The build subcommand can automatically build an image from the running system
+that will work on your device:
+
+- Chooses the most recent vmlinuz and initramfs files for your distro.
+- Chooses the correct device-tree blob for your machine, if any.
+- Uses an appropriate root command-line parameter derived from /etc/fstab.
+- Tries better compression values as needed, if your firmware allows it.
+- Raises an error if it can't build a bootable image e.g. when it's too big.
+- Handles storage and caching of built images.
+
+depthchargectl write
+~~~~~~~~~~~~~~~~~~~~
+The write subcommand can automatically write a depthcharge-bootable
+image to disk. By default, it will build, check and write an image for
+your system to where the target subcommand sees fit and mark it as
+the preferred (but not yet successful) partition on the next boot.
+
+When you have more than one ChromeOS kernel partition, they will be
+utilized in rotation so that an unsuccessful boot can revert to the
+last good version.
+
+depthchargectl partitions
+~~~~~~~~~~~~~~~~~~~~~~~~~
+The partitions subcommand provides a table of ChromeOS kernel partitions
+and their flags. By default it will show those on the boot-time physical
+disks for your system (those where /boot and root are located).
+
+depthchargectl target
+~~~~~~~~~~~~~~~~~~~~~
+The target subcommand chooses an appropriate ChromeOS kernel partition
+to write a boot image to. It tries to avoid choosing the currently
+booted partition.
+
+depthchargectl set-good
+~~~~~~~~~~~~~~~~~~~~~~~
+The set-good subcommand modifies the flags on the currently booted
+partition so that it's the highest priority successful partition. The
+write subcommand marks partitions as bootable only once, and the
+set-good subcommand must be run to make them permanently bootable.
+
+depthchargectl rm
+~~~~~~~~~~~~~~~~~
+The rm subcommand disables partitions that contain a specific image.
+This is most useful when you are removing a kernel version (and its
+modules) from your machine and know images built with that kernel will
+fail to boot from that point on.
