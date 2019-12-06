@@ -6,10 +6,23 @@ depthchargectl
 manage the ChromeOS bootloader and its boot images
 --------------------------------------------------
 
+.. |PACKAGENAME| replace:: depthcharge-tools
+.. |VERSION| replace:: v0.3.0
+
 :date: 2019-12-06
-:version: v0.3.0
+:version: |VERSION|
 :manual_section: 8
-:manual_group: depthcharge-tools
+:manual_group: |PACKAGENAME|
+
+.. |mkdepthcharge| replace:: *mkdepthcharge*\ (1)
+.. |cgpt| replace:: *cgpt*\ (1)
+.. |vbutil_kernel| replace:: *vbutil_kernel*\ (1)
+
+.. |PREFIX| replace:: /usr/local
+.. |DATADIR| replace:: |PREFIX|/share
+.. |SYSCONFDIR| replace:: |PREFIX|/etc
+.. |LOCALSTATEDIR| replace:: |PREFIX|/var
+.. |LIBDIR| replace:: |PREFIX|/lib
 
 
 SYNOPSIS
@@ -282,28 +295,28 @@ depthchargectl target exit status
 
 FILES
 =====
-/usr/local/etc/depthcharge-tools/config
+|SYSCONFDIR|/|PACKAGENAME|/config
     Configuration file. The kernel command line can be set here, among
     other things. See its contents for more information on what can be
     set.
 
-/usr/local/etc/depthcharge-tools/config.d/*\ **
+|SYSCONFDIR|/|PACKAGENAME|/config.d/*\ **
     These files are considered appended to the **config** file.
 
-/usr/local/etc/depthcharge-tools/userdb
+|SYSCONFDIR|/|PACKAGENAME|/userdb
     User-specified machine database file. If you are using a
     custom-built firmware, you can override settings for your machine.
     You can also add information about yet unsupported machines to test
     **depthchargectl** on them.
 
-/usr/local/etc/depthcharge-tools/userdb.d/*\ **
+|SYSCONFDIR|/|PACKAGENAME|/userdb.d/*\ **
     These files are considered appended to the **userdb** file.
 
-/usr/local/share/depthcharge-tools/db
+|DATADIR|/|PACKAGENAME|/db
     Machine database file. Contains information about ChromeOS devices,
     how to build images for them, and their limitations on images.
 
-/usr/local/lib/systemd/system/depthchargectl-set-good.service
+|LIBDIR|/systemd/system/depthchargectl-set-good.service
     A systemd service that runs the **set-good** subcommand on
     successful boots.
 
@@ -329,8 +342,3 @@ depthchargectl write vmlinux.kpart -t /dev/mmcblk1p1
 SEE ALSO
 ========
 |mkdepthcharge|, |cgpt|, |vbutil_kernel|
-
-.. |mkdepthcharge| replace:: *mkdepthcharge*\ (1)
-.. |cgpt| replace:: *cgpt*\ (1)
-.. |vbutil_kernel| replace:: *vbutil_kernel*\ (1)
-

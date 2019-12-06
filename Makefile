@@ -37,13 +37,20 @@ vars += $(foreach var,$(d_vars),DEFAULT_$(var))
 
 # Search lines of 'VAR="value"' and replace them with ours.
 pattern = 's|^$(var)=".*"$$|$(var)="$(call $(var))"|1'
-patterns := $(foreach var, $(dirs) $(vars),-e $(pattern))
-substvars := sed $(patterns)
+patterns := $(foreach var,$(vars),-e $(pattern))
+sh_substvars := sed $(patterns)
 
+# Search lines of '. "${FUNCTIONS_DIR}/func.sh"' and replace them with the
+# content of the script at "lib/func.sh".
 functions := $(foreach f, $(wildcard lib/*.sh), $(basename $(notdir $(f))))
 pattern = '\|^\. "$${FUNCTIONS_DIR}/$(f)\.sh"$$| r lib/$(f).sh'
 patterns := $(foreach f, $(functions),-e $(pattern))
-includelibs := sed $(patterns) -e 's|^\. "$${FUNCTIONS_DIR}/.*\.sh"$$|\n|1'
+sh_includelibs := sed $(patterns) -e 's|^\. "$${FUNCTIONS_DIR}/.*\.sh"$$|\n|1'
+
+# Search lines of '.. |var| replace:: value' and replace them with ours.
+pattern = 's|^.. \|$(var)\| replace:: .*|.. \|$(var)\| replace:: $(call $(var))|1'
+patterns := $(foreach var,$(vars),-e $(pattern))
+rst_substvars := sed $(patterns)
 
 all: bin/depthchargectl bin/depthchargectl.8
 all: bin/mkdepthcharge bin/mkdepthcharge.1
@@ -53,20 +60,20 @@ bin/:
 	mkdir -p bin
 
 bin/depthchargectl: depthchargectl bin/
-	$(substvars) <"$<" >"$@"
+	$(sh_substvars) <"$<" >"$@"
 
 bin/mkdepthcharge: mkdepthcharge bin/
-	$(substvars) <"$<" >"$@"
+	$(sh_substvars) <"$<" >"$@"
 
 # This builds mkdepthcharge into a single file.
 bin/mkdepthcharge-standalone: mkdepthcharge bin/
-	$(substvars) <"$<" | $(includelibs) >"$@"
+	$(sh_substvars) <"$<" | $(sh_includelibs) >"$@"
 
 bin/depthchargectl.8: depthchargectl.rst bin/
-	rst2man <"$<" >"$@"
+	$(rst_substvars) <"$<" | rst2man >"$@"
 
 bin/mkdepthcharge.1: mkdepthcharge.rst bin/
-	rst2man <"$<" >"$@"
+	$(rst_substvars) <"$<" | rst2man >"$@"
 
 install: bin/depthchargectl bin/depthchargectl.8
 install: bin/mkdepthcharge bin/mkdepthcharge.1
