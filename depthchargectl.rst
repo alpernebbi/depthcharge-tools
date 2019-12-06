@@ -75,7 +75,7 @@ depthchargectl check
 Checks if a file is a depthcharge image that can be booted on this
 machine. **depthchargectl** also keeps track of restrictions on images
 for each machine. For example, most ChromeOS machines can boot images
-upto a specific size, e.g. 32MiB. It checks if its input is in a format
+up to a specific size, e.g. 32MiB. It checks if its input is in a format
 the ChromeOS bootloader expects, and satisfies these restrictions.
 
 depthchargectl partitions
@@ -212,7 +212,7 @@ depthchargectl build exit status
     Image built and stored successfully, or a cached valid image exists.
 
 1
-    An error occured before or during building the image.
+    An error occurred before or during building the image.
 
 2
     Can build an image, but it cannot be validated according to the

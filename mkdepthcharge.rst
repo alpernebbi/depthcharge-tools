@@ -135,7 +135,7 @@ EXIT STATUS
     **--help**, **--version** is given).
 
 1
-    An error occured, no image is written to the output path.
+    An error occurred, no image is written to the output path.
 
 
 EXAMPLES
