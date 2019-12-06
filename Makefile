@@ -11,6 +11,7 @@ DATADIR ?= $(PREFIX)/share
 SYSCONFDIR ?= $(PREFIX)/etc
 LOCALSTATEDIR ?= $(PREFIX)/var
 LIBDIR ?= $(PREFIX)/lib
+MANDIR ?= $(DATADIR)/man
 
 vars := PACKAGENAME VERSION
 vars += PREFIX BINDIR SBINDIR DATADIR SYSCONFDIR LOCALSTATEDIR LIBDIR
@@ -44,7 +45,9 @@ pattern = '\|^\. "$${FUNCTIONS_DIR}/$(f)\.sh"$$| r lib/$(f).sh'
 patterns := $(foreach f, $(functions),-e $(pattern))
 includelibs := sed $(patterns) -e 's|^\. "$${FUNCTIONS_DIR}/.*\.sh"$$|\n|1'
 
-all: bin/depthchargectl bin/mkdepthcharge bin/mkdepthcharge-standalone
+all: bin/depthchargectl bin/depthchargectl.8
+all: bin/mkdepthcharge bin/mkdepthcharge.1
+all: bin/mkdepthcharge-standalone
 
 bin/:
 	mkdir -p bin
@@ -59,7 +62,15 @@ bin/mkdepthcharge: mkdepthcharge bin/
 bin/mkdepthcharge-standalone: mkdepthcharge bin/
 	$(substvars) <"$<" | $(includelibs) >"$@"
 
-install: bin/mkdepthcharge bin/depthchargectl
+bin/depthchargectl.8: depthchargectl.rst bin/
+	rst2man <"$<" >"$@"
+
+bin/mkdepthcharge.1: mkdepthcharge.rst bin/
+	rst2man <"$<" >"$@"
+
+install: bin/depthchargectl bin/depthchargectl.8
+install: bin/mkdepthcharge bin/mkdepthcharge.1
+install:
 	install -d '$(DESTDIR)$(BINDIR)'
 	install -d '$(DESTDIR)$(SBINDIR)'
 	install -d '$(DESTDIR)$(DATADIR)/$(PACKAGENAME)'
@@ -69,6 +80,9 @@ install: bin/mkdepthcharge bin/depthchargectl
 	install -d '$(DESTDIR)$(SYSCONFDIR)/$(PACKAGENAME)'/userdb.d
 	install -d '$(DESTDIR)$(LOCALSTATEDIR)/$(PACKAGENAME)'
 	install -d '$(DESTDIR)$(LOCALSTATEDIR)/$(PACKAGENAME)'/images
+	install -d '$(DESTDIR)$(LOCALSTATEDIR)/$(PACKAGENAME)'/images
+	install -d '$(DESTDIR)$(MANDIR)'/man1
+	install -d '$(DESTDIR)$(MANDIR)'/man8
 	install -m 0755 bin/mkdepthcharge '$(DESTDIR)$(BINDIR)'
 	install -m 0755 bin/depthchargectl '$(DESTDIR)$(SBINDIR)'
 	install -m 0644 lib/*.sh '$(DESTDIR)$(DATADIR)/$(PACKAGENAME)'
@@ -76,6 +90,8 @@ install: bin/mkdepthcharge bin/depthchargectl
 	install -m 0644 conf/db '$(DESTDIR)$(DATADIR)/$(PACKAGENAME)'
 	install -m 0644 conf/userdb '$(DESTDIR)$(SYSCONFDIR)/$(PACKAGENAME)'
 	install -m 0644 conf/config '$(DESTDIR)$(SYSCONFDIR)/$(PACKAGENAME)'
+	install -m 0644 bin/mkdepthcharge.1 '$(DESTDIR)$(MANDIR)'/man1
+	install -m 0644 bin/depthchargectl.8 '$(DESTDIR)$(MANDIR)'/man8
 
 install-systemd: systemd/depthchargectl-set-good.service
 	install -d '$(DESTDIR)$(LIBDIR)/systemd/system'
@@ -98,8 +114,8 @@ install-standalone: bin/mkdepthcharge-standalone
 	install -m 0755 bin/mkdepthcharge-standalone -T '$(DESTDIR)$(BINDIR)'/mkdepthcharge
 
 clean:
-	rm -f bin/depthchargectl
-	rm -f bin/mkdepthcharge
+	rm -f bin/depthchargectl bin/depthchargectl.8
+	rm -f bin/mkdepthcharge bin/mkdepthcharge.1
 	rm -f bin/mkdepthcharge-standalone
 	[ ! -d bin ] || rmdir bin
 
