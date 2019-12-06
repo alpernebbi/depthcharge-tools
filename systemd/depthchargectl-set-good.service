@@ -2,6 +2,7 @@
 
 [Unit]
 Description=Mark the current depthcharge partition as successful
+Documentation=man:depthchargectl(8)
 DefaultDependencies=no
 Requires=boot-complete.target
 After=local-fs.target boot-complete.target
