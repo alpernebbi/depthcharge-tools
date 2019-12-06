@@ -320,6 +320,9 @@ FILES
     A systemd service that runs the **set-good** subcommand on
     successful boots.
 
+|LOCALSTATEDIR|/|PACKAGENAME|/images/*\ **.img
+    The most recently built images for each kernel version.
+
 
 EXAMPLES
 ========
