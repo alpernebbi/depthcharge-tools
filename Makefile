@@ -46,16 +46,17 @@ includelibs := sed $(patterns) -e 's|^\. "$${FUNCTIONS_DIR}/.*\.sh"$$|\n|1'
 
 all: bin/depthchargectl bin/mkdepthcharge bin/mkdepthcharge-standalone
 
-bin/depthchargectl: depthchargectl
+bin/:
 	mkdir -p bin
+
+bin/depthchargectl: depthchargectl bin/
 	$(substvars) <"$<" >"$@"
 
-bin/mkdepthcharge: mkdepthcharge
-	mkdir -p bin
+bin/mkdepthcharge: mkdepthcharge bin/
 	$(substvars) <"$<" >"$@"
 
 # This builds mkdepthcharge into a single file.
-bin/mkdepthcharge-standalone: mkdepthcharge
+bin/mkdepthcharge-standalone: mkdepthcharge bin/
 	$(substvars) <"$<" | $(includelibs) >"$@"
 
 install: bin/mkdepthcharge bin/depthchargectl
