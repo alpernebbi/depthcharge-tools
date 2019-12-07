@@ -77,8 +77,8 @@ kversion_dtbs_path() {
     esac
 }
 
-# Description for a kernel version.
-kversion_description() {
+# Name for a kernel version.
+kversion_name() {
     if name="$(os_release NAME)"; then
         printf "%s, with Linux %s" "$name" "$1"
     else

@@ -18,7 +18,7 @@ Options:
 
 FIT image options:
  -C, --compress TYPE        Compress vmlinuz with lz4 or lzma.
- -n, --description DESC     Description of vmlinuz to put in the FIT.
+ -n, --name NAME            Description of vmlinuz to put in the FIT.
 
 Depthcharge image options:
  -c, --cmdline CMD          Command-line parameters for the kernel. Can
@@ -157,7 +157,7 @@ while [ "$#" -gt 0 ]; do
 
         # FIT image options:
         -C|--compress)      COMPRESS="$2";              shift 2 ;;
-        -n|--description)   DESCRIPTION="$2";           shift 2 ;;
+        -n|--name)          NAME="$2";                  shift 2 ;;
 
         # Depthcharge options:
         -c|--cmdline)       add_cmdline "$2";           shift 2 ;;
@@ -228,8 +228,8 @@ esac
 # should be set to none in that case.
 : "${COMPRESS:=none}"
 
-# Default description can be empty, but needs to be set (sh -o nounset).
-: "${DESCRIPTION:=unavailable}"
+# Default name can be empty, but needs to be set (sh -o nounset).
+: "${NAME:=unavailable}"
 
 # If kernel.args is empty, vbutil_kernel returns an error. We can
 # use "--" instead of putting a newline or a space into the cmdline.
@@ -250,15 +250,15 @@ fi
 
 readonly VERBOSE QUIET SILENT
 readonly ARCH FORMAT MKIMAGE_ARCH VBOOT_ARCH
-readonly COMPRESS DESCRIPTION CMDLINE MAX_SIZE
+readonly COMPRESS NAME CMDLINE MAX_SIZE
 readonly VBOOT_DEVKEYS VBOOT_KEYBLOCK VBOOT_SIGNPRIVATE
 
 # Check invalid option combinations.
 if [ "$FORMAT" = "zimage" ]; then
     if [ "$COMPRESS" != "none" ]; then
         usage_error "--compress is incompatible with zimage format."
-    elif [ "$DESCRIPTION" != "unavailable" ]; then
-        usage_error "--description is incompatible with zimage format."
+    elif [ "$NAME" != "unavailable" ]; then
+        usage_error "--name is incompatible with zimage format."
     elif [ -n "${DTBS:-}" ]; then
         error "Device tree files not supported with zimage format."
     elif [ -n "${INITRAMFS:-}" ]; then
@@ -369,7 +369,7 @@ make_fit() (
         -A "$MKIMAGE_ARCH" \
         -O linux \
         -C "$COMPRESS" \
-        -n "$DESCRIPTION" \
+        -n "$NAME" \
         -d "$VMLINUZ" \
         "$@" \
         "$temp"

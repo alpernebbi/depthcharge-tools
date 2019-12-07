@@ -100,7 +100,7 @@ FIT image options
     with **lz4** or **lzma**. **none** is also accepted, but does
     nothing.
 
--n DESC, --description DESC
+-n DESC, --name NAME
     Description of the *vmlinuz* to put in the FIT image.
 
 Depthcharge image options

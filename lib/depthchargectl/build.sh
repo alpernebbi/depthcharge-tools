@@ -177,12 +177,12 @@ build_image() {
             "compression '$compress'."
     fi
 
-    # Human readable description for the image.
-    description="$(kversion_description "$kversion")" \
-        || error "Version '$kversion' can't be resolved to a description."
+    # Human readable name for the image.
+    name="$(kversion_name "$kversion")" \
+        || error "Version '$kversion' can't be resolved to a name."
     if [ "$MACHINE_FORMAT" = "fit" ]; then
-        if [ -n "$description" ]; then
-            set -- "--description" "$description" "$@"
+        if [ -n "$name" ]; then
+            set -- "--name" "$name" "$@"
         fi
     fi
 
@@ -230,7 +230,7 @@ build_image() {
             Kernel-Version "$kversion" \
             Kernel-Cmdline "$cmdline" \
             Kernel-Compression "$compress" \
-            Kernel-Description "$description" \
+            Kernel-Name "$name" \
             Source-Date-Epoch "${SOURCE_DATE_EPOCH:-unset}"
         printf "\n"
 
