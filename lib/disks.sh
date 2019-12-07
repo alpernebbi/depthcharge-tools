@@ -120,9 +120,12 @@ find_disks() {
 }
 
 # Print physical disks on which the /boot and / partitions exist.
+# Prefer values in the fstab, but don't fail if it's not available.
 bootable_disks() {
-    boot="$(findmnt --fstab -M "/boot" --evaluate -n -o SOURCE)" || :
-    root="$(findmnt --fstab -M "/" --evaluate -n -o SOURCE)"
+    boot="$(findmnt --fstab -M "/boot" --evaluate -n -o SOURCE)" \
+        || boot="$(findmnt -M "/boot" --evaluate -n -o SOURCE)" || :
+    root="$(findmnt --fstab -M "/" --evaluate -n -o SOURCE)" \
+        || root="$(findmnt -M "/" --evaluate -n -o SOURCE)"
     find_disks "$boot" "$root"
 }
 
