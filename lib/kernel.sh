@@ -142,7 +142,7 @@ check_root_cmdline() {
 # Gets a kernel cmdline for the root set in /etc/fstab.
 get_root_cmdline() {
     rootdev="$(
-        findmnt --fstab -M "/" -n -o SOURCE \
+        findmnt "$@" -M "/" -n -o SOURCE \
             | sed -e 's/\="\(.*\)"$/\=\1/' -e 's/ /\\x20/g' \
     )"
 

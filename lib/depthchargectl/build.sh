@@ -141,8 +141,15 @@ build_image() {
         info "Using root as set in user configured cmdline."
     else
         info "Trying to prepend root into cmdline."
-        rootcmd="$(get_root_cmdline)" \
-            || error "Couldn't figure out a root cmdline parameter."
+        if rootcmd="$(get_root_cmdline --fstab)"; then
+            info "Using root as set in /etc/fstab."
+        elif rootcmd="$(get_root_cmdline --kernel)"; then
+            warn "Couldn't figure out a root cmdline parameter from" \
+                "/etc/fstab. Will use '$rootcmd' from kernel."
+        else
+            error "Couldn't figure out a root cmdline parameter."
+        fi
+
         if [ -z "$initramfs" ] && ! check_root_cmdline "$rootcmd"; then
             error "An initramfs is required for '$rootcmd'."
         fi
