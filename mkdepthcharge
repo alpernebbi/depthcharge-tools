@@ -404,7 +404,6 @@ elif [ "$FORMAT" = "zimage" ]; then
 fi
 readonly VBOOT_VMLINUZ
 
-temp="$(temp_file depthcharge.img)"
 pack_depthcharge() {
     futility vbutil_kernel \
         --version 1 \
@@ -414,7 +413,7 @@ pack_depthcharge() {
         --bootloader "$VBOOT_BOOTSTUB" \
         --keyblock "$VBOOT_KEYBLOCK" \
         --signprivate "$VBOOT_SIGNPRIVATE" \
-        --pack "$temp"
+        --pack "$OUTPUT"
 }
 
 info "Running vbutil_kernel (pack):"
@@ -423,16 +422,3 @@ if [ "$VERBOSE" = "yes" ]; then
 else
     pack_depthcharge >/dev/null
 fi || error "Could not pack inputs into a depthcharge image."
-
-DEPTHCHARGE_IMAGE="$temp"
-unset temp
-
-readonly DEPTHCHARGE_IMAGE
-
-
-# Output depthcharge image
-# ------------------------
-
-info "Copying image to output '$OUTPUT'."
-cp -f "$DEPTHCHARGE_IMAGE" "$OUTPUT" \
-    || error "Couldn't copy to output."
