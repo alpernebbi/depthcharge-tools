@@ -56,23 +56,25 @@ all: bin/depthchargectl bin/depthchargectl.8
 all: bin/mkdepthcharge bin/mkdepthcharge.1
 all: bin/mkdepthcharge-standalone
 
-bin/:
+bin/depthchargectl: depthchargectl
 	mkdir -p bin
-
-bin/depthchargectl: depthchargectl bin/
 	$(sh_substvars) <"$<" >"$@"
 
-bin/mkdepthcharge: mkdepthcharge bin/
+bin/mkdepthcharge: mkdepthcharge
+	mkdir -p bin
 	$(sh_substvars) <"$<" >"$@"
 
 # This builds mkdepthcharge into a single file.
-bin/mkdepthcharge-standalone: mkdepthcharge bin/
+bin/mkdepthcharge-standalone: mkdepthcharge
+	mkdir -p bin
 	$(sh_substvars) <"$<" | $(sh_includelibs) >"$@"
 
-bin/depthchargectl.8: depthchargectl.rst bin/
+bin/depthchargectl.8: depthchargectl.rst
+	mkdir -p bin
 	$(rst_substvars) <"$<" | rst2man >"$@"
 
-bin/mkdepthcharge.1: mkdepthcharge.rst bin/
+bin/mkdepthcharge.1: mkdepthcharge.rst
+	mkdir -p bin
 	$(rst_substvars) <"$<" | rst2man >"$@"
 
 install: bin/depthchargectl bin/depthchargectl.8
