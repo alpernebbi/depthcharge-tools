@@ -48,7 +48,7 @@ patterns := $(foreach f, $(functions),-e $(pattern))
 sh_includelibs := sed $(patterns) -e 's|^\. "$${FUNCTIONS_DIR}/.*\.sh"$$|\n|1'
 
 # Search lines of '.. |var| replace:: value' and replace them with ours.
-pattern = 's|^.. \|$(var)\| replace:: .*|.. \|$(var)\| replace:: $(call $(var))|1'
+pattern = 's|^.. \|$(var)\| replace:: .*|.. \|$(var)\| replace:: $(subst $${,\|,$(subst },\|,$(call $(var))))|1'
 patterns := $(foreach var,$(vars),-e $(pattern))
 rst_substvars := sed $(patterns)
 

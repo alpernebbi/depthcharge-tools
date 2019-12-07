@@ -6,11 +6,22 @@ mkdepthcharge
 build boot images for the ChromeOS bootloader
 ---------------------------------------------
 
-:date: 2019-12-05
-:version: v0.3.0
-:manual_section: 1
-:manual_group: depthcharge-tools
+.. |PACKAGENAME| replace:: depthcharge-tools
+.. |VERSION| replace:: v0.3.0
 
+:date: 2019-12-05
+:version: |VERSION|
+:manual_section: 1
+:manual_group: |PACKAGENAME|
+
+.. |mkimage| replace:: *mkimage*\ (1)
+.. |vbutil_kernel| replace:: *vbutil_kernel*\ (1)
+.. |futility| replace:: *futility*\ (1)
+
+.. |DEFAULT_VBOOT_DEVKEYS| replace:: /usr/share/vboot/devkeys
+.. |DEFAULT_VBOOT_KEYBLOCK| replace:: |DEFAULT_VBOOT_DEVKEYS|/kernel.keyblock
+.. |DEFAULT_VBOOT_SIGNPUBKEY| replace:: |DEFAULT_VBOOT_DEVKEYS|/kernel_subkey.vbpubk
+.. |DEFAULT_VBOOT_SIGNPRIVATE| replace:: |DEFAULT_VBOOT_DEVKEYS|/kernel_data_key.vbprivk
 
 SYNOPSIS
 ========
@@ -138,6 +149,22 @@ EXIT STATUS
     An error occurred, no image is written to the output path.
 
 
+FILES
+=====
+|DEFAULT_VBOOT_DEVKEYS|
+    Default devkeys directory which should have been installed by
+    |vbutil_kernel|.
+
+|DEFAULT_VBOOT_KEYBLOCK|
+    Default kernel key block file used for signing the image.
+
+|DEFAULT_VBOOT_SIGNPUBKEY|
+    Default public key used to verify signed images.
+
+|DEFAULT_VBOOT_SIGNPRIVATE|
+    Default private key used for signing the image.
+
+
 EXAMPLES
 ========
 **mkdepthcharge** **-o** *depthcharge.img* */boot/vmlinuz*
@@ -159,8 +186,4 @@ EXAMPLES
 SEE ALSO
 ========
 |mkimage|, |vbutil_kernel|, |futility|
-
-.. |mkimage| replace:: *mkimage*\ (1)
-.. |vbutil_kernel| replace:: *vbutil_kernel*\ (1)
-.. |futility| replace:: *futility*\ (1)
 
