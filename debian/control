@@ -9,7 +9,8 @@ Vcs-Git: https://salsa.debian.org/alpernebbi-guest/depthcharge-support.git
 
 Package: depthcharge-tools
 Architecture: all
-Depends: ${misc:Depends}, u-boot-tools, vboot-kernel-utils, cgpt, linux-base
+Depends: ${misc:Depends}, u-boot-tools, vboot-kernel-utils, cgpt,
+ linux-base, lz4, xz-utils
 Description: Tools for ChromeOS firmware/bootloader integration
  The built-in firmware on ChromeOS devices has a custom verified boot
  implementation that can only boot from special images written to
