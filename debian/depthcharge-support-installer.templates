@@ -1,0 +1,3 @@
+Template: debian-installer/depthcharge-support-installer/title
+Type: text
+Description: Make this ChromeOS machine bootable

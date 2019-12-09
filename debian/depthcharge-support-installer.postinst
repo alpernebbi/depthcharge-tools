@@ -1,0 +1,53 @@
+#!/bin/sh
+set -eu
+
+. /usr/share/debconf/confmodule
+
+log() {
+	logger -t "depthcharge-support-installer" "$@"
+}
+
+error () {
+	log "$@"
+	exit 1
+}
+
+DB="$(cat "/usr/share/depthcharge-tools/db")"
+
+if machine="$(tr -d "\0" </proc/device-tree/model)"; then
+	log "Machine:" "$machine"
+else
+	error "Can't figure out machine."
+fi
+
+if printf "%s\n" "$DB" | grep -qs "^Machine: $machine\$"; then
+	log "Machine is supported."
+else
+	error "Machine not supported."
+fi
+
+if apt-install depthcharge-tools depthcharge-support; then
+	log "depthcharge-tools installed."
+else
+	error "depthcharge-tools not installed."
+fi
+
+# # Temporarily uninstall depthcharge-support hooks, somehow doesn't work.
+# mv /target/etc/initramfs/post-update.d/depthcharge-support \
+# 	/target/var/lib/depthchargectl-tools/initramfs-post-update-d.sh
+# mv /target/etc/kernel/postinst.d/depthcharge-support \
+# 	/target/var/lib/depthchargectl-tools/kernel-postinst-d.sh
+# mv /target/etc/kernel/postrm.d/depthcharge-support \
+# 	/target/var/lib/depthchargectl-tools/kernel-postrm-d.sh
+
+log "running partitions"
+in-target depthchargectl partitions -v
+log "running target"
+in-target depthchargectl target -v
+log "running update-initramfs"
+in-target update-initramfs -u
+log "running build"
+in-target depthchargectl build -v
+log "running write"
+in-target depthchargectl write -v
+

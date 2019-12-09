@@ -24,3 +24,13 @@ Description: ChromeOS firmware/bootloader integration
  verified boot method by automatically building boot images and writing
  them to appropriate partitions whenever a kernel or an initramfs change
  happens.
+
+Package: depthcharge-support-installer
+Section: debian-installer
+Priority: standard
+Package-Type: udeb
+Architecture: all
+Provides: bootable-system
+Depends: cdebconf-udeb, installed-base
+XB-Installer-Menu-Item: 7300
+Description: Make this ChromeOS machine bootable
