@@ -12,28 +12,61 @@ error () {
 	exit 1
 }
 
-if apt-install depthcharge-tools depthcharge-support; then
-	log "depthcharge-tools installed."
-else
-	error "depthcharge-tools not installed."
+if ! apt-install depthcharge-tools; then
+	error "Couldn't install depthcharge-tools."
 fi
 
-# # Temporarily uninstall depthcharge-support hooks, somehow doesn't work.
-# mv /target/etc/initramfs/post-update.d/depthcharge-support \
-# 	/target/var/lib/depthchargectl-tools/initramfs-post-update-d.sh
-# mv /target/etc/kernel/postinst.d/depthcharge-support \
-# 	/target/var/lib/depthchargectl-tools/kernel-postinst-d.sh
-# mv /target/etc/kernel/postrm.d/depthcharge-support \
-# 	/target/var/lib/depthchargectl-tools/kernel-postrm-d.sh
+if ! in-target depthchargectl target --allow-current; then
+    error "No usable ChromeOS partition found."
+fi
 
-log "running partitions"
-in-target depthchargectl partitions -v
-log "running target"
-in-target depthchargectl target -v
-log "running update-initramfs"
-in-target update-initramfs -u
-log "running build"
-in-target depthchargectl build -v
-log "running write"
-in-target depthchargectl write -v
+initramfs_tools_conf() {
+cat >/target/etc/initramfs-tools/conf.d/zz-depthcharge-support <<EOF
+# Settings selected during installation to make the initramfs small
+# enough for this machine's firmware limits.
+MODULES=${1:-most}
+COMPRESS=${2:-gzip}
+EOF
+}
 
+while true; do
+	if ! in-target update-initramfs -u; then
+		error "Couldn't build initramfs."
+	fi
+
+	if in-target depthchargectl build; then
+		# Successfully built.
+		break
+	elif [ "$?" -ne 3 ]; then
+		# Something else than initramfs size.
+		exit 1
+	fi
+
+	db_fset depthcharge-support-installer/initramfs_too_big seen false
+	db_input critical depthcharge-support-installer/initramfs_too_big || :
+	db_go || exit 1
+	db_get depthcharge-support-installer/initramfs_too_big
+	if [ "${RET:-false}" != true ]; then
+		exit 1
+	fi
+
+	db_fset base-installer/initramfs-tools/driver-policy seen false
+	db_fset depthcharge-support-installer/initramfs-tools/compress seen false
+	db_input critical base-installer/initramfs-tools/driver-policy || :
+	db_input critical depthcharge-support-installer/initramfs-tools/compress || :
+	db_go || exit 1
+
+	db_get base-installer/initramfs-tools/driver-policy
+	MODULES="${RET:-most}"
+	db_get depthcharge-support-installer/initramfs-tools/compress
+	COMPRESS="${RET:-gzip}"
+	initramfs_tools_conf "$MODULES" "$COMPRESS"
+done
+
+if ! in-target depthchargectl write --allow-current; then
+	error "Couldn't write image to disk."
+fi
+
+if ! apt-install depthcharge-support; then
+    error "Couldn't install depthcharge-support."
+fi

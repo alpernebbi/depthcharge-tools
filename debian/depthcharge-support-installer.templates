@@ -1,3 +1,23 @@
 Template: debian-installer/depthcharge-support-installer/title
 Type: text
 Description: Make this ChromeOS machine bootable
+
+Template: depthcharge-support-installer/initramfs_too_big
+Type: boolean
+# :sl4:
+Description: Reconfigure initramfs policies?
+ Could not generate a small enough boot image for this machine. Usually
+ this can be resolved by including less modules in the initramfs and/or
+ compressing it with a better algorithm.
+
+Template: depthcharge-support-installer/initramfs-tools/compress
+Type: select
+# :sl4:
+Choices: lzop, lz4, gzip, bzip2, xz, lzma
+Default: gzip
+Description: Compression method for the initramfs image:
+ Compressing the initramfs is usually a trade-off between initramfs
+ size, memory use, compression speed, and the time it takes to boot
+ (decompression speed). Gzip is reasonably balanced, xz and lzma makes
+ the initramfs significantly smaller, but lz4 has the highest
+ decompression speed.
