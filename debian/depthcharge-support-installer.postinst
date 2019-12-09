@@ -12,20 +12,6 @@ error () {
 	exit 1
 }
 
-DB="$(cat "/usr/share/depthcharge-tools/db")"
-
-if machine="$(tr -d "\0" </proc/device-tree/model)"; then
-	log "Machine:" "$machine"
-else
-	error "Can't figure out machine."
-fi
-
-if printf "%s\n" "$DB" | grep -qs "^Machine: $machine\$"; then
-	log "Machine is supported."
-else
-	error "Machine not supported."
-fi
-
 if apt-install depthcharge-tools depthcharge-support; then
 	log "depthcharge-tools installed."
 else
