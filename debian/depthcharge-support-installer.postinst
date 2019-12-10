@@ -9,13 +9,20 @@ log() {
 
 error () {
 	log "$@"
+	db_progress STOP
 	exit 1
 }
 
+db_progress START 0 6 depthcharge-support-installer/progress
+
+db_progress SET 0
+db_progress INFO depthcharge-support-installer/progress/install_tools
 if ! apt-install depthcharge-tools; then
 	error "Couldn't install depthcharge-tools."
 fi
 
+db_progress SET 1
+db_progress INFO depthcharge-support-installer/progress/check_parts
 if ! in-target depthchargectl target --allow-current; then
     error "No usable ChromeOS partition found."
 fi
@@ -30,31 +37,35 @@ EOF
 }
 
 while true; do
+    db_progress SET 2
+	db_progress INFO depthcharge-support-installer/progress/update_initramfs
 	if ! in-target update-initramfs -u; then
 		error "Couldn't build initramfs."
 	fi
 
+	db_progress SET 3
+	db_progress INFO depthcharge-support-installer/progress/build_image
 	if in-target depthchargectl build; then
 		# Successfully built.
 		break
 	elif [ "$?" -ne 3 ]; then
 		# Something else than initramfs size.
-		exit 1
+		error "Cannot build a valid image."
 	fi
 
 	db_fset depthcharge-support-installer/initramfs_too_big seen false
 	db_input critical depthcharge-support-installer/initramfs_too_big || :
-	db_go || exit 1
+	db_go || error "db_go returned $?"
 	db_get depthcharge-support-installer/initramfs_too_big
 	if [ "${RET:-false}" != true ]; then
-		exit 1
+		error "User rejected initramfs reconfiguration."
 	fi
 
 	db_fset base-installer/initramfs-tools/driver-policy seen false
 	db_fset depthcharge-support-installer/initramfs-tools/compress seen false
 	db_input critical base-installer/initramfs-tools/driver-policy || :
 	db_input critical depthcharge-support-installer/initramfs-tools/compress || :
-	db_go || exit 1
+	db_go || error "db_go returned $?"
 
 	db_get base-installer/initramfs-tools/driver-policy
 	MODULES="${RET:-most}"
@@ -63,10 +74,17 @@ while true; do
 	initramfs_tools_conf "$MODULES" "$COMPRESS"
 done
 
+db_progress SET 4
+db_progress INFO depthcharge-support-installer/progress/write_image
 if ! in-target depthchargectl write --allow-current; then
 	error "Couldn't write image to disk."
 fi
 
+db_progress SET 5
+db_progress INFO depthcharge-support-installer/progress/install_support
 if ! apt-install depthcharge-support; then
     error "Couldn't install depthcharge-support."
 fi
+
+db_progress SET 6
+db_progress STOP

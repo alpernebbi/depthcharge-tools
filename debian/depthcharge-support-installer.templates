@@ -1,6 +1,34 @@
 Template: debian-installer/depthcharge-support-installer/title
-Type: text
+Type: note
 Description: Make this ChromeOS machine bootable
+
+Template: depthcharge-support-installer/progress
+Type: note
+Description: Making this ChromeOS machine bootable
+
+Template: depthcharge-support-installer/progress/install_tools
+Type: note
+Description: Installing tools to manage ChromeOS boot images
+
+Template: depthcharge-support-installer/progress/check_parts
+Type: note
+Description: Checking ChromeOS kernel partitions
+
+Template: depthcharge-support-installer/progress/update_initramfs
+Type: note
+Description: Updating initramfs
+
+Template: depthcharge-support-installer/progress/build_image
+Type: note
+Description: Building a boot image
+
+Template: depthcharge-support-installer/progress/write_image
+Type: note
+Description: Writing the boot image to disk
+
+Template: depthcharge-support-installer/progress/install_support
+Type: note
+Description: Setting up automatic management of the bootloader
 
 Template: depthcharge-support-installer/initramfs_too_big
 Type: boolean
