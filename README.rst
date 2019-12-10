@@ -10,6 +10,12 @@ systems as is. This means someone who wants to use e.g. Debian_ on these
 machines need to either replace the firmware or work their system into
 `the format depthcharge expects`_. These tools are about the latter.
 
+Right now these are developed on and tested with only one arm64 machine,
+so only that is explicitly supported. However, it will probably work
+with ARM machines just by adding an entry in the `machine database`_.
+Support for x86 devices is very limited at a fundamental level and even
+those parts are untested.
+
 .. _depthcharge: https://chromium.googlesource.com/chromiumos/platform/depthcharge
 .. _the format depthcharge expects: https://www.chromium.org/chromium-os/chromiumos-design-docs/disk-format#TOC-Google-Chrome-OS-devices
 .. _Debian: https://www.debian.org/
@@ -65,3 +71,14 @@ successful on boot::
     $ sudo make install-systemd
     $ systemctl daemon-reload
     $ systemctl --enable depthchargectl-set-good
+
+
+Machine Database
+----------------
+Different ChromeOS machines have different sets of requirements for
+bootable images, so depthchargectl has to track them to build images
+that work on a specific machine. These are stored in the
+``/usr/local/share/depthcharge-tools/db`` file. If you want to test
+whether depthchargectl can work with your machine, you can add a block
+to the ``/ust/local/etc/depthcharge-tools/userdb`` file for your machine
+similar to those in the main database file.
