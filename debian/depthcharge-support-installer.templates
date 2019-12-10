@@ -1,39 +1,65 @@
 Template: debian-installer/depthcharge-support-installer/title
 Type: note
-Description: Make this ChromeOS machine bootable
+# Main menu entry.
+# :sl4:
+_Description: Make this ChromeOS machine bootable
 
 Template: depthcharge-support-installer/progress
 Type: note
-Description: Making this ChromeOS machine bootable
+# Progress bar title.
+# :sl4:
+_Description: Making this ChromeOS machine bootable
 
 Template: depthcharge-support-installer/progress/install_tools
 Type: note
-Description: Installing tools to manage ChromeOS boot images
+# Progress bar step.
+# What I call "ChromeOS boot image" here is a special image that the
+# bootloader understands. Google calls them "ChromeOS kernel"s in the
+# ChromiumOS documentation and there might be official translations
+# there.
+# :sl4:
+_Description: Installing tools to manage ChromeOS boot images
 
 Template: depthcharge-support-installer/progress/check_parts
 Type: note
-Description: Checking ChromeOS kernel partitions
+# Progress bar step.
+# "ChromeOS kernel partition" is a GPT partition type to which special
+# boot images are written. Here, we check if at least one such partition
+# exists.
+# :sl4:
+_Description: Checking ChromeOS kernel partitions
 
 Template: depthcharge-support-installer/progress/update_initramfs
 Type: note
-Description: Updating initramfs
+# Progress bar step.
+# :sl4:
+_Description: Updating initramfs
 
 Template: depthcharge-support-installer/progress/build_image
 Type: note
-Description: Building a boot image
+# Progress bar step.
+# :sl4:
+_Description: Building a boot image
 
 Template: depthcharge-support-installer/progress/write_image
 Type: note
-Description: Writing the boot image to disk
+# Progress bar step.
+# :sl4:
+_Description: Writing the boot image to disk
 
 Template: depthcharge-support-installer/progress/install_support
 Type: note
-Description: Setting up automatic management of the bootloader
+# Progress bar step.
+# This installs hooks to ensure the previous steps are run on kernel
+# and initramfs changes in the installed system, so the system stays
+# bootable.
+# :sl4:
+_Description: Setting up automatic management of the bootloader
 
 Template: depthcharge-support-installer/initramfs_too_big
 Type: boolean
 # :sl4:
-Description: Reconfigure initramfs policies?
+_Description: Reconfigure initramfs policies?
  Could not generate a small enough boot image for this machine. Usually
  this can be resolved by including less modules in the initramfs and/or
  compressing it with a better algorithm.
@@ -43,7 +69,7 @@ Type: select
 # :sl4:
 Choices: lzop, lz4, gzip, bzip2, xz, lzma
 Default: gzip
-Description: Compression method for the initramfs image:
+_Description: Compression method for the initramfs image:
  Compressing the initramfs is usually a trade-off between initramfs
  size, memory use, compression speed, and the time it takes to boot
  (decompression speed). Gzip is reasonably balanced, xz and lzma makes

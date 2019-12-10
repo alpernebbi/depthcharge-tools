@@ -1,0 +1,125 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the depthcharge-support-installer package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: alpernebiyasak@gmail.com\n"
+"POT-Creation-Date: 2019-12-11 02:30+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: note
+#. Description
+#. Main menu entry.
+#. :sl4:
+#: ../depthcharge-support-installer.templates:1001
+msgid "Make this ChromeOS machine bootable"
+msgstr ""
+
+#. Type: note
+#. Description
+#. Progress bar title.
+#. :sl4:
+#: ../depthcharge-support-installer.templates:2001
+msgid "Making this ChromeOS machine bootable"
+msgstr ""
+
+#. Type: note
+#. Description
+#. Progress bar step.
+#. What I call "ChromeOS boot image" here is a special image that the
+#. bootloader understands. Google calls them "ChromeOS kernel"s in the
+#. ChromiumOS documentation and there might be official translations
+#. there.
+#. :sl4:
+#: ../depthcharge-support-installer.templates:3001
+msgid "Installing tools to manage ChromeOS boot images"
+msgstr ""
+
+#. Type: note
+#. Description
+#. Progress bar step.
+#. "ChromeOS kernel partition" is a GPT partition type to which special
+#. boot images are written. Here, we check if at least one such partition
+#. exists.
+#. :sl4:
+#: ../depthcharge-support-installer.templates:4001
+msgid "Checking ChromeOS kernel partitions"
+msgstr ""
+
+#. Type: note
+#. Description
+#. Progress bar step.
+#. :sl4:
+#: ../depthcharge-support-installer.templates:5001
+msgid "Updating initramfs"
+msgstr ""
+
+#. Type: note
+#. Description
+#. Progress bar step.
+#. :sl4:
+#: ../depthcharge-support-installer.templates:6001
+msgid "Building a boot image"
+msgstr ""
+
+#. Type: note
+#. Description
+#. Progress bar step.
+#. :sl4:
+#: ../depthcharge-support-installer.templates:7001
+msgid "Writing the boot image to disk"
+msgstr ""
+
+#. Type: note
+#. Description
+#. Progress bar step.
+#. This installs hooks to ensure the previous steps are run on kernel
+#. and initramfs changes in the installed system, so the system stays
+#. bootable.
+#. :sl4:
+#: ../depthcharge-support-installer.templates:8001
+msgid "Setting up automatic management of the bootloader"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#. :sl4:
+#: ../depthcharge-support-installer.templates:9001
+msgid "Reconfigure initramfs policies?"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#. :sl4:
+#: ../depthcharge-support-installer.templates:9001
+msgid ""
+"Could not generate a small enough boot image for this machine. Usually this "
+"can be resolved by including less modules in the initramfs and/or "
+"compressing it with a better algorithm."
+msgstr ""
+
+#. Type: select
+#. Description
+#: ../depthcharge-support-installer.templates:10001
+msgid "Compression method for the initramfs image:"
+msgstr ""
+
+#. Type: select
+#. Description
+#: ../depthcharge-support-installer.templates:10001
+msgid ""
+"Compressing the initramfs is usually a trade-off between initramfs size, "
+"memory use, compression speed, and the time it takes to boot (decompression "
+"speed). Gzip is reasonably balanced, xz and lzma makes the initramfs "
+"significantly smaller, but lz4 has the highest decompression speed."
+msgstr ""
