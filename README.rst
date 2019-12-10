@@ -58,3 +58,10 @@ Hopefully, you should be able to use depthchargectl with just that::
 
 After that, you can edit ``/usr/local/etc/depthcharge-tools/config`` to
 set the kernel command line or vboot keys to be used.
+
+There is also an optional systemd service to set partitions as
+successful on boot::
+
+    $ sudo make install-systemd
+    $ systemctl daemon-reload
+    $ systemctl --enable depthchargectl-set-good
