@@ -20,19 +20,27 @@ those parts are untested.
 .. _the format depthcharge expects: https://www.chromium.org/chromium-os/chromiumos-design-docs/disk-format#TOC-Google-Chrome-OS-devices
 .. _Debian: https://www.debian.org/
 
+
 mkdepthcharge
 -------------
 The mkdepthcharge tool is intended to wrap mkimage_ and vbutil_kernel_
-to provide reasonable defaults to them and create a depthcharge-bootable
-partition image appropriate for the running architecture. An example
-invocation on the Samsung Chromebook Plus (v1, arm64) could be::
+to provide reasonable defaults to them, hide their idiosyncrasies and
+automate creating a depthcharge-bootable partition image appropriate for
+the running architecture. An example invocation on a Samsung Chromebook
+Plus (v1, arm64) could be::
 
     $ mkdepthcharge -o depthcharge.img --compress lzma \
         --cmdline "console=tty1 root=/dev/mmcblk0p2 rootwait" \
         /boot/vmlinuz.gz /boot/initrd.img rk3399-gru-kevin.dtb
 
+Here, mkdepthcharge would automatically extract and recompress the
+kernel, create a FIT image, put command line parameters into a file,
+create an empty bootloader, and provide defaults for vboot keys and
+other arguments while building the partition image.
+
 .. _mkimage: https://dyn.manpages.debian.org/jump?q=unstable/mkimage
 .. _vbutil_kernel: https://dyn.manpages.debian.org/jump?q=unstable/vbutil_kernel
+
 
 depthchargectl
 --------------
