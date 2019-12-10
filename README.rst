@@ -49,7 +49,19 @@ bootable image creation and ChromeOS kernel partition management, even
 the machine-specific and distro-specific parts. With proper integration
 with your distribution, depthchargectl can keep your system bootable
 across kernel and initramfs changes without any interaction on your
-part.
+part. Even without such integration, a single command automates most of
+the work::
+
+    # Use --allow-current if you only have one ChromeOS kernel partition.
+    $ sudo depthchargectl write --allow-current
+    depthchargectl build: Built image for kernel version '5.4.0-1-arm64'.
+    depthchargectl write: Wrote image for kernel version '5.4.0-1-arm64' to '/dev/mmcblk1p1'.
+    depthchargectl write: Set '/dev/mmcblk1p1' as next to boot.
+
+    # After a reboot, you or an init service should run this.
+    $ sudo depthchargectl set-good
+    depthchargectl set-good: Set '/dev/mmcblk1p1' as next to boot, successful.
+
 
 Installation
 ------------
