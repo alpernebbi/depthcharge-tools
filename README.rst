@@ -62,8 +62,8 @@ Hopefully, you should be able to use depthchargectl with just that::
     1  1  0  /dev/mmcblk0p4
     0  0  15 /dev/mmcblk0p6
 
-After that, you can edit ``/usr/local/etc/depthcharge-tools/config`` to
-set the kernel command line or vboot keys to be used.
+After that, you can edit |CONFIG_FILE| to set the kernel command line or
+vboot keys to be used.
 
 There is also an optional systemd service to set partitions as
 successful on boot::
@@ -72,13 +72,16 @@ successful on boot::
     $ systemctl daemon-reload
     $ systemctl --enable depthchargectl-set-good
 
+.. |CONFIG_FILE| replace:: ``/usr/local/etc/depthcharge-tools/config``
 
 Machine Database
 ----------------
 Different ChromeOS machines have different sets of requirements for
 bootable images, so depthchargectl has to track them to build images
-that work on a specific machine. These are stored in the
-``/usr/local/share/depthcharge-tools/db`` file. If you want to test
-whether depthchargectl can work with your machine, you can add a block
-to the ``/ust/local/etc/depthcharge-tools/userdb`` file for your machine
+that work on a specific machine. These are stored in the |DB_FILE|
+file.  If you want to test whether depthchargectl can work with your
+machine, you can add a block to the |USERDB_FILE| file for your machine
 similar to those in the main database file.
+
+.. |DB_FILE| replace:: ``/usr/local/share/depthcharge-tools/db``
+.. |USERDB_FILE| replace:: ``/usr/local/etc/depthcharge-tools/userdb``
