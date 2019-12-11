@@ -1,0 +1,5 @@
+# The depthchargectl set-good command should run on successful boots to
+# mark the currently booted partition as successful. This mimics
+# systemd-bless-boot.service which installs to basic.target.wants via a
+# generator, so we install there as well albeit manually.
+depthcharge-support binary: systemd-service-file-refers-to-unusual-wantedby-target lib/systemd/system/depthchargectl-set-good.service basic.target
