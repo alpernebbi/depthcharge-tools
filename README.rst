@@ -22,7 +22,7 @@ those parts are untested.
 
 
 mkdepthcharge
--------------
+=============
 The mkdepthcharge tool is intended to wrap mkimage_ and vbutil_kernel_
 to provide reasonable defaults to them, hide their idiosyncrasies and
 automate creating a depthcharge-bootable partition image appropriate for
@@ -43,7 +43,7 @@ other arguments while building the partition image.
 
 
 depthchargectl
---------------
+==============
 The depthchargectl tool goes a step further and aims to fully automate
 bootable image creation and ChromeOS kernel partition management, even
 the machine-specific and distro-specific parts. With proper integration
@@ -64,7 +64,7 @@ the work::
 
 
 Installation
-------------
+============
 These tools depend on ``mkimage``, ``vbutil_kernel``, ``cgpt``, and other
 utilities (``util-linux``, ``coreutils``, etc.) that are usually
 installed by default on most Linux systems.
@@ -94,21 +94,25 @@ successful on boot::
 
 .. |CONFIG_FILE| replace:: ``/usr/local/etc/depthcharge-tools/config``
 
+
+Contributing
+============
+
 Machine Database
 ----------------
 Different ChromeOS machines have different sets of requirements for
 bootable images, so depthchargectl has to track them to build images
 that work on a specific machine. These are stored in the |DB_FILE|
-file.  If you want to test whether depthchargectl can work with your
-machine, you can add a block to the |USERDB_FILE| file for your machine
-similar to those in the main database file.
+file. You can test whether depthchargectl works with your machine by
+adding a block to the |USERDB_FILE| file for your machine similar to
+those in the main database file.
 
 .. |DB_FILE| replace:: ``/usr/local/share/depthcharge-tools/db``
 .. |USERDB_FILE| replace:: ``/usr/local/etc/depthcharge-tools/userdb``
 
 
 License
--------
+=======
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
