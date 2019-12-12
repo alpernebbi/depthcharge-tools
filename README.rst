@@ -105,6 +105,10 @@ for development::
 
 Contributing
 ============
+I only own one chromebook, so I need your help to make it work with all
+others. Pull requests, bug reports, or even pointers in the right
+direction for existing issues are all welcome. The following are the
+issues I consider most important for now:
 
 Machine Database
 ----------------
