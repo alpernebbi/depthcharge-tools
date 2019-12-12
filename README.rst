@@ -32,7 +32,7 @@ even those parts are untested.
 
 mkdepthcharge
 =============
-The mkdepthcharge tool is intended to wrap mkimage_ and vbutil_kernel_
+The mkdepthcharge_ tool is intended to wrap mkimage_ and vbutil_kernel_
 to provide reasonable defaults to them, hide their idiosyncrasies and
 automate creating a depthcharge-bootable partition image appropriate for
 the running architecture. An example invocation on a Samsung Chromebook
@@ -47,13 +47,14 @@ kernel, create a FIT image, put command line parameters into a file,
 create an empty bootloader, and provide defaults for vboot keys and
 other arguments while building the partition image.
 
+.. _mkdepthcharge: https://github.com/alpernebbi/depthcharge-tools/blob/master/mkdepthcharge.rst
 .. _mkimage: https://dyn.manpages.debian.org/jump?q=unstable/mkimage
 .. _vbutil_kernel: https://dyn.manpages.debian.org/jump?q=unstable/vbutil_kernel
 
 
 depthchargectl
 ==============
-The depthchargectl tool goes a step further and aims to fully automate
+The depthchargectl_ tool goes a step further and aims to fully automate
 bootable image creation and ChromeOS kernel partition management, even
 the machine-specific and distro-specific parts. With proper integration
 with your distribution, depthchargectl can keep your system bootable
@@ -71,6 +72,7 @@ the work::
     $ sudo depthchargectl set-good
     depthchargectl set-good: Set '/dev/mmcblk1p1' as next to boot, successful.
 
+.. _depthchargectl: https://github.com/alpernebbi/depthcharge-tools/blob/master/depthchargectl.rst
 
 Installation
 ============
