@@ -13,8 +13,8 @@ machines need to either replace the firmware or work their system into
 Right now these are developed on and tested with only one arm64 machine,
 so only that is explicitly supported. However, it will probably work
 with ARM machines just by adding an entry in the `machine database`_.
-Support for x86 devices is very limited at a fundamental level and even
-those parts are untested.
+Support for `x86 devices`_ is very limited at a fundamental level and
+even those parts are untested.
 
 .. _depthcharge: https://chromium.googlesource.com/chromiumos/platform/depthcharge
 .. _the format depthcharge expects: https://www.chromium.org/chromium-os/chromiumos-design-docs/disk-format#TOC-Google-Chrome-OS-devices
@@ -109,6 +109,17 @@ those in the main database file.
 
 .. |DB_FILE| replace:: ``/usr/local/share/depthcharge-tools/db``
 .. |USERDB_FILE| replace:: ``/usr/local/etc/depthcharge-tools/userdb``
+
+x86 Machines
+------------
+If you can already get an x86 ChromeOS machine to boot with your
+manually built images, you can test if images built by mkdepthcharge
+boot successfully as well.
+
+Right now, mkdepthcharge can built images in a 'zimage' format, meaning
+it will just pass the kernel executable to vbutil_kernel without an
+initramfs. If you know of a way to create x86 boot images that can use
+an initramfs, I'd be glad to hear it.
 
 
 License
