@@ -1,6 +1,15 @@
 =================
 Depthcharge-Tools
 =================
+
+.. |DB_FILE| replace:: ``/usr/local/share/depthcharge-tools/db``
+.. |USERDB_FILE| replace:: ``/usr/local/etc/depthcharge-tools/userdb``
+.. |CONFIG_FILE| replace:: ``/usr/local/etc/depthcharge-tools/config``
+
+.. _DB_FILE: https://github.com/alpernebbi/depthcharge-tools/blob/master/conf/db
+.. _USERDB_FILE: https://github.com/alpernebbi/depthcharge-tools/blob/master/conf/userdb
+.. _CONFIG_FILE: https://github.com/alpernebbi/depthcharge-tools/blob/master/conf/config
+
 This project is a collection of tools that ease and automate interacting
 with depthcharge_, the ChromeOS bootloader.
 
@@ -82,7 +91,7 @@ Hopefully, you should be able to use depthchargectl with just that::
     1  1  0  /dev/mmcblk0p4
     0  0  15 /dev/mmcblk0p6
 
-After that, you can edit |CONFIG_FILE| to set the kernel command line or
+After that, you can edit |CONFIG_FILE|_ to set the kernel command line or
 vboot keys to be used.
 
 There is also an optional systemd service to set partitions as
@@ -100,8 +109,6 @@ for development::
     $ PATH=".:$PATH" ./mkdepthcharge ...
     $ sudo PATH=".:$PATH" ./depthchargectl ...
 
-.. |CONFIG_FILE| replace:: ``/usr/local/etc/depthcharge-tools/config``
-
 
 Contributing
 ============
@@ -114,13 +121,10 @@ Machine Database
 ----------------
 Different ChromeOS machines have different sets of requirements for
 bootable images, so depthchargectl has to track them to build images
-that work on a specific machine. These are stored in the |DB_FILE|
+that work on a specific machine. These are stored in the |DB_FILE|_
 file. You can test whether depthchargectl works with your machine by
-adding a block to the |USERDB_FILE| file for your machine similar to
+adding a block to the |USERDB_FILE|_ file for your machine similar to
 those in the main database file.
-
-.. |DB_FILE| replace:: ``/usr/local/share/depthcharge-tools/db``
-.. |USERDB_FILE| replace:: ``/usr/local/etc/depthcharge-tools/userdb``
 
 x86 Machines
 ------------
