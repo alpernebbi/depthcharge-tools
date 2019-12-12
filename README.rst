@@ -92,6 +92,14 @@ successful on boot::
     $ systemctl daemon-reload
     $ systemctl --enable depthchargectl-set-good
 
+You can also run the files directly from the repository but you would
+need to add the repository to ``$PATH`` first. This is mostly useful
+for development::
+
+    # From the root of the repository:
+    $ PATH=".:$PATH" ./mkdepthcharge ...
+    $ sudo PATH=".:$PATH" ./depthchargectl ...
+
 .. |CONFIG_FILE| replace:: ``/usr/local/etc/depthcharge-tools/config``
 
 

@@ -51,7 +51,8 @@ readonly PACKAGENAME DATADIR DEFAULT_VBOOT_DEVKEYS
 readonly DEFAULT_VBOOT_KEYBLOCK DEFAULT_VBOOT_SIGNPRIVATE
 
 # If system directories are set, use them, or use files in the repo.
-FUNCTIONS_DIR="${DATADIR:-./lib}${DATADIR:+/$PACKAGENAME}"
+REPO="${0%/*}"
+FUNCTIONS_DIR="${DATADIR:-$REPO/lib}${DATADIR:+/$PACKAGENAME}"
 
 readonly FUNCTIONS_DIR
 
