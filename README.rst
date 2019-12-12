@@ -13,7 +13,7 @@ machines need to either replace the firmware or work their system into
 Right now these are developed on and tested with only one arm64 machine,
 so only that is explicitly supported. However, it will probably work
 with ARM machines just by adding an entry in the `machine database`_.
-Support for `x86 devices`_ is very limited at a fundamental level and
+Support for `x86 machines`_ is very limited at a fundamental level and
 even those parts are untested.
 
 .. _depthcharge: https://chromium.googlesource.com/chromiumos/platform/depthcharge
