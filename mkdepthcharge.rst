@@ -168,17 +168,13 @@ FILES
 EXAMPLES
 ========
 **mkdepthcharge** **-o** *depthcharge.img* */boot/vmlinuz*
-
     The simplest invocation possible. If tried on an ARM machine, the
     firmware might refuse to boot the output image since it doesn't have
     a dtb for the machine. Otherwise, even if the firmware runs the
     */boot/vmlinuz* binary, it might not correctly boot due to
     non-firmware causes (e.g. kernel panic due to not having a root).
 
-**mkdepthcharge** **-o** *system.img* **--cmdline** *"root=/dev/mmcblk0p2"*
-**--compress** *lz4* **--** */boot/vmlinuz.gz* */boot/initrd.img*
-*rk3399-gru-kevin.dtb*
-
+**mkdepthcharge** **-o** *system.img* **--cmdline** *"root=/dev/mmcblk0p2"* **--compress** *lz4* **--** */boot/vmlinuz.gz* */boot/initrd.img* *rk3399-gru-kevin.dtb*
     A command someone using a Samsung Chromebook Plus (v1) might run on
     their machine to create a bootable image for their running system.
 
