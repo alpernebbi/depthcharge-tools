@@ -1,15 +1,6 @@
 =================
 Depthcharge-Tools
 =================
-
-.. |DB_FILE| replace:: ``/usr/local/share/depthcharge-tools/db``
-.. |USERDB_FILE| replace:: ``/usr/local/etc/depthcharge-tools/userdb``
-.. |CONFIG_FILE| replace:: ``/usr/local/etc/depthcharge-tools/config``
-
-.. _DB_FILE: https://github.com/alpernebbi/depthcharge-tools/blob/master/conf/db
-.. _USERDB_FILE: https://github.com/alpernebbi/depthcharge-tools/blob/master/conf/userdb
-.. _CONFIG_FILE: https://github.com/alpernebbi/depthcharge-tools/blob/master/conf/config
-
 This project is a collection of tools that ease and automate interacting
 with depthcharge_, the ChromeOS bootloader.
 
@@ -96,6 +87,9 @@ Hopefully, you should be able to use depthchargectl with just that::
 After that, you can edit |CONFIG_FILE|_ to set the kernel command line or
 vboot keys to be used.
 
+.. |CONFIG_FILE| replace:: ``/usr/local/etc/depthcharge-tools/config``
+.. _CONFIG_FILE: https://github.com/alpernebbi/depthcharge-tools/blob/master/conf/config
+
 There is also an optional systemd service to set partitions as
 successful on boot::
 
@@ -116,29 +110,16 @@ Contributing
 ============
 I only own one chromebook, so I need your help to make it work with all
 others. Pull requests, bug reports, or even pointers in the right
-direction for existing issues are all welcome. The following are the
-issues I consider most important for now:
+direction for existing issues are all welcome. The following issues are
+where I need help the most:
 
-Machine Database
-----------------
-Different ChromeOS machines have different sets of requirements for
-bootable images, so depthchargectl has to track them to build images
-that work on a specific machine. These are stored in the |DB_FILE|_
-file. You can test whether depthchargectl works with your machine by
-adding a block to the |USERDB_FILE|_ file for your machine similar to
-those in the main database file.
+- |machine database|_
+- |x86 machines|_
 
-x86 Machines
-------------
-If you can already get an x86 ChromeOS machine to boot with your
-manually built images, you can test if images built by mkdepthcharge
-boot successfully as well.
-
-Right now, mkdepthcharge can built images in a 'zimage' format, meaning
-it will just pass the kernel executable to vbutil_kernel without an
-initramfs. If you know of a way to create x86 boot images that can use
-an initramfs, I'd be glad to hear it.
-
+.. |machine database| replace:: More machine database entries
+.. _machine database: https://github.com/alpernebbi/depthcharge-tools/issues/1
+.. |x86 machines| replace:: Support for x86 machines
+.. _x86 machines: https://github.com/alpernebbi/depthcharge-tools/issues/2
 
 License
 =======
