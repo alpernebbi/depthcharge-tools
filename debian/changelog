@@ -1,5 +1,5 @@
-depthcharge-tools (1) UNRELEASED; urgency=medium
+depthcharge-tools (0.3.0~dev) UNRELEASED; urgency=medium
 
-  * Initial version.
+  * Initial packaging.
 
- -- Alper Nebi Yasak <alpernebiyasak@gmail.com>  Fri, 29 Nov 2019 15:19:39 +0300
+ -- Alper Nebi Yasak <alpernebiyasak@gmail.com>  Sat, 14 Dec 2019 17:10:02 +0300
