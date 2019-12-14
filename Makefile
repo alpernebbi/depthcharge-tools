@@ -1,7 +1,7 @@
 #! /usr/bin/make -f
 
 PACKAGENAME ?= depthcharge-tools
-VERSION ?= 0.3.0-dev
+VERSION ?= 0.3.0
 DESTDIR ?=
 
 PREFIX ?= /usr/local
