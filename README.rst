@@ -69,7 +69,8 @@ Installation
 ============
 These tools depend on ``mkimage``, ``vbutil_kernel``, ``cgpt``, and other
 utilities (``util-linux``, ``coreutils``, etc.) that are usually
-installed by default on most Linux systems.
+installed by default on most Linux systems. You also need ``docutils``
+to build the manual pages with ``rst2man``, but only during the build.
 
 To install depthcharge-tools to ``/usr/local/``, run::
 
