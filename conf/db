@@ -6,3 +6,151 @@ DTB-Name: rk3399-gru-kevin.dtb
 Kernel-Compression: none lz4 lzma
 Max-Size: 33554432
 Image-Format: fit
+
+
+# The following machines are untested -- values are guesses at best.
+# Please test if you can and tell me if they are correct.
+
+#Machine: Acer Chromebook 13 CB5-311
+#DTB-Name: tegra124-nyan-big.dtb
+#Kernel-Compression: none
+#Max-Size: 16777216
+#Image-Format: fit
+
+#Machine: Google Bob
+#DTB-Name: rk3399-gru-bob.dtb
+#Kernel-Compression: none lz4 lzma
+#Max-Size: 33554432
+#Image-Format: fit
+
+#Machine: Google Brain
+#DTB-Name: rk3288-veyron-brain.dtb
+#Kernel-Compression: none
+#Max-Size: 16777216
+#Image-Format: fit
+
+#Machine: Google Cheza (rev1)
+#DTB-Name: sdm845-cheza-*.dtb
+#Kernel-Compression: none lz4 lzma
+#Max-Size: 33554432
+#Image-Format: fit
+
+#Machine: Google Cheza (rev2)
+#DTB-Name: sdm845-cheza-*.dtb
+#Kernel-Compression: none lz4 lzma
+#Max-Size: 33554432
+#Image-Format: fit
+
+#Machine: Google Cheza (rev3+)
+#DTB-Name: sdm845-cheza-*.dtb
+#Kernel-Compression: none lz4 lzma
+#Max-Size: 33554432
+#Image-Format: fit
+
+#Machine: Google Chromecast
+#DTB-Name: berlin2cd-google-chromecast.dtb
+#Kernel-Compression: none
+#Max-Size: 16777216
+#Image-Format: fit
+
+#Machine: Google Fievel
+#DTB-Name: rk3288-veyron-fievel.dtb
+#Kernel-Compression: none
+#Max-Size: 16777216
+#Image-Format: fit
+
+#Machine: Google Jaq
+#DTB-Name: rk3288-veyron-jaq.dtb
+#Kernel-Compression: none
+#Max-Size: 16777216
+#Image-Format: fit
+
+#Machine: Google Jerry
+#DTB-Name: rk3288-veyron-jerry.dtb
+#Kernel-Compression: none
+#Max-Size: 16777216
+#Image-Format: fit
+
+#Machine: Google Mickey
+#DTB-Name: rk3288-veyron-mickey.dtb
+#Kernel-Compression: none
+#Max-Size: 16777216
+#Image-Format: fit
+
+#Machine: Google Mighty
+#DTB-Name: rk3288-veyron-mighty.dtb
+#Kernel-Compression: none
+#Max-Size: 16777216
+#Image-Format: fit
+
+#Machine: Google Minnie
+#DTB-Name: rk3288-veyron-minnie.dtb
+#Kernel-Compression: none
+#Max-Size: 16777216
+#Image-Format: fit
+
+#Machine: Google Peach Pi Rev 10+
+#DTB-Name: exynos5800-peach-pi.dtb
+#Kernel-Compression: none
+#Max-Size: 16777216
+#Image-Format: fit
+
+#Machine: Google Peach Pit Rev 6+
+#DTB-Name: exynos5420-peach-pit.dtb
+#Kernel-Compression: none
+#Max-Size: 16777216
+#Image-Format: fit
+
+#Machine: Google Pinky
+#DTB-Name: rk3288-veyron-pinky.dtb
+#Kernel-Compression: none
+#Max-Size: 16777216
+#Image-Format: fit
+
+#Machine: Google Pixel C
+#DTB-Name: tegra210-smaug.dtb
+#Kernel-Compression: none lz4 lzma
+#Max-Size: 33554432
+#Image-Format: fit
+
+#Machine: Google Scarlet
+#DTB-Name: rk3399-gru-scarlet-*.dtb
+#Kernel-Compression: none lz4 lzma
+#Max-Size: 33554432
+#Image-Format: fit
+
+#Machine: Google Snow
+#DTB-Name: exynos5250-snow.dtb
+#Kernel-Compression: none
+#Max-Size: 16777216
+#Image-Format: fit
+
+#Machine: Google Snow Rev 5+
+#DTB-Name: exynos5250-snow-rev5.dtb
+#Kernel-Compression: none
+#Max-Size: 16777216
+#Image-Format: fit
+
+#Machine: Google Speedy
+#DTB-Name: rk3288-veyron-speedy.dtb
+#Kernel-Compression: none
+#Max-Size: 16777216
+#Image-Format: fit
+
+#Machine: Google Spring
+#DTB-Name: exynos5250-spring.dtb
+#Kernel-Compression: none
+#Max-Size: 16777216
+#Image-Format: fit
+
+#Machine: Google Tiger
+#DTB-Name: rk3288-veyron-tiger.dtb
+#Kernel-Compression: none
+#Max-Size: 16777216
+#Image-Format: fit
+
+#Machine: HP Chromebook 14
+#DTB-Name: tegra124-nyan-blaze.dtb
+#Kernel-Compression: none
+#Max-Size: 16777216
+#Image-Format: fit
