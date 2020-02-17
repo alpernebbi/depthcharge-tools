@@ -165,7 +165,7 @@ depthcharge_parts_table() {
         # us all three values at once.
         attr="$(cgpt_ show -A -i "$partno" "$disk")" || continue
         case "$attr" in
-            0x?|0x??|0x???|0x????) : ;;
+            0|0x?|0x??|0x???|0x????) : ;;
             *) continue ;;
         esac
 
