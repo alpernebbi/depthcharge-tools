@@ -19,7 +19,7 @@ vars += PREFIX BINDIR SBINDIR DATADIR SYSCONFDIR LOCALSTATEDIR LIBDIR
 # Default values for depthchargectl configuration.
 # These don't affect mkdepthcharge.
 DEFAULT_FORMAT ?= fit
-DEFAULT_CMDLINE ?= quiet splash
+DEFAULT_CMDLINE ?= console=tty0 quiet splash
 DEFAULT_COMPRESS ?= none lz4 lzma
 DEFAULT_MAX_SIZE ?= 33554432
 DEFAULT_DTB_NAME ?=
