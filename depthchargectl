@@ -202,8 +202,8 @@ machine_is_supported() {
         | parse_machine_exists "${1:-$MACHINE}"
 }
 
-DETECTED_MACHINE="$(detect_machine)"
-if [ -n "$CONFIG_MACHINE" ] ; then
+DETECTED_MACHINE="$(detect_machine)" || DETECTED_MACHINE="unknown"
+if [ -n "$CONFIG_MACHINE" ]; then
     info "Overriding detected machine '$DETECTED_MACHINE' with" \
         "'$CONFIG_MACHINE' from user configuration."
     MACHINE="$CONFIG_MACHINE"
