@@ -79,9 +79,7 @@ bin/mkdepthcharge.1: mkdepthcharge.rst
 	mkdir -p bin
 	$(rst_substvars) <"$<" | rst2man >"$@"
 
-install: bin/depthchargectl bin/depthchargectl.8
-install: bin/mkdepthcharge bin/mkdepthcharge.1
-install:
+install: bin/mkdepthcharge bin/depthchargectl
 	install -d '$(DESTDIR)$(BINDIR)'
 	install -d '$(DESTDIR)$(SBINDIR)'
 	install -d '$(DESTDIR)$(DATADIR)/$(PACKAGENAME)'
@@ -92,8 +90,6 @@ install:
 	install -d '$(DESTDIR)$(LOCALSTATEDIR)/$(PACKAGENAME)'
 	install -d '$(DESTDIR)$(LOCALSTATEDIR)/$(PACKAGENAME)'/images
 	install -d '$(DESTDIR)$(LOCALSTATEDIR)/$(PACKAGENAME)'/images
-	install -d '$(DESTDIR)$(MANDIR)'/man1
-	install -d '$(DESTDIR)$(MANDIR)'/man8
 	install -m 0755 bin/mkdepthcharge '$(DESTDIR)$(BINDIR)'
 	install -m 0755 bin/depthchargectl '$(DESTDIR)$(SBINDIR)'
 	install -m 0644 lib/*.sh '$(DESTDIR)$(DATADIR)/$(PACKAGENAME)'
@@ -101,6 +97,10 @@ install:
 	install -m 0644 conf/db '$(DESTDIR)$(DATADIR)/$(PACKAGENAME)'
 	install -m 0644 conf/userdb '$(DESTDIR)$(SYSCONFDIR)/$(PACKAGENAME)'
 	install -m 0644 conf/config '$(DESTDIR)$(SYSCONFDIR)/$(PACKAGENAME)'
+
+install-man: bin/mkdepthcharge.1 bin/depthchargectl.8
+	install -d '$(DESTDIR)$(MANDIR)'/man1
+	install -d '$(DESTDIR)$(MANDIR)'/man8
 	install -m 0644 bin/mkdepthcharge.1 '$(DESTDIR)$(MANDIR)'/man1
 	install -m 0644 bin/depthchargectl.8 '$(DESTDIR)$(MANDIR)'/man8
 
@@ -150,4 +150,4 @@ clean:
 	rm -f bin/mkdepthcharge-standalone
 	[ ! -d bin ] || rmdir bin
 
-.PHONY: all install install-systemd install-init install-bash install-standalone uninstall clean
+.PHONY: all install install-man install-systemd install-init install-bash install-standalone uninstall clean
