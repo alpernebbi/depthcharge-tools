@@ -12,9 +12,11 @@ SYSCONFDIR ?= $(PREFIX)/etc
 LOCALSTATEDIR ?= $(PREFIX)/var
 LIBDIR ?= $(PREFIX)/lib
 MANDIR ?= $(DATADIR)/man
+BASHCOMPDIR ?= ${DATADIR}/bash-completion/completions
 
 vars := PACKAGENAME VERSION
 vars += PREFIX BINDIR SBINDIR DATADIR SYSCONFDIR LOCALSTATEDIR LIBDIR
+vars += BASHCOMPDIR
 
 # Default values for depthchargectl configuration.
 # These don't affect mkdepthcharge.
@@ -120,6 +122,11 @@ install-init: init.d/depthchargectl-set-good
 	@echo "  ln -s ../init.d/S04depthchargectl-set-good $(DESTDIR)$(SYSCONFDIR)/rc4.d/depthchargectl-set-good"
 	@echo "  ln -s ../init.d/S05depthchargectl-set-good $(DESTDIR)$(SYSCONFDIR)/rc5.d/depthchargectl-set-good"
 
+install-bash: completions/_mkdepthcharge.bash completions/_depthchargectl.bash
+	install -d '$(DESTDIR)$(BASHCOMPDIR)'
+	install -m 0644 completions/_mkdepthcharge.bash '$(DESTDIR)$(BASHCOMPDIR)'/mkdepthcharge
+	install -m 0644 completions/_depthchargectl.bash '$(DESTDIR)$(BASHCOMPDIR)'/depthchargectl
+
 uninstall:
 	rm -f '$(DESTDIR)$(BINDIR)'/mkdepthcharge
 	rm -f '$(DESTDIR)$(SBINDIR)'/depthchargectl
@@ -130,6 +137,8 @@ uninstall:
 	rm -f '$(DESTDIR)$(MANDIR)'/man8/depthchargectl.8
 	rm -f '$(DESTDIR)$(LIBDIR)'/systemd/system/depthchargectl-set-good.service
 	rm -f '$(DESTDIR)$(SYSCONFDIR)'/init.d/depthchargectl-set-good
+	rm -f '$(DESTDIR)$(BASHCOMPDIR)'/mkdepthcharge
+	rm -f '$(DESTDIR)$(BASHCOMPDIR)'/depthchargectl
 
 install-standalone: bin/mkdepthcharge-standalone
 	install -d '$(DESTDIR)$(BINDIR)'
@@ -141,4 +150,4 @@ clean:
 	rm -f bin/mkdepthcharge-standalone
 	[ ! -d bin ] || rmdir bin
 
-.PHONY: all install install-systemd install-init install-standalone uninstall clean
+.PHONY: all install install-systemd install-init install-bash install-standalone uninstall clean
