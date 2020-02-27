@@ -110,6 +110,16 @@ install-systemd: systemd/depthchargectl-set-good.service
 	@echo "  systemctl daemon-reload"
 	@echo "  systemctl --enable depthchargectl-set-good"
 
+install-init: init.d/depthchargectl-set-good
+	install -d '$(DESTDIR)$(SYSCONFDIR)/init.d'
+	install -m 0644 init.d/depthchargectl-set-good '$(DESTDIR)$(SYSCONFDIR)/init.d'
+	@echo "This target only installs the service, does not enable it."
+	@echo "You might want to run:"
+	@echo "  ln -s ../init.d/S02depthchargectl-set-good $(DESTDIR)$(SYSCONFDIR)/rc2.d/depthchargectl-set-good"
+	@echo "  ln -s ../init.d/S03depthchargectl-set-good $(DESTDIR)$(SYSCONFDIR)/rc3.d/depthchargectl-set-good"
+	@echo "  ln -s ../init.d/S04depthchargectl-set-good $(DESTDIR)$(SYSCONFDIR)/rc4.d/depthchargectl-set-good"
+	@echo "  ln -s ../init.d/S05depthchargectl-set-good $(DESTDIR)$(SYSCONFDIR)/rc5.d/depthchargectl-set-good"
+
 uninstall:
 	rm -f '$(DESTDIR)$(BINDIR)'/mkdepthcharge
 	rm -f '$(DESTDIR)$(SBINDIR)'/depthchargectl
@@ -119,6 +129,7 @@ uninstall:
 	rm -f '$(DESTDIR)$(MANDIR)'/man1/mkdepthcharge.1
 	rm -f '$(DESTDIR)$(MANDIR)'/man8/depthchargectl.8
 	rm -f '$(DESTDIR)$(LIBDIR)'/systemd/system/depthchargectl-set-good.service
+	rm -f '$(DESTDIR)$(SYSCONFDIR)'/init.d/depthchargectl-set-good
 
 install-standalone: bin/mkdepthcharge-standalone
 	install -d '$(DESTDIR)$(BINDIR)'
@@ -130,4 +141,4 @@ clean:
 	rm -f bin/mkdepthcharge-standalone
 	[ ! -d bin ] || rmdir bin
 
-.PHONY: all install install-systemd install-standalone uninstall clean
+.PHONY: all install install-systemd install-init install-standalone uninstall clean

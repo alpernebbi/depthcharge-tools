@@ -1,0 +1,27 @@
+#!/bin/sh
+
+### BEGIN INIT INFO
+# Provides:          depthchargectl-set-good
+# Required-Start:    $remote_fs
+# Required-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:
+# Short-Description: Mark the current depthcharge partition as successful
+### END INIT INFO
+
+if ! command -v depthchargectl >/dev/null 2>/dev/null; then
+    exit 0
+fi
+
+if [ -f /lib/lsb/init-functions ]; then
+    . /lib/lsb/init-functions
+fi
+
+case "$1" in
+    start|restart|reload|force-reload)
+        depthchargectl set-good
+        ;;
+    stop|status)
+        # Not a daemon.
+        ;;
+esac
