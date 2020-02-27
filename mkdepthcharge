@@ -417,9 +417,13 @@ pack_depthcharge() {
         --pack "$OUTPUT"
 }
 
-info "Running vbutil_kernel (pack):"
+info "Running vbutil_kernel:"
 if [ "$VERBOSE" = "yes" ]; then
     pack_depthcharge >&2
 else
     pack_depthcharge >/dev/null
 fi || error "Could not pack inputs into a depthcharge image."
+
+if [ "$VERBOSE" = "yes" ]; then
+    futility vbutil_kernel --verify "$OUTPUT" >&2 || :
+fi
