@@ -13,6 +13,7 @@ LOCALSTATEDIR ?= $(PREFIX)/var
 LIBDIR ?= $(PREFIX)/lib
 MANDIR ?= $(DATADIR)/man
 BASHCOMPDIR ?= ${DATADIR}/bash-completion/completions
+ZSHCOMPDIR ?= ${DATADIR}/zsh/site-functions
 
 vars := PACKAGENAME VERSION
 vars += PREFIX BINDIR SBINDIR DATADIR SYSCONFDIR LOCALSTATEDIR LIBDIR
@@ -127,6 +128,11 @@ install-bash: completions/_mkdepthcharge.bash completions/_depthchargectl.bash
 	install -m 0644 completions/_mkdepthcharge.bash '$(DESTDIR)$(BASHCOMPDIR)'/mkdepthcharge
 	install -m 0644 completions/_depthchargectl.bash '$(DESTDIR)$(BASHCOMPDIR)'/depthchargectl
 
+install-zsh: completions/_mkdepthcharge.zsh completions/_depthchargectl.zsh
+	install -d '$(DESTDIR)$(ZSHCOMPDIR)'
+	install -m 0644 completions/_mkdepthcharge.zsh '$(DESTDIR)$(ZSHCOMPDIR)'/_mkdepthcharge
+	install -m 0644 completions/_depthchargectl.zsh '$(DESTDIR)$(ZSHCOMPDIR)'/_depthchargectl
+
 uninstall:
 	rm -f '$(DESTDIR)$(BINDIR)'/mkdepthcharge
 	rm -f '$(DESTDIR)$(SBINDIR)'/depthchargectl
@@ -139,6 +145,8 @@ uninstall:
 	rm -f '$(DESTDIR)$(SYSCONFDIR)'/init.d/depthchargectl-set-good
 	rm -f '$(DESTDIR)$(BASHCOMPDIR)'/mkdepthcharge
 	rm -f '$(DESTDIR)$(BASHCOMPDIR)'/depthchargectl
+	rm -f '$(DESTDIR)$(ZSHCOMPDIR)'/_mkdepthcharge
+	rm -f '$(DESTDIR)$(ZSHCOMPDIR)'/_depthchargectl
 
 install-standalone: bin/mkdepthcharge-standalone
 	install -d '$(DESTDIR)$(BINDIR)'
@@ -150,4 +158,4 @@ clean:
 	rm -f bin/mkdepthcharge-standalone
 	[ ! -d bin ] || rmdir bin
 
-.PHONY: all install install-man install-systemd install-init install-bash install-standalone uninstall clean
+.PHONY: all install install-man install-systemd install-init install-bash install-zsh install-standalone uninstall clean
