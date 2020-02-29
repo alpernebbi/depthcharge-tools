@@ -1,4 +1,4 @@
-#! /bin/bash
+# vim: filetype=sh
 
 _mkdepthcharge__file() {
     COMPREPLY+=($(compgen -f -- "$cur"))
