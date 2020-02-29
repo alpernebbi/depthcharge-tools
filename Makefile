@@ -55,6 +55,7 @@ pattern = 's|^.. \|$(var)\| replace:: .*|.. \|$(var)\| replace:: $(subst $${,\|,
 patterns := $(foreach var,$(vars),-e $(pattern))
 rst_substvars := sed $(patterns)
 
+.PHONY: all
 all: bin/depthchargectl bin/depthchargectl.8
 all: bin/mkdepthcharge bin/mkdepthcharge.1
 all: bin/mkdepthcharge-standalone
@@ -80,8 +81,10 @@ bin/mkdepthcharge.1: mkdepthcharge.rst
 	mkdir -p bin
 	$(rst_substvars) <"$<" | rst2man >"$@"
 
+.PHONY: install
 install: install-bin install-man install-bash install-zsh
 
+.PHONY: install-bin
 install-bin: bin/mkdepthcharge bin/depthchargectl
 	install -d '$(DESTDIR)$(BINDIR)'
 	install -d '$(DESTDIR)$(SBINDIR)'
@@ -101,12 +104,14 @@ install-bin: bin/mkdepthcharge bin/depthchargectl
 	install -m 0644 conf/userdb '$(DESTDIR)$(SYSCONFDIR)/$(PACKAGENAME)'
 	install -m 0644 conf/config '$(DESTDIR)$(SYSCONFDIR)/$(PACKAGENAME)'
 
+.PHONY: install-man
 install-man: bin/mkdepthcharge.1 bin/depthchargectl.8
 	install -d '$(DESTDIR)$(MANDIR)'/man1
 	install -d '$(DESTDIR)$(MANDIR)'/man8
 	install -m 0644 bin/mkdepthcharge.1 '$(DESTDIR)$(MANDIR)'/man1
 	install -m 0644 bin/depthchargectl.8 '$(DESTDIR)$(MANDIR)'/man8
 
+.PHONY: install-systemd
 install-systemd: systemd/depthchargectl-set-good.service
 	install -d '$(DESTDIR)$(LIBDIR)/systemd/system'
 	install -m 0644 systemd/depthchargectl-set-good.service '$(DESTDIR)$(LIBDIR)/systemd/system'
@@ -115,6 +120,7 @@ install-systemd: systemd/depthchargectl-set-good.service
 	@echo "  systemctl daemon-reload"
 	@echo "  systemctl --enable depthchargectl-set-good"
 
+.PHONY: install-init
 install-init: init.d/depthchargectl-set-good
 	install -d '$(DESTDIR)$(SYSCONFDIR)/init.d'
 	install -m 0644 init.d/depthchargectl-set-good '$(DESTDIR)$(SYSCONFDIR)/init.d'
@@ -125,16 +131,19 @@ install-init: init.d/depthchargectl-set-good
 	@echo "  ln -s ../init.d/S04depthchargectl-set-good $(DESTDIR)$(SYSCONFDIR)/rc4.d/depthchargectl-set-good"
 	@echo "  ln -s ../init.d/S05depthchargectl-set-good $(DESTDIR)$(SYSCONFDIR)/rc5.d/depthchargectl-set-good"
 
+.PHONY: install-bash
 install-bash: completions/_mkdepthcharge.bash completions/_depthchargectl.bash
 	install -d '$(DESTDIR)$(BASHCOMPDIR)'
 	install -m 0644 completions/_mkdepthcharge.bash '$(DESTDIR)$(BASHCOMPDIR)'/mkdepthcharge
 	install -m 0644 completions/_depthchargectl.bash '$(DESTDIR)$(BASHCOMPDIR)'/depthchargectl
 
+.PHONY: install-zsh
 install-zsh: completions/_mkdepthcharge.zsh completions/_depthchargectl.zsh
 	install -d '$(DESTDIR)$(ZSHCOMPDIR)'
 	install -m 0644 completions/_mkdepthcharge.zsh '$(DESTDIR)$(ZSHCOMPDIR)'/_mkdepthcharge
 	install -m 0644 completions/_depthchargectl.zsh '$(DESTDIR)$(ZSHCOMPDIR)'/_depthchargectl
 
+.PHONY: uninstall
 uninstall:
 	rm -f '$(DESTDIR)$(BINDIR)'/mkdepthcharge
 	rm -f '$(DESTDIR)$(SBINDIR)'/depthchargectl
@@ -150,14 +159,15 @@ uninstall:
 	rm -f '$(DESTDIR)$(ZSHCOMPDIR)'/_mkdepthcharge
 	rm -f '$(DESTDIR)$(ZSHCOMPDIR)'/_depthchargectl
 
+.PHONY: install-standalone
 install-standalone: bin/mkdepthcharge-standalone
 	install -d '$(DESTDIR)$(BINDIR)'
 	install -m 0755 bin/mkdepthcharge-standalone -T '$(DESTDIR)$(BINDIR)'/mkdepthcharge
 
+.PHONY: clean
 clean:
 	rm -f bin/depthchargectl bin/depthchargectl.8
 	rm -f bin/mkdepthcharge bin/mkdepthcharge.1
 	rm -f bin/mkdepthcharge-standalone
 	[ ! -d bin ] || rmdir bin
 
-.PHONY: all install install-bin install-man install-systemd install-init install-bash install-zsh install-standalone uninstall clean
