@@ -7,9 +7,9 @@ manage the ChromeOS bootloader and its boot images
 --------------------------------------------------
 
 .. |PACKAGENAME| replace:: depthcharge-tools
-.. |VERSION| replace:: v0.3.0
+.. |VERSION| replace:: v0.3.1-dev
 
-:date: 2019-12-06
+:date: 2020-02-29
 :version: |VERSION|
 :manual_section: 8
 :manual_group: |PACKAGENAME|
@@ -23,6 +23,8 @@ manage the ChromeOS bootloader and its boot images
 .. |SYSCONFDIR| replace:: |PREFIX|/etc
 .. |LOCALSTATEDIR| replace:: |PREFIX|/var
 .. |LIBDIR| replace:: |PREFIX|/lib
+.. |INITDDIR| replace:: |SYSCONFDIR|/init.d
+.. |SYSTEMDDIR| replace:: |LIBDIR|/systemd/system
 
 
 SYNOPSIS
@@ -316,8 +318,12 @@ FILES
     Machine database file. Contains information about ChromeOS devices,
     how to build images for them, and their limitations on images.
 
-|LIBDIR|/systemd/system/depthchargectl-set-good.service
+|SYSTEMDDIR|/depthchargectl-set-good.service
     A systemd service that runs the **set-good** subcommand on
+    successful boots.
+
+|INITDDIR|/depthchargectl-set-good
+    An init service that runs the **set-good** subcommand on
     successful boots.
 
 |LOCALSTATEDIR|/|PACKAGENAME|/images/*\ **.img
