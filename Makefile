@@ -12,12 +12,14 @@ SYSCONFDIR ?= $(PREFIX)/etc
 LOCALSTATEDIR ?= $(PREFIX)/var
 LIBDIR ?= $(PREFIX)/lib
 MANDIR ?= $(DATADIR)/man
+INITDDIR ?= ${SYSCONFDIR}/init.d
+SYSTEMDDIR ?= ${LIBDIR}/systemd/system
 BASHCOMPDIR ?= ${DATADIR}/bash-completion/completions
 ZSHCOMPDIR ?= ${DATADIR}/zsh/site-functions
 
 vars := PACKAGENAME VERSION
 vars += PREFIX BINDIR SBINDIR DATADIR SYSCONFDIR LOCALSTATEDIR LIBDIR
-vars += BASHCOMPDIR ZSHCOMPDIR
+vars += INITDDIR SYSTEMDDIR BASHCOMPDIR ZSHCOMPDIR
 
 # Default values for depthchargectl configuration.
 # These don't affect mkdepthcharge.
@@ -113,8 +115,8 @@ install-man: bin/mkdepthcharge.1 bin/depthchargectl.8
 
 .PHONY: install-systemd
 install-systemd: systemd/depthchargectl-set-good.service
-	install -d '$(DESTDIR)$(LIBDIR)/systemd/system'
-	install -m 0644 systemd/depthchargectl-set-good.service '$(DESTDIR)$(LIBDIR)/systemd/system'
+	install -d '$(DESTDIR)$(SYSTEMDDIR)/'
+	install -m 0644 systemd/depthchargectl-set-good.service '$(DESTDIR)$(SYSTEMDDIR)/'
 	@echo "This target only installs the service, does not enable it."
 	@echo "You might want to run:"
 	@echo "  systemctl daemon-reload"
@@ -122,10 +124,10 @@ install-systemd: systemd/depthchargectl-set-good.service
 
 .PHONY: install-init
 install-init: init.d/depthchargectl-set-good
-	install -d '$(DESTDIR)$(SYSCONFDIR)/init.d'
-	install -m 0644 init.d/depthchargectl-set-good '$(DESTDIR)$(SYSCONFDIR)/init.d'
+	install -d '$(DESTDIR)$(INITDDIR)/'
+	install -m 0644 init.d/depthchargectl-set-good '$(DESTDIR)$(INITDDIR)/'
 	@echo "This target only installs the service, does not enable it."
-	@echo "You might want to run:"
+	@echo "You might want to run something like:"
 	@echo "  ln -s ../init.d/S02depthchargectl-set-good $(DESTDIR)$(SYSCONFDIR)/rc2.d/depthchargectl-set-good"
 	@echo "  ln -s ../init.d/S03depthchargectl-set-good $(DESTDIR)$(SYSCONFDIR)/rc3.d/depthchargectl-set-good"
 	@echo "  ln -s ../init.d/S04depthchargectl-set-good $(DESTDIR)$(SYSCONFDIR)/rc4.d/depthchargectl-set-good"
@@ -152,8 +154,8 @@ uninstall:
 	rm -rf '$(DESTDIR)$(LOCALSTATEDIR)/$(PACKAGENAME)'
 	rm -f '$(DESTDIR)$(MANDIR)'/man1/mkdepthcharge.1
 	rm -f '$(DESTDIR)$(MANDIR)'/man8/depthchargectl.8
-	rm -f '$(DESTDIR)$(LIBDIR)'/systemd/system/depthchargectl-set-good.service
-	rm -f '$(DESTDIR)$(SYSCONFDIR)'/init.d/depthchargectl-set-good
+	rm -f '$(DESTDIR)$(SYSTEMDDIR)'/depthchargectl-set-good.service
+	rm -f '$(DESTDIR)$(INITDDIR)'/depthchargectl-set-good
 	rm -f '$(DESTDIR)$(BASHCOMPDIR)'/mkdepthcharge
 	rm -f '$(DESTDIR)$(BASHCOMPDIR)'/depthchargectl
 	rm -f '$(DESTDIR)$(ZSHCOMPDIR)'/_mkdepthcharge
