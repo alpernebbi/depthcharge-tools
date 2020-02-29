@@ -80,7 +80,9 @@ bin/mkdepthcharge.1: mkdepthcharge.rst
 	mkdir -p bin
 	$(rst_substvars) <"$<" | rst2man >"$@"
 
-install: bin/mkdepthcharge bin/depthchargectl
+install: install-bin install-man install-bash install-zsh
+
+install-bin: bin/mkdepthcharge bin/depthchargectl
 	install -d '$(DESTDIR)$(BINDIR)'
 	install -d '$(DESTDIR)$(SBINDIR)'
 	install -d '$(DESTDIR)$(DATADIR)/$(PACKAGENAME)'
@@ -158,4 +160,4 @@ clean:
 	rm -f bin/mkdepthcharge-standalone
 	[ ! -d bin ] || rmdir bin
 
-.PHONY: all install install-man install-systemd install-init install-bash install-zsh install-standalone uninstall clean
+.PHONY: all install install-bin install-man install-systemd install-init install-bash install-zsh install-standalone uninstall clean
