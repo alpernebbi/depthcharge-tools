@@ -17,7 +17,7 @@ ZSHCOMPDIR ?= ${DATADIR}/zsh/site-functions
 
 vars := PACKAGENAME VERSION
 vars += PREFIX BINDIR SBINDIR DATADIR SYSCONFDIR LOCALSTATEDIR LIBDIR
-vars += BASHCOMPDIR
+vars += BASHCOMPDIR ZSHCOMPDIR
 
 # Default values for depthchargectl configuration.
 # These don't affect mkdepthcharge.
