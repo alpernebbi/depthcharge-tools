@@ -14,7 +14,7 @@ _depthchargectl__file() {
 }
 
 _depthchargectl__disk() {
-    COMPREPLY+=($(compgen -W "$(lsblk -o NAME -l -n)" -- "$cur"))
+    COMPREPLY+=($(compgen -W "$(lsblk -o "PATH" -n -l)" -- "$cur"))
 }
 
 _depthchargectl__kernel() {

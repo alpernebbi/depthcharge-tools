@@ -70,7 +70,7 @@ function _depthchargectl__kernel {
 }
 
 function _depthchargectl__disk {
-    local disks=($(lsblk -o NAME -n -l))
+    local disks=($(lsblk -o "PATH" -n -l))
     _describe 'disk or partition' disks
 }
 
