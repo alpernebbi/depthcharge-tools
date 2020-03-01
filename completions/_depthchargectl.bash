@@ -75,6 +75,7 @@ _depthchargectl_partitions() {
             esac
             ;;
         *)
+            _depthchargectl__disk
             COMPREPLY+=($(compgen -W "${opts[*]}" -- "$cur"))
             COMPREPLY+=($(compgen -W "${global_opts[*]}" -- "$cur"))
             ;;
