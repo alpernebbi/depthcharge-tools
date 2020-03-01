@@ -32,7 +32,7 @@ EOF
 }
 
 version() {
-    printf "%s %s %s" \
+    printf "%s %s %s\n" \
         "${PACKAGENAME:-depthcharge-tools}" \
         "${PROG:-mkdepthcharge}" \
         "${VERSION:+version }${VERSION:-(unversioned)}"
