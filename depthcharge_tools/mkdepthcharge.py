@@ -15,6 +15,63 @@ def main(*argv):
     print(args)
 
 
+def is_vmlinuz(path):
+    return any((
+        "vmlinuz" in path.name,
+        "vmlinux" in path.name,
+        "linux" in path.name,
+        "Image" in path.name,
+        "kernel" in path.name,
+    ))
+
+
+def is_initramfs(path):
+    return any((
+        "initrd" in path.name,
+        "initramfs" in path.name,
+        "cpio" in path.name,
+    ))
+
+
+def is_dtb(path):
+    return any((
+        "dtb" in path.name,
+    ))
+
+
+class InputFileAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if isinstance(values, pathlib.Path):
+            values = [values]
+        elif values is None:
+            return
+
+        for path in list(values):
+            if is_dtb(path):
+                namespace.dtb.append(path)
+
+            elif is_initramfs(path):
+                if namespace.initramfs is not None:
+                    fmt = "Cannot have multiple initramfs args '{}' and '{}'."
+                    msg = fmt.format(namespace.initramfs, path)
+                    parser.error(msg)
+                namespace.initramfs = path
+
+            elif is_vmlinuz(path):
+                if namespace.vmlinuz is not None:
+                    fmt = "Cannot have multiple vmlinuz args '{}' and '{}'."
+                    msg = fmt.format(namespace.vmlinuz, path)
+                    parser.error(msg)
+                namespace.vmlinuz = path
+
+            elif namespace.vmlinuz is None:
+                namespace.vmlinuz = path
+            elif namespace.initramfs is None:
+                namespace.initramfs = path
+            else:
+                namespace.dtb.append(path)
+
+
 def parse_args(*argv):
     parser = argparse.ArgumentParser(
         description="Build boot images for the ChromeOS bootloader.",
@@ -27,12 +84,14 @@ def parse_args(*argv):
     )
     input_files.add_argument(
         "vmlinuz",
+        action=InputFileAction,
         type=pathlib.Path,
         help="Kernel executable",
     )
     input_files.add_argument(
         "initramfs",
         nargs="?",
+        action=InputFileAction,
         type=pathlib.Path,
         help="Ramdisk image",
     )
@@ -40,6 +99,7 @@ def parse_args(*argv):
         "dtb",
         nargs="*",
         default=[],
+        action=InputFileAction,
         type=pathlib.Path,
         help="Device-tree binary file",
     )
