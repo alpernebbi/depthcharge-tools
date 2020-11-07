@@ -34,6 +34,11 @@ setuptools.setup(
         'Programming Language :: Python :: 3',
         'Topic :: System :: Boot',
     ],
+    entry_points={
+        'console_scripts': [
+            'mkdepthcharge=depthcharge_tools.mkdepthcharge:main',
+        ],
+    },
     keywords='ChromeOS ChromiumOS depthcharge vboot vbutil_kernel',
     packages=['depthcharge_tools'],
     install_requires=[''],
