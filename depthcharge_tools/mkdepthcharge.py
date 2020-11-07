@@ -4,6 +4,7 @@ from depthcharge_tools import __version__
 
 import argparse
 import logging
+import pathlib
 import sys
 
 logger = logging.getLogger(__name__)
@@ -26,17 +27,20 @@ def parse_args(*argv):
     )
     input_files.add_argument(
         "vmlinuz",
+        type=pathlib.Path,
         help="Kernel executable",
     )
     input_files.add_argument(
         "initramfs",
         nargs="?",
+        type=pathlib.Path,
         help="Ramdisk image",
     )
     input_files.add_argument(
         "dtb",
         nargs="*",
         default=[],
+        type=pathlib.Path,
         help="Device-tree binary file",
     )
 
@@ -64,6 +68,7 @@ def parse_args(*argv):
         metavar="FILE",
         action='store',
         required=True,
+        type=pathlib.Path,
         help="Write resulting image to FILE.",
     )
     options.add_argument(
@@ -118,24 +123,28 @@ def parse_args(*argv):
         "--bootloader",
         metavar="FILE",
         action='store',
+        type=pathlib.Path,
         help="Bootloader stub binary to use.",
     )
     vboot_options.add_argument(
         "--devkeys",
         metavar="DIR",
         action='store',
+        type=pathlib.Path,
         help="Directory containing developer keys to use.",
     )
     vboot_options.add_argument(
         "--keyblock",
         metavar="FILE",
         action='store',
+        type=pathlib.Path,
         help="The key block file (.keyblock).",
     )
     vboot_options.add_argument(
         "--signprivate",
         metavar="FILE",
         action='store',
+        type=pathlib.Path,
         help="Private key (.vbprivk) to sign the image.",
     )
 
