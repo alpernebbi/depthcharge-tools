@@ -1,7 +1,5 @@
 #! /usr/bin/env python3
 
-from depthcharge_tools import __version__
-
 import argparse
 import logging
 import pathlib
@@ -10,6 +8,9 @@ import shutil
 import subprocess
 import sys
 import tempfile
+
+from depthcharge_tools import __version__
+from depthcharge_tools.utils import DemuxAction
 
 logger = logging.getLogger(__name__)
 
@@ -172,40 +173,6 @@ def is_dtb(path):
     ))
 
 
-class InputFileAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        if isinstance(values, pathlib.Path):
-            values = [values]
-        elif values is None:
-            return
-        elif values is namespace.dtb:
-            return
-
-        for path in list(values):
-            if is_dtb(path):
-                namespace.dtb.append(path)
-
-            elif is_initramfs(path):
-                if namespace.initramfs is not None:
-                    fmt = "Cannot have multiple initramfs args '{}' and '{}'."
-                    msg = fmt.format(namespace.initramfs, path)
-                    parser.error(msg)
-                namespace.initramfs = path
-
-            elif is_vmlinuz(path):
-                if namespace.vmlinuz is not None:
-                    fmt = "Cannot have multiple vmlinuz args '{}' and '{}'."
-                    msg = fmt.format(namespace.vmlinuz, path)
-                    parser.error(msg)
-                namespace.vmlinuz = path
-
-            elif namespace.vmlinuz is None:
-                namespace.vmlinuz = path
-            elif namespace.initramfs is None:
-                namespace.initramfs = path
-            else:
-                namespace.dtb.append(path)
-
 
 def parse_args(*argv):
     parser = argparse.ArgumentParser(
@@ -214,12 +181,16 @@ def parse_args(*argv):
         add_help=False,
     )
 
+    class InputFileAction(DemuxAction):
+        pass
+
     input_files = parser.add_argument_group(
         title="Input files",
     )
     input_files.add_argument(
         "vmlinuz",
         action=InputFileAction,
+        select=is_vmlinuz,
         type=pathlib.Path,
         help="Kernel executable",
     )
@@ -227,6 +198,7 @@ def parse_args(*argv):
         "initramfs",
         nargs="?",
         action=InputFileAction,
+        select=is_initramfs,
         type=pathlib.Path,
         help="Ramdisk image",
     )
@@ -235,6 +207,7 @@ def parse_args(*argv):
         nargs="*",
         default=[],
         action=InputFileAction,
+        select=is_dtb,
         type=pathlib.Path,
         help="Device-tree binary file",
     )
