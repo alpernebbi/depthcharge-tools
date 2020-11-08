@@ -46,6 +46,8 @@ class InputFileAction(argparse.Action):
             values = [values]
         elif values is None:
             return
+        elif values is namespace.dtb:
+            return
 
         for path in list(values):
             if is_dtb(path):
