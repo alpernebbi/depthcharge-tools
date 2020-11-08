@@ -135,7 +135,7 @@ def parse_args(*argv):
         "-A", "--arch",
         metavar="ARCH",
         action='store',
-        choices=["arm", "arm64", "aarch64", "x86", "x86_64", "amd64"],
+        choices=["arm", "arm64", "aarch64", "i386", "x86", "x86_64", "amd64"],
         help="Architecture to build for.",
     )
     options.add_argument(
