@@ -347,6 +347,10 @@ def parse_args(*argv):
     if args.signprivate is None:
         args.signprivate = args.devkeys / "kernel_data_key.vbprivk"
 
+    # vmlinuz is required but might be missing due to argparse hacks
+    if args.vmlinuz is None:
+        parser.error("the following arguments are required: vmlinuz")
+
     # Check incompatible combinations
     if args.image_format == "zimage":
         if args.compress != "none":
