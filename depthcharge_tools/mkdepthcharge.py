@@ -5,6 +5,7 @@ from depthcharge_tools import __version__
 import argparse
 import logging
 import pathlib
+import platform
 import sys
 
 logger = logging.getLogger(__name__)
@@ -136,6 +137,7 @@ def parse_args(*argv):
         metavar="ARCH",
         action='store',
         choices=["arm", "arm64", "aarch64", "i386", "x86", "x86_64", "amd64"],
+        default=platform.machine(),
         help="Architecture to build for.",
     )
     options.add_argument(
@@ -155,12 +157,14 @@ def parse_args(*argv):
         metavar="TYPE",
         action='store',
         choices=["none", "lz4", "lzma"],
+        default="none",
         help="Compress vmlinuz file before packing.",
     )
     fit_options.add_argument(
         "-n", "--name",
         metavar="DESC",
         action='store',
+        default="unavailable",
         help="Description of vmlinuz to put in the FIT.",
     )
 
@@ -208,7 +212,49 @@ def parse_args(*argv):
         help="Private key (.vbprivk) to sign the image.",
     )
 
-    return parser.parse_args(*argv[1:])
+    args = parser.parse_args(*argv[1:])
+
+    # Set defaults
+    if args.image_format is None:
+        if args.arch in ("arm", "arm64", "aarch64"):
+            args.image_format = "fit"
+        elif args.arch in ("i386", "x86", "x86_64", "amd64"):
+            args.image_format = "zimage"
+
+    if args.cmdline is None:
+        args.cmdline = ["--"]
+
+    if args.devkeys is None:
+        if args.keyblock is None and args.signprivate is None:
+            args.devkeys = pathlib.Path("/usr/share/vboot/devkeys")
+        elif args.keyblock is not None and args.signprivate is not None:
+            if args.keyblock.parent == args.signprivate.parent:
+                args.devkeys = args.signprivate.parent
+        elif args.signprivate is not None:
+            args.devkeys = args.signprivate.parent
+        elif args.keyblock is not None:
+            args.devkeys = args.keyblock.parent
+
+    if args.keyblock is None:
+        args.keyblock = args.devkeys / "kernel.keyblock"
+    if args.signprivate is None:
+        args.signprivate = args.devkeys / "kernel_data_key.vbprivk"
+
+    # Check incompatible combinations
+    if args.image_format == "zimage":
+        if args.compress != "none":
+            msg = "--compress is incompatible with zimage format."
+            parser.error(msg)
+        if args.name != "unavailable":
+            msg = "--name is incompatible with zimage format."
+        if args.initramfs is not None:
+            msg = "Initramfs image not supported with zimage format."
+            parser.error(msg)
+        if args.dtb:
+            msg = "Device tree files not supported with zimage format."
+            parser.error(msg)
+
+    return args
 
 
 if __name__ == "__main__":
