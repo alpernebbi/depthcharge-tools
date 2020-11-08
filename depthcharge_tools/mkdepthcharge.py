@@ -6,14 +6,146 @@ import argparse
 import logging
 import pathlib
 import platform
+import shutil
+import subprocess
 import sys
+import tempfile
 
 logger = logging.getLogger(__name__)
 
 
 def main(*argv):
     args = parse_args(*argv)
-    print(args)
+
+    with tempfile.TemporaryDirectory(prefix="mkdepthcharge-") as tmpdir:
+        tmpdir = pathlib.Path(tmpdir)
+
+        vmlinuz = tmpdir / args.vmlinuz.name
+        shutil.copyfile(args.vmlinuz, vmlinuz)
+        args.vmlinuz = vmlinuz
+
+        if is_gzip(args.vmlinuz):
+            if args.vmlinuz.name.endswith(".gz"):
+                vmlinuz_ungzip = tmpdir / args.vmlinuz.name[:-3]
+            else:
+                vmlinuz_ungzip = tmpdir / (args.vmlinuz.name + ".gunzip")
+            ungzip(args.vmlinuz, vmlinuz_ungzip)
+            args.vmlinuz = vmlinuz_ungzip
+
+        if args.initramfs is not None:
+            initramfs = tmpdir / args.initramfs.name
+            shutil.copyfile(args.initramfs, initramfs)
+            args.initramfs = initramfs
+
+        dtb = [tmpdir / d.name for d in args.dtb]
+        for src, dest in zip(args.dtb, dtb):
+            shutil.copyfile(src, dest)
+        args.dtb = dtb
+
+        if args.compress == "lz4":
+            vmlinuz_lz4 = tmpdir / (args.vmlinuz.name + ".lz4")
+            lz4(args.vmlinuz, vmlinuz_lz4)
+            args.vmlinuz = vmlinuz_lz4
+        elif args.compress == "lzma":
+            vmlinuz_lzma = tmpdir / (args.vmlinuz.name + ".lzma")
+            lzma(args.vmlinuz, vmlinuz_lzma)
+            args.vmlinuz = vmlinuz_lzma
+
+        if args.kern_guid:
+            args.cmdline.insert(0, "kern_guid=%U")
+        args.cmdline = " ".join(args.cmdline)
+        cmdline_file = tmpdir / "kernel.args"
+        cmdline_file.write_text(args.cmdline)
+
+        if args.bootloader is not None:
+            bootloader = tmpdir / args.bootloader.name
+            shutil.copyfile(args.bootloader, bootloader)
+            args.bootloader = bootloader
+        else:
+            bootloader = tmpdir / "bootloader.bin"
+            bootloader.write_bytes(bytes(512))
+            args.bootloader = bootloader
+
+        if args.arch == "arm":
+            mkimage_arch = "arm"
+            vboot_arch = "arm"
+        elif args.arch in ("arm64", "aarch64"):
+            mkimage_arch = "arm64"
+            vboot_arch = "aarch64"
+        elif args.arch in ("i386", "x86"):
+            mkimage_arch = "x86"
+            vboot_arch = "x86"
+        elif args.arch in ("x86_64", "amd64"):
+            mkimage_arch = "x86_64"
+            vboot_arch = "amd64"
+
+        if args.image_format == "fit":
+            fit_image = tmpdir / "depthcharge.fit"
+            mkimage_cmd = [
+                "mkimage",
+                "-f", "auto",
+                "-A", mkimage_arch,
+                "-O", "linux",
+                "-C", args.compress,
+                "-n", args.name,
+                "-d", args.vmlinuz,
+            ]
+            if args.initramfs:
+                mkimage_cmd.extend(["-i", args.initramfs])
+            for dtb in args.dtb:
+                mkimage_cmd.extend(["-b", dtb])
+            mkimage_cmd.append(fit_image)
+            proc = subprocess.run(mkimage_cmd)
+            proc.check_returncode()
+            vboot_vmlinuz = fit_image
+
+        elif args.image_format == "zimage":
+            vboot_vmlinuz = fit_image
+
+        vboot_cmd = [
+            "futility", "vbutil_kernel",
+            "--version", "1",
+            "--arch", vboot_arch,
+            "--vmlinuz", vboot_vmlinuz,
+            "--config", cmdline_file,
+            "--bootloader", args.bootloader,
+            "--keyblock", args.keyblock,
+            "--signprivate", args.signprivate,
+            "--pack", args.output
+        ]
+        proc = subprocess.run(vboot_cmd)
+        proc.check_returncode()
+
+        verify_cmd = [
+            "futility", "vbutil_kernel",
+            "--verify", args.output,
+        ]
+
+
+def is_gzip(path):
+    proc = subprocess.run(["gzip", "-t", path])
+    return proc.returncode == 0
+
+
+def gunzip(src, dest):
+    with src.open() as s:
+        with dest.open('w') as d:
+            proc = subprocess.run(["gzip", "-d"], stdin=s, stdout=d)
+    proc.check_returncode()
+
+
+def lz4(src, dest):
+    with src.open() as s:
+        with dest.open('w') as d:
+            proc = subprocess.run(["lz4", "-z", "-9"], stdin=s, stdout=d)
+    proc.check_returncode()
+
+
+def lzma(src, dest):
+    with src.open() as s:
+        with dest.open('w') as d:
+            proc = subprocess.run(["lzma", "-z"], stdin=s, stdout=d)
+    proc.check_returncode()
 
 
 def is_vmlinuz(path):
