@@ -2,14 +2,13 @@
 
 import argparse
 import logging
-import pathlib
 import platform
-import shutil
 import subprocess
 import sys
-import tempfile
 
 from depthcharge_tools import __version__
+from depthcharge_tools.utils import Path
+from depthcharge_tools.utils import TemporaryDirectory
 from depthcharge_tools.utils import DemuxAction
 
 logger = logging.getLogger(__name__)
@@ -18,39 +17,20 @@ logger = logging.getLogger(__name__)
 def main(*argv):
     args = parse_args(*argv)
 
-    with tempfile.TemporaryDirectory(prefix="mkdepthcharge-") as tmpdir:
-        tmpdir = pathlib.Path(tmpdir)
-
-        vmlinuz = tmpdir / args.vmlinuz.name
-        shutil.copyfile(args.vmlinuz, vmlinuz)
-        args.vmlinuz = vmlinuz
-
-        if is_gzip(args.vmlinuz):
-            if args.vmlinuz.name.endswith(".gz"):
-                vmlinuz_ungzip = tmpdir / args.vmlinuz.name[:-3]
-            else:
-                vmlinuz_ungzip = tmpdir / (args.vmlinuz.name + ".gunzip")
-            ungzip(args.vmlinuz, vmlinuz_ungzip)
-            args.vmlinuz = vmlinuz_ungzip
+    with TemporaryDirectory(prefix="mkdepthcharge-") as tmpdir:
+        args.vmlinuz = args.vmlinuz.copy_to(tmpdir)
+        if args.vmlinuz.is_gzip():
+            args.vmlinuz = args.vmlinuz.gunzip()
 
         if args.initramfs is not None:
-            initramfs = tmpdir / args.initramfs.name
-            shutil.copyfile(args.initramfs, initramfs)
-            args.initramfs = initramfs
+            args.initramfs = args.initramfs.copy_to(tmpdir)
 
-        dtb = [tmpdir / d.name for d in args.dtb]
-        for src, dest in zip(args.dtb, dtb):
-            shutil.copyfile(src, dest)
-        args.dtb = dtb
+        args.dtb = [dtb.copy_to(tmpdir) for dtb in args.dtb]
 
         if args.compress == "lz4":
-            vmlinuz_lz4 = tmpdir / (args.vmlinuz.name + ".lz4")
-            lz4(args.vmlinuz, vmlinuz_lz4)
-            args.vmlinuz = vmlinuz_lz4
+            args.vmlinuz = args.vmlinuz.lz4()
         elif args.compress == "lzma":
-            vmlinuz_lzma = tmpdir / (args.vmlinuz.name + ".lzma")
-            lzma(args.vmlinuz, vmlinuz_lzma)
-            args.vmlinuz = vmlinuz_lzma
+            args.vmlinuz = args.vmlinuz.lzma()
 
         if args.kern_guid:
             args.cmdline.insert(0, "kern_guid=%U")
@@ -59,13 +39,10 @@ def main(*argv):
         cmdline_file.write_text(args.cmdline)
 
         if args.bootloader is not None:
-            bootloader = tmpdir / args.bootloader.name
-            shutil.copyfile(args.bootloader, bootloader)
-            args.bootloader = bootloader
+            args.bootloader = args.bootloader.copy_to(tmpdir)
         else:
-            bootloader = tmpdir / "bootloader.bin"
-            bootloader.write_bytes(bytes(512))
-            args.bootloader = bootloader
+            args.bootloader = tmpdir / "bootloader.bin"
+            args.bootloader.write_bytes(bytes(512))
 
         if args.arch == "arm":
             mkimage_arch = "arm"
@@ -123,57 +100,6 @@ def main(*argv):
         ]
 
 
-def is_gzip(path):
-    proc = subprocess.run(["gzip", "-t", path])
-    return proc.returncode == 0
-
-
-def gunzip(src, dest):
-    with src.open() as s:
-        with dest.open('w') as d:
-            proc = subprocess.run(["gzip", "-d"], stdin=s, stdout=d)
-    proc.check_returncode()
-
-
-def lz4(src, dest):
-    with src.open() as s:
-        with dest.open('w') as d:
-            proc = subprocess.run(["lz4", "-z", "-9"], stdin=s, stdout=d)
-    proc.check_returncode()
-
-
-def lzma(src, dest):
-    with src.open() as s:
-        with dest.open('w') as d:
-            proc = subprocess.run(["lzma", "-z"], stdin=s, stdout=d)
-    proc.check_returncode()
-
-
-def is_vmlinuz(path):
-    return any((
-        "vmlinuz" in path.name,
-        "vmlinux" in path.name,
-        "linux" in path.name,
-        "Image" in path.name,
-        "kernel" in path.name,
-    ))
-
-
-def is_initramfs(path):
-    return any((
-        "initrd" in path.name,
-        "initramfs" in path.name,
-        "cpio" in path.name,
-    ))
-
-
-def is_dtb(path):
-    return any((
-        "dtb" in path.name,
-    ))
-
-
-
 def parse_args(*argv):
     parser = argparse.ArgumentParser(
         description="Build boot images for the ChromeOS bootloader.",
@@ -190,16 +116,16 @@ def parse_args(*argv):
     input_files.add_argument(
         "vmlinuz",
         action=InputFileAction,
-        select=is_vmlinuz,
-        type=pathlib.Path,
+        select=Path.is_vmlinuz,
+        type=Path,
         help="Kernel executable",
     )
     input_files.add_argument(
         "initramfs",
         nargs="?",
         action=InputFileAction,
-        select=is_initramfs,
-        type=pathlib.Path,
+        select=Path.is_initramfs,
+        type=Path,
         help="Ramdisk image",
     )
     input_files.add_argument(
@@ -207,8 +133,8 @@ def parse_args(*argv):
         nargs="*",
         default=[],
         action=InputFileAction,
-        select=is_dtb,
-        type=pathlib.Path,
+        select=Path.is_dtb,
+        type=Path,
         help="Device-tree binary file",
     )
 
@@ -236,7 +162,7 @@ def parse_args(*argv):
         metavar="FILE",
         action='store',
         required=True,
-        type=pathlib.Path,
+        type=Path,
         help="Write resulting image to FILE.",
     )
     options.add_argument(
@@ -294,28 +220,28 @@ def parse_args(*argv):
         "--bootloader",
         metavar="FILE",
         action='store',
-        type=pathlib.Path,
+        type=Path,
         help="Bootloader stub binary to use.",
     )
     vboot_options.add_argument(
         "--devkeys",
         metavar="DIR",
         action='store',
-        type=pathlib.Path,
+        type=Path,
         help="Directory containing developer keys to use.",
     )
     vboot_options.add_argument(
         "--keyblock",
         metavar="FILE",
         action='store',
-        type=pathlib.Path,
+        type=Path,
         help="The key block file (.keyblock).",
     )
     vboot_options.add_argument(
         "--signprivate",
         metavar="FILE",
         action='store',
-        type=pathlib.Path,
+        type=Path,
         help="Private key (.vbprivk) to sign the image.",
     )
 
@@ -333,7 +259,7 @@ def parse_args(*argv):
 
     if args.devkeys is None:
         if args.keyblock is None and args.signprivate is None:
-            args.devkeys = pathlib.Path("/usr/share/vboot/devkeys")
+            args.devkeys = Path("/usr/share/vboot/devkeys")
         elif args.keyblock is not None and args.signprivate is not None:
             if args.keyblock.parent == args.signprivate.parent:
                 args.devkeys = args.signprivate.parent

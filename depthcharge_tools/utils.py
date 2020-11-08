@@ -2,11 +2,84 @@
 
 import argparse
 import logging
+import pathlib
+import shutil
+import subprocess
+import tempfile
 from collections import defaultdict
 
 from depthcharge_tools import __version__
 
 logger = logging.getLogger(__name__)
+
+
+class Path(pathlib.PosixPath):
+    def copy_to(self, dest):
+        dest = shutil.copy2(self, dest)
+        return Path(dest)
+
+    def is_gzip(self):
+        proc = subprocess.run(["gzip", "-t", self])
+        return proc.returncode == 0
+
+    def gunzip(self, dest=None):
+        if dest is None:
+            if self.name.endswith(".gz"):
+                dest = self.parent / self.name[:-3]
+            else:
+                dest = self.parent / (self.name + ".gunzip")
+
+        with self.open() as s:
+            with dest.open('w') as d:
+                proc = subprocess.run(["gzip", "-d"], stdin=s, stdout=d)
+        proc.check_returncode()
+        return Path(dest)
+
+    def lz4(self, dest=None):
+        if dest is None:
+            dest = self.parent / (self.name + ".lz4")
+
+        with self.open() as s:
+            with dest.open('w') as d:
+                proc = subprocess.run(["lz4", "-z", "-9"], stdin=s, stdout=d)
+        proc.check_returncode()
+        return Path(dest)
+
+    def lzma(self, dest=None):
+        if dest is None:
+            dest = self.parent / (self.name + ".lzma")
+
+        with self.open() as s:
+            with dest.open('w') as d:
+                proc = subprocess.run(["lzma", "-z"], stdin=s, stdout=d)
+        proc.check_returncode()
+        return Path(dest)
+
+    def is_vmlinuz(self):
+        return any((
+            "vmlinuz" in self.name,
+            "vmlinux" in self.name,
+            "linux" in self.name,
+            "Image" in self.name,
+            "kernel" in self.name,
+        ))
+
+    def is_initramfs(self):
+        return any((
+            "initrd" in self.name,
+            "initramfs" in self.name,
+            "cpio" in self.name,
+        ))
+
+    def is_dtb(self):
+        return any((
+            "dtb" in self.name,
+        ))
+
+
+class TemporaryDirectory(tempfile.TemporaryDirectory):
+    def __enter__(self):
+        return Path(super().__enter__())
 
 
 class DemuxAction(argparse.Action):
