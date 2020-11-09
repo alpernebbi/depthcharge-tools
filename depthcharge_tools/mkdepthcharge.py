@@ -275,6 +275,7 @@ def parse_args(*argv):
             parser.error(msg)
         if args.name != "unavailable":
             msg = "--name is incompatible with zimage format."
+            parser.error(msg)
         if args.initramfs is not None:
             msg = "Initramfs image not supported with zimage format."
             parser.error(msg)
