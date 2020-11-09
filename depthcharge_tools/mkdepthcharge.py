@@ -7,9 +7,12 @@ import subprocess
 import sys
 
 from depthcharge_tools import __version__
-from depthcharge_tools.utils import Path
-from depthcharge_tools.utils import TemporaryDirectory
-from depthcharge_tools.utils import DemuxAction
+from depthcharge_tools.utils import (
+    Architecture,
+    Path,
+    TemporaryDirectory,
+    DemuxAction,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -44,25 +47,12 @@ def main(*argv):
             args.bootloader = tmpdir / "bootloader.bin"
             args.bootloader.write_bytes(bytes(512))
 
-        if args.arch == "arm":
-            mkimage_arch = "arm"
-            vboot_arch = "arm"
-        elif args.arch in ("arm64", "aarch64"):
-            mkimage_arch = "arm64"
-            vboot_arch = "aarch64"
-        elif args.arch in ("i386", "x86"):
-            mkimage_arch = "x86"
-            vboot_arch = "x86"
-        elif args.arch in ("x86_64", "amd64"):
-            mkimage_arch = "x86_64"
-            vboot_arch = "amd64"
-
         if args.image_format == "fit":
             fit_image = tmpdir / "depthcharge.fit"
             mkimage_cmd = [
                 "mkimage",
                 "-f", "auto",
-                "-A", mkimage_arch,
+                "-A", args.arch.mkimage,
                 "-O", "linux",
                 "-C", args.compress,
                 "-n", args.name,
@@ -83,7 +73,7 @@ def main(*argv):
         vboot_cmd = [
             "futility", "vbutil_kernel",
             "--version", "1",
-            "--arch", vboot_arch,
+            "--arch", args.arch.vboot,
             "--vmlinuz", vboot_vmlinuz,
             "--config", cmdline_file,
             "--bootloader", args.bootloader,
@@ -169,8 +159,9 @@ def parse_args(*argv):
         "-A", "--arch",
         metavar="ARCH",
         action='store',
-        choices=["arm", "arm64", "aarch64", "i386", "x86", "x86_64", "amd64"],
+        choices=Architecture.all,
         default=platform.machine(),
+        type=Architecture,
         help="Architecture to build for.",
     )
     options.add_argument(
@@ -249,9 +240,9 @@ def parse_args(*argv):
 
     # Set defaults
     if args.image_format is None:
-        if args.arch in ("arm", "arm64", "aarch64"):
+        if args.arch in Architecture.arm:
             args.image_format = "fit"
-        elif args.arch in ("i386", "x86", "x86_64", "amd64"):
+        elif args.arch in Architecture.x86:
             args.image_format = "zimage"
 
     if args.cmdline is None:

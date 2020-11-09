@@ -77,6 +77,53 @@ class Path(pathlib.PosixPath):
         ))
 
 
+class Architecture(str):
+    arm_32 = ["arm"]
+    arm_64 = ["arm64", "aarch64"]
+    arm = arm_32 + arm_64
+    x86_32 = ["i386", "x86"]
+    x86_64 = ["x86_64", "amd64"]
+    x86 = x86_32 + x86_64
+    all = arm + x86
+    groups = (arm_32, arm_64, x86_32, x86_64)
+
+    def __eq__(self, other):
+        if isinstance(other, Architecture):
+            for group in self.groups:
+                if self in group and other in group:
+                    return True
+        return str(self) == str(other)
+
+    def __ne__(self, other):
+        if isinstance(other, Architecture):
+            for group in self.groups:
+                if self in group and other not in group:
+                    return True
+        return str(self) != str(other)
+
+    @property
+    def mkimage(self):
+        if self in self.arm_32:
+            return "arm"
+        if self in self.arm_64:
+            return "arm64"
+        if self in self.x86_32:
+            return "x86"
+        if self in self.x86_64:
+            return "x86_64"
+
+    @property
+    def vboot(self):
+        if self in self.arm_32:
+            return "arm"
+        if self in self.arm_64:
+            return "aarch64"
+        if self in self.x86_32:
+            return "x86"
+        if self in self.x86_64:
+            return "amd64"
+
+
 class TemporaryDirectory(tempfile.TemporaryDirectory):
     def __enter__(self):
         return Path(super().__enter__())
