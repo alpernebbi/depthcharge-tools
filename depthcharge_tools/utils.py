@@ -6,7 +6,6 @@ import pathlib
 import shutil
 import subprocess
 import tempfile
-from collections import defaultdict
 
 from depthcharge_tools import __version__
 
