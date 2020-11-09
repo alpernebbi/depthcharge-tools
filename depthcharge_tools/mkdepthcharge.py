@@ -68,7 +68,7 @@ def main(*argv):
             vboot_vmlinuz = fit_image
 
         elif args.image_format == "zimage":
-            vboot_vmlinuz = fit_image
+            vboot_vmlinuz = args.vmlinuz
 
         vboot_cmd = [
             "futility", "vbutil_kernel",
