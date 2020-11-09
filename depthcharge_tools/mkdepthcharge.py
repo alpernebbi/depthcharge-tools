@@ -28,7 +28,7 @@ def main(*argv):
         if args.initramfs is not None:
             args.initramfs = args.initramfs.copy_to(tmpdir)
 
-        args.dtb = [dtb.copy_to(tmpdir) for dtb in args.dtb]
+        args.dtbs = [dtb.copy_to(tmpdir) for dtb in args.dtbs]
 
         if args.compress == "lz4":
             args.vmlinuz = args.vmlinuz.lz4()
@@ -60,7 +60,7 @@ def main(*argv):
             ]
             if args.initramfs:
                 mkimage_cmd.extend(["-i", args.initramfs])
-            for dtb in args.dtb:
+            for dtb in args.dtbs:
                 mkimage_cmd.extend(["-b", dtb])
             mkimage_cmd.append(fit_image)
             proc = subprocess.run(mkimage_cmd)
@@ -119,7 +119,8 @@ def parse_args(*argv):
         help="Ramdisk image",
     )
     input_files.add_argument(
-        "dtb",
+        "dtbs",
+        metavar="dtb",
         nargs="*",
         default=[],
         action=InputFileAction,
@@ -279,7 +280,7 @@ def parse_args(*argv):
         if args.initramfs is not None:
             msg = "Initramfs image not supported with zimage format."
             parser.error(msg)
-        if args.dtb:
+        if args.dtbs:
             msg = "Device tree files not supported with zimage format."
             parser.error(msg)
 
