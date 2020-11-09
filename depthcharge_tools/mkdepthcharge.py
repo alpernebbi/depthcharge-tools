@@ -11,7 +11,7 @@ from depthcharge_tools.utils import (
     Architecture,
     Path,
     TemporaryDirectory,
-    DemuxAction,
+    MixedArgumentsAction,
 )
 
 logger = logging.getLogger(__name__)
@@ -97,7 +97,7 @@ def parse_args(*argv):
         add_help=False,
     )
 
-    class InputFileAction(DemuxAction):
+    class InputFileAction(MixedArgumentsAction):
         pass
 
     input_files = parser.add_argument_group(

@@ -129,7 +129,7 @@ class TemporaryDirectory(tempfile.TemporaryDirectory):
         return Path(super().__enter__())
 
 
-class DemuxAction(argparse.Action):
+class MixedArgumentsAction(argparse.Action):
     def __init_subclass__(cls, *args, **kwargs):
         super().__init_subclass__(*args, **kwargs)
         cls._selectors = {}
