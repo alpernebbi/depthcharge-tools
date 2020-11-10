@@ -21,89 +21,152 @@ def main(*argv):
     prog, *argv = argv
     parser = argument_parser()
     args = parser.parse_args(*argv)
+    kwargs = vars(args)
 
     try:
-        mkdepthcharge(args)
+        mkdepthcharge(**kwargs)
     except ValueError as err:
         parser.error(err.args[0])
 
 
-def mkdepthcharge(args):
-    set_default_args(args)
-    check_args(args)
+def mkdepthcharge(
+    arch=None,
+    bootloader=None,
+    cmdline=None,
+    compress=None,
+    devkeys=None,
+    dtbs=None,
+    image_format=None,
+    initramfs=None,
+    kern_guid=None,
+    keyblock=None,
+    name=None,
+    output=None,
+    signprivate=None,
+    verbose=None,
+    vmlinuz=None,
+):
+    # Set defaults
+    if arch is None:
+        arch = Architecture(platform.machine())
+
+    if image_format is None:
+        if arch in Architecture.arm:
+            image_format = "fit"
+        elif arch in Architecture.x86:
+            image_format = "zimage"
+
+    if cmdline is None:
+        cmdline = ["--"]
+
+    if devkeys is None:
+        if keyblock is None and signprivate is None:
+            devkeys = Path("/usr/share/vboot/devkeys")
+        elif keyblock is not None and signprivate is not None:
+            if keyblock.parent == signprivate.parent:
+                devkeys = signprivate.parent
+        elif signprivate is not None:
+            devkeys = signprivate.parent
+        elif keyblock is not None:
+            devkeys = keyblock.parent
+
+    if keyblock is None:
+        keyblock = devkeys / "kernel.keyblock"
+    if signprivate is None:
+        signprivate = devkeys / "kernel_data_key.vbprivk"
+
+    # vmlinuz is required but might be missing due to argparse hacks
+    if vmlinuz is None:
+        msg = "the following arguments are required: vmlinuz"
+        raise ValueError(msg)
+
+    # Check incompatible combinations
+    if image_format == "zimage":
+        if compress is not None:
+            msg = "compress argument not supported with zimage format."
+            raise ValueError(msg)
+        if name is not None:
+            msg = "name argument not supported with zimage format."
+            raise ValueError(msg)
+        if initramfs is not None:
+            msg = "Initramfs image not supported with zimage format."
+            raise ValueError(msg)
+        if dtbs:
+            msg = "Device tree files not supported with zimage format."
+            raise ValueError(msg)
 
     with TemporaryDirectory(prefix="mkdepthcharge-") as tmpdir:
-        args.vmlinuz = args.vmlinuz.copy_to(tmpdir)
-        if args.vmlinuz.is_gzip():
-            args.vmlinuz = args.vmlinuz.gunzip()
+        vmlinuz = vmlinuz.copy_to(tmpdir)
+        if vmlinuz.is_gzip():
+            vmlinuz = vmlinuz.gunzip()
 
-        if args.initramfs is not None:
-            args.initramfs = args.initramfs.copy_to(tmpdir)
+        if initramfs is not None:
+            initramfs = initramfs.copy_to(tmpdir)
 
-        args.dtbs = [dtb.copy_to(tmpdir) for dtb in args.dtbs]
+        dtbs = [dtb.copy_to(tmpdir) for dtb in dtbs]
 
-        if args.compress == "lz4":
-            args.vmlinuz = args.vmlinuz.lz4()
-        elif args.compress == "lzma":
-            args.vmlinuz = args.vmlinuz.lzma()
+        if compress == "lz4":
+            vmlinuz = vmlinuz.lz4()
+        elif compress == "lzma":
+            vmlinuz = vmlinuz.lzma()
 
-        if args.kern_guid:
-            args.cmdline.insert(0, "kern_guid=%U")
-        args.cmdline = " ".join(args.cmdline)
+        if kern_guid:
+            cmdline.insert(0, "kern_guid=%U")
+        cmdline = " ".join(cmdline)
         cmdline_file = tmpdir / "kernel.args"
-        cmdline_file.write_text(args.cmdline)
+        cmdline_file.write_text(cmdline)
 
-        if args.bootloader is not None:
-            args.bootloader = args.bootloader.copy_to(tmpdir)
+        if bootloader is not None:
+            bootloader = bootloader.copy_to(tmpdir)
         else:
-            args.bootloader = tmpdir / "bootloader.bin"
-            args.bootloader.write_bytes(bytes(512))
+            bootloader = tmpdir / "bootloader.bin"
+            bootloader.write_bytes(bytes(512))
 
-        if args.image_format == "fit":
-            if args.name is None:
-                args.name = "unavailable"
-            if args.compress is None:
-                args.compress = "none"
-
+        if image_format == "fit":
             fit_image = tmpdir / "depthcharge.fit"
+
+            if name is None:
+                name = "unavailable"
+            if compress is None:
+                compress = "none"
+
             mkimage_cmd = [
                 "mkimage",
                 "-f", "auto",
-                "-A", args.arch.mkimage,
+                "-A", arch.mkimage,
                 "-O", "linux",
-                "-C", args.compress,
-                "-n", args.name,
-                "-d", args.vmlinuz,
+                "-C", compress,
+                "-n", name,
+                "-d", vmlinuz,
             ]
-            if args.initramfs:
-                mkimage_cmd.extend(["-i", args.initramfs])
-            for dtb in args.dtbs:
-                mkimage_cmd.extend(["-b", dtb])
+            if initramfs:
+                mkimage_cmd += ["-i", initramfs]
+            for dtb in dtbs:
+                mkimage_cmd += ["-b", dtb]
             mkimage_cmd.append(fit_image)
-            proc = subprocess.run(mkimage_cmd)
-            proc.check_returncode()
-            vboot_vmlinuz = fit_image
+            subprocess.run(mkimage_cmd, check=True)
 
-        elif args.image_format == "zimage":
-            vboot_vmlinuz = args.vmlinuz
+            vmlinuz_vboot = fit_image
+
+        elif image_format == "zimage":
+            vmlinuz_vboot = vmlinuz
 
         vboot_cmd = [
             "futility", "vbutil_kernel",
             "--version", "1",
-            "--arch", args.arch.vboot,
-            "--vmlinuz", vboot_vmlinuz,
+            "--arch", arch.vboot,
+            "--vmlinuz", vmlinuz_vboot,
             "--config", cmdline_file,
-            "--bootloader", args.bootloader,
-            "--keyblock", args.keyblock,
-            "--signprivate", args.signprivate,
-            "--pack", args.output
+            "--bootloader", bootloader,
+            "--keyblock", keyblock,
+            "--signprivate", signprivate,
+            "--pack", output
         ]
-        proc = subprocess.run(vboot_cmd)
-        proc.check_returncode()
+        subprocess.run(vboot_cmd, check=True)
 
         verify_cmd = [
             "futility", "vbutil_kernel",
-            "--verify", args.output,
+            "--verify", output,
         ]
 
 
@@ -256,58 +319,6 @@ def argument_parser():
     )
 
     return parser
-
-
-def set_default_args(args):
-    if args.arch is None:
-        args.arch = Architecture(platform.machine())
-
-    if args.image_format is None:
-        if args.arch in Architecture.arm:
-            args.image_format = "fit"
-        elif args.arch in Architecture.x86:
-            args.image_format = "zimage"
-
-    if args.cmdline is None:
-        args.cmdline = ["--"]
-
-    if args.devkeys is None:
-        if args.keyblock is None and args.signprivate is None:
-            args.devkeys = Path("/usr/share/vboot/devkeys")
-        elif args.keyblock is not None and args.signprivate is not None:
-            if args.keyblock.parent == args.signprivate.parent:
-                args.devkeys = args.signprivate.parent
-        elif args.signprivate is not None:
-            args.devkeys = args.signprivate.parent
-        elif args.keyblock is not None:
-            args.devkeys = args.keyblock.parent
-
-    if args.keyblock is None:
-        args.keyblock = args.devkeys / "kernel.keyblock"
-    if args.signprivate is None:
-        args.signprivate = args.devkeys / "kernel_data_key.vbprivk"
-
-
-def check_args(args):
-    # vmlinuz is required but might be missing due to argparse hacks
-    if args.vmlinuz is None:
-        msg = "the following arguments are required: vmlinuz"
-        raise ValueError(msg)
-
-    # Check incompatible combinations
-    if args.image_format == "zimage":
-        if args.compress is not None:
-            msg = "--compress is incompatible with zimage format."
-            raise ValueError(msg)
-        if args.name is not None:
-            msg = "--name is incompatible with zimage format."
-            raise ValueError(msg)
-        if args.initramfs is not None:
-            msg = "Initramfs image not supported with zimage format."
-            raise ValueError(msg)
-        if args.dtbs:
-            msg = "Device tree files not supported with zimage format."
-            raise ValueError(msg)
 
 
 if __name__ == "__main__":
