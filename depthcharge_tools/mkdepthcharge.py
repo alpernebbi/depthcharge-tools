@@ -161,7 +161,6 @@ def parse_args(*argv):
         metavar="ARCH",
         action='store',
         choices=Architecture.all,
-        default=platform.machine(),
         type=Architecture,
         help="Architecture to build for.",
     )
@@ -240,6 +239,9 @@ def parse_args(*argv):
     args = parser.parse_args(*argv[1:])
 
     # Set defaults
+    if args.arch is None:
+        args.arch = Architecture(platform.machine())
+
     if args.image_format is None:
         if args.arch in Architecture.arm:
             args.image_format = "fit"
