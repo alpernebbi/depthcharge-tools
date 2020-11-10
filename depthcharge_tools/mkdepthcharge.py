@@ -18,7 +18,19 @@ logger = logging.getLogger(__name__)
 
 
 def main(*argv):
-    args = parse_args(*argv)
+    prog, *argv = argv
+    parser = argument_parser()
+    args = parser.parse_args(*argv)
+
+    try:
+        mkdepthcharge(args)
+    except ValueError as err:
+        parser.error(err.args[0])
+
+
+def mkdepthcharge(args):
+    set_default_args(args)
+    check_args(args)
 
     with TemporaryDirectory(prefix="mkdepthcharge-") as tmpdir:
         args.vmlinuz = args.vmlinuz.copy_to(tmpdir)
@@ -95,7 +107,7 @@ def main(*argv):
         ]
 
 
-def parse_args(*argv):
+def argument_parser():
     parser = argparse.ArgumentParser(
         description="Build boot images for the ChromeOS bootloader.",
         usage="%(prog)s [options] -o FILE [--] vmlinuz [initramfs] [dtb ...]",
@@ -243,9 +255,10 @@ def parse_args(*argv):
         help="Private key (.vbprivk) to sign the image.",
     )
 
-    args = parser.parse_args(*argv[1:])
+    return parser
 
-    # Set defaults
+
+def set_default_args(args):
     if args.arch is None:
         args.arch = Architecture(platform.machine())
 
@@ -274,27 +287,27 @@ def parse_args(*argv):
     if args.signprivate is None:
         args.signprivate = args.devkeys / "kernel_data_key.vbprivk"
 
+
+def check_args(args):
     # vmlinuz is required but might be missing due to argparse hacks
     if args.vmlinuz is None:
         msg = "the following arguments are required: vmlinuz"
-        parser.error(msg)
+        raise ValueError(msg)
 
     # Check incompatible combinations
     if args.image_format == "zimage":
         if args.compress is not None:
             msg = "--compress is incompatible with zimage format."
-            parser.error(msg)
+            raise ValueError(msg)
         if args.name is not None:
             msg = "--name is incompatible with zimage format."
-            parser.error(msg)
+            raise ValueError(msg)
         if args.initramfs is not None:
             msg = "Initramfs image not supported with zimage format."
-            parser.error(msg)
+            raise ValueError(msg)
         if args.dtbs:
             msg = "Device tree files not supported with zimage format."
-            parser.error(msg)
-
-    return args
+            raise ValueError(msg)
 
 
 if __name__ == "__main__":
