@@ -48,6 +48,11 @@ def main(*argv):
             args.bootloader.write_bytes(bytes(512))
 
         if args.image_format == "fit":
+            if args.name is None:
+                args.name = "unavailable"
+            if args.compress is None:
+                args.compress = "none"
+
             fit_image = tmpdir / "depthcharge.fit"
             mkimage_cmd = [
                 "mkimage",
@@ -173,6 +178,9 @@ def parse_args(*argv):
         help="Kernel image format to use.",
     )
 
+    def compress_type(s):
+        return None if s == "none" else s
+
     fit_options = parser.add_argument_group(
         title="FIT image options",
     )
@@ -180,15 +188,14 @@ def parse_args(*argv):
         "-C", "--compress",
         metavar="TYPE",
         action='store',
-        choices=["none", "lz4", "lzma"],
-        default="none",
+        choices=[None, "lz4", "lzma"],
+        type=compress_type,
         help="Compress vmlinuz file before packing.",
     )
     fit_options.add_argument(
         "-n", "--name",
         metavar="DESC",
         action='store',
-        default="unavailable",
         help="Description of vmlinuz to put in the FIT.",
     )
 
@@ -273,10 +280,10 @@ def parse_args(*argv):
 
     # Check incompatible combinations
     if args.image_format == "zimage":
-        if args.compress != "none":
+        if args.compress is not None:
             msg = "--compress is incompatible with zimage format."
             parser.error(msg)
-        if args.name != "unavailable":
+        if args.name is not None:
             msg = "--name is incompatible with zimage format."
             parser.error(msg)
         if args.initramfs is not None:
