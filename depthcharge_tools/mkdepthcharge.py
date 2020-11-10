@@ -18,9 +18,11 @@ logger = logging.getLogger(__name__)
 
 
 def main(*argv):
-    prog, *argv = argv
+    if len(argv) == 0:
+        prog, *argv = sys.argv
+
     parser = argument_parser()
-    args = parser.parse_args(*argv)
+    args = parser.parse_args(argv)
     kwargs = vars(args)
 
     try:
@@ -322,4 +324,4 @@ def argument_parser():
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main()
