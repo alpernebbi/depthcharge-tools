@@ -276,7 +276,8 @@ def parse_args(*argv):
 
     # vmlinuz is required but might be missing due to argparse hacks
     if args.vmlinuz is None:
-        parser.error("the following arguments are required: vmlinuz")
+        msg = "the following arguments are required: vmlinuz"
+        parser.error(msg)
 
     # Check incompatible combinations
     if args.image_format == "zimage":
