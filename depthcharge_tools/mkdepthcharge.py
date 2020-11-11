@@ -124,6 +124,10 @@ def mkdepthcharge(
             vmlinuz = vmlinuz.lz4()
         elif compress == "lzma":
             vmlinuz = vmlinuz.lzma()
+        elif compress != "none":
+            fmt = "Compression type '{}' is not supported."
+            msg = fmt.format(compress)
+            raise ValueError(msg)
 
         cmdline_file = tmpdir / "kernel.args"
         cmdline_file.write_text(cmdline)
