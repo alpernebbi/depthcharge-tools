@@ -58,10 +58,19 @@ def mkdepthcharge(
         elif arch in Architecture.x86:
             image_format = "zimage"
 
+    if compress is None:
+        compress = "none"
+
+    if name is None:
+        name = "unavailable"
+
     if cmdline is None:
         cmdline = "--"
     elif isinstance(cmdline, list):
         cmdline = " ".join(cmdline)
+
+    if (kern_guid is None) or kern_guid:
+        cmdline = " ".join(("kern_guid=%U", cmdline))
 
     if devkeys is None:
         if keyblock is None and signprivate is None:
@@ -101,21 +110,18 @@ def mkdepthcharge(
 
     with TemporaryDirectory(prefix="mkdepthcharge-") as tmpdir:
         vmlinuz = vmlinuz.copy_to(tmpdir)
-        if vmlinuz.is_gzip():
-            vmlinuz = vmlinuz.gunzip()
-
         if initramfs is not None:
             initramfs = initramfs.copy_to(tmpdir)
-
         dtbs = [dtb.copy_to(tmpdir) for dtb in dtbs]
+
+        if vmlinuz.is_gzip():
+            vmlinuz = vmlinuz.gunzip()
 
         if compress == "lz4":
             vmlinuz = vmlinuz.lz4()
         elif compress == "lzma":
             vmlinuz = vmlinuz.lzma()
 
-        if (kern_guid is None) or kern_guid:
-            cmdline = " ".join(("kern_guid=%U", cmdline))
         cmdline_file = tmpdir / "kernel.args"
         cmdline_file.write_text(cmdline)
 
@@ -127,11 +133,6 @@ def mkdepthcharge(
 
         if image_format == "fit":
             fit_image = tmpdir / "depthcharge.fit"
-
-            if name is None:
-                name = "unavailable"
-            if compress is None:
-                compress = "none"
 
             mkimage_cmd = [
                 "mkimage",
