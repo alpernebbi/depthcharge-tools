@@ -88,9 +88,12 @@ def mkdepthcharge(
     if signprivate is None:
         signprivate = devkeys / "kernel_data_key.vbprivk"
 
-    # vmlinuz is required but might be missing due to argparse hacks
+    # Check for required arguments
     if vmlinuz is None:
-        msg = "the following arguments are required: vmlinuz"
+        msg = "vmlinuz argument is required."
+        raise ValueError(msg)
+    if output is None:
+        msg = "output argument is required."
         raise ValueError(msg)
 
     # Check incompatible combinations
