@@ -48,30 +48,43 @@ def mkdepthcharge(
     verbose=None,
     vmlinuz=None,
 ):
-    # Set defaults
+    # We should be able to make an image for other architectures, but
+    # the default should be this machine's.
     if arch is None:
         arch = Architecture(platform.machine())
 
+    # Default to architecture-specific formats.
     if image_format is None:
         if arch in Architecture.arm:
             image_format = "fit"
         elif arch in Architecture.x86:
             image_format = "zimage"
 
+    # We need to pass "-C none" to mkimage or it assumes gzip.
     if compress is None:
         compress = "none"
 
+    # If we don't pass "-n <name>" to mkimage, the kernel image
+    # description is left blank. But other images get "unavailable" as
+    # their description, so it looks better if we match that.
     if name is None:
         name = "unavailable"
 
+    # If the cmdline is empty vbutil_kernel returns an error. We can use
+    # "--" instead of putting a newline or a space into the cmdline.
     if cmdline is None:
         cmdline = "--"
     elif isinstance(cmdline, list):
         cmdline = " ".join(cmdline)
 
+    # The firmware replaces any '%U' in the kernel cmdline with the
+    # PARTUUID of the partition it booted from. Chrome OS uses
+    # kern_guid=%U in their cmdline and it's useful information, so
+    # prepend it to cmdline.
     if (kern_guid is None) or kern_guid:
         cmdline = " ".join(("kern_guid=%U", cmdline))
 
+    # Default to distro-specific paths for necessary files.
     if devkeys is None:
         if keyblock is None and signprivate is None:
             devkeys = Path("/usr/share/vboot/devkeys")
@@ -112,14 +125,21 @@ def mkdepthcharge(
             raise ValueError(msg)
 
     with TemporaryDirectory(prefix="mkdepthcharge-") as tmpdir:
+        # mkimage can't open files when they are read-only for some
+        # reason. Copy them into a temp dir in fear of modifying the
+        # originals. We can add write permissions after we copy the
+        # files to temp.
         vmlinuz = vmlinuz.copy_to(tmpdir)
         if initramfs is not None:
             initramfs = initramfs.copy_to(tmpdir)
         dtbs = [dtb.copy_to(tmpdir) for dtb in dtbs]
 
+        # Debian packs the arm64 kernel uncompressed, but the bindeb-pkg
+        # kernel target packs it as gzip.
         if vmlinuz.is_gzip():
             vmlinuz = vmlinuz.gunzip()
 
+        # Depthcharge on arm64 with FIT supports these two compressions.
         if compress == "lz4":
             vmlinuz = vmlinuz.lz4()
         elif compress == "lzma":
@@ -129,9 +149,12 @@ def mkdepthcharge(
             msg = fmt.format(compress)
             raise ValueError(msg)
 
+        # vbutil_kernel --config argument wants cmdline as a file.
         cmdline_file = tmpdir / "kernel.args"
         cmdline_file.write_text(cmdline)
 
+        # vbutil_kernel --bootloader argument is mandatory, but it's
+        # contents don't matter at least on arm systems.
         if bootloader is not None:
             bootloader = bootloader.copy_to(tmpdir)
         else:
