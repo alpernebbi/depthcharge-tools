@@ -127,12 +127,18 @@ def mkdepthcharge(
     with TemporaryDirectory(prefix="mkdepthcharge-") as tmpdir:
         # mkimage can't open files when they are read-only for some
         # reason. Copy them into a temp dir in fear of modifying the
-        # originals. We can add write permissions after we copy the
-        # files to temp.
+        # originals.
         vmlinuz = vmlinuz.copy_to(tmpdir)
         if initramfs is not None:
             initramfs = initramfs.copy_to(tmpdir)
         dtbs = [dtb.copy_to(tmpdir) for dtb in dtbs]
+
+        # We can add write permissions after we copy the files to temp.
+        vmlinuz.chmod(0o755)
+        if initramfs is not None:
+            initramfs.chmod(0o755)
+        for dtb in dtbs:
+            dtb.chmod(0o755)
 
         # Debian packs the arm64 kernel uncompressed, but the bindeb-pkg
         # kernel target packs it as gzip.
