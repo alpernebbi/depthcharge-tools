@@ -179,6 +179,7 @@ def mkdepthcharge(
             "futility", "vbutil_kernel",
             "--verify", output,
         ]
+        subprocess.run(verify_cmd, check=True)
 
 
 def argument_parser():
