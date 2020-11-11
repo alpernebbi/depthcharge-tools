@@ -59,7 +59,9 @@ def mkdepthcharge(
             image_format = "zimage"
 
     if cmdline is None:
-        cmdline = ["--"]
+        cmdline = "--"
+    elif isinstance(cmdline, list):
+        cmdline = " ".join(cmdline)
 
     if devkeys is None:
         if keyblock is None and signprivate is None:
@@ -112,9 +114,8 @@ def mkdepthcharge(
         elif compress == "lzma":
             vmlinuz = vmlinuz.lzma()
 
-        if kern_guid:
-            cmdline.insert(0, "kern_guid=%U")
-        cmdline = " ".join(cmdline)
+        if (kern_guid is None) or kern_guid:
+            cmdline = " ".join(("kern_guid=%U", cmdline))
         cmdline_file = tmpdir / "kernel.args"
         cmdline_file.write_text(cmdline)
 
