@@ -48,10 +48,28 @@ def mkdepthcharge(
     verbose=None,
     vmlinuz=None,
 ):
+    # Use helper class for input files
+    if vmlinuz is not None:
+        vmlinuz = Path(vmlinuz)
+    if initramfs is not None:
+        initramfs = Path(initramfs)
+    if dtbs is not None:
+        dtbs = [Path(dtb) for dtb in dtbs]
+    if bootloader is not None:
+        bootloader = Path(bootloader)
+    if devkeys is not None:
+        devkeys = Path(devkeys)
+    if signprivate is not None:
+        signprivate = Path(devkeys)
+    if keyblock is not None:
+        keyblock = Path(keyblock)
+
     # We should be able to make an image for other architectures, but
     # the default should be this machine's.
     if arch is None:
         arch = Architecture(platform.machine())
+    else:
+        arch = Architecture(arch)
 
     # Default to architecture-specific formats.
     if image_format is None:
