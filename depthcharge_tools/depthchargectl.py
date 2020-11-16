@@ -154,6 +154,15 @@ def argument_parser():
         usage="%(prog)s [options] [disk ...]",
         add_help=False,
     )
+    partitions_arguments = partitions.add_argument_group(
+        title="Positional arguments",
+    )
+    partitions_arguments.add_argument(
+        "disks",
+        metavar="disk",
+        nargs="*",
+        help="Disks to check for ChromeOS kernel partitions.",
+    )
     partitions_options = partitions.add_argument_group(
         title="Options",
     )
