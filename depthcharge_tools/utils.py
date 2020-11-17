@@ -88,6 +88,16 @@ def bootable_disks():
     return find_disks(boot, root)
 
 
+def depthcharge_partitions(*args):
+    proc = subprocess.run(
+        ["sudo", "cgpt", "find", "-t", "kernel", *args],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        encoding="utf-8",
+    )
+    return set(Path(dev) for dev in proc.stdout.splitlines())
+
+
 class Path(pathlib.PosixPath):
     def copy_to(self, dest):
         dest = shutil.copy2(self, dest)
