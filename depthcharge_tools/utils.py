@@ -1,7 +1,9 @@
 #! /usr/bin/env python3
 
 import argparse
+import collections
 import logging
+import os
 import pathlib
 import shutil
 import subprocess
@@ -10,6 +12,54 @@ import tempfile
 from depthcharge_tools import __version__
 
 logger = logging.getLogger(__name__)
+
+
+def find_disks(*args):
+    block = Path("/sys/class/block")
+    devs = [block / dev for dev in os.listdir(block)]
+    parents = collections.defaultdict(set)
+
+    for dev in devs:
+        dm_name_path = dev / "dm" / "name"
+        if dm_name_path.is_file():
+            dm_name = dm_name_path.read_text()
+            parents[dm_name].add(dev.name)
+
+        slaves_path = dev / "slaves"
+        if slaves_path.is_dir():
+            for slave in os.listdir(slaves_path):
+                parents[slave].add(dev.name)
+
+        parent = dev.resolve().parent
+        if parent.parent.name == "block":
+            parents[dev.name].add(parent.name)
+        elif parent.name == "block":
+            parents[dev.name].add(dev.name)
+
+    if len(args) == 0:
+        args = parents.keys()
+
+    disks = {
+        Path(arg).resolve().name
+        for arg in args
+        if arg is not None
+    }
+
+    phys_disks = set()
+    while disks:
+        phys_disks.update(*(parents.get(d, set()) for d in disks))
+        if disks == phys_disks:
+            break
+        disks = phys_disks
+        phys_disks = set()
+
+    phys_disk_devs = []
+    for disk in phys_disks:
+        dev = Path("/dev") / disk
+        if dev.is_block_device():
+            phys_disk_devs.append(dev)
+
+    return phys_disk_devs
 
 
 class Path(pathlib.PosixPath):
