@@ -6,6 +6,10 @@ import sys
 import types
 
 from depthcharge_tools import __version__
+from depthcharge_tools.utils import (
+    find_disks,
+    bootable_disks,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +30,23 @@ def main(*argv):
         parser.error(err.args[0])
 
 
+def _partitions(
+    disks=None,
+    noheadings=True,
+    all_disks=False,
+    output=None,
+    verbose=None,
+):
+    if all_disks:
+        disks = find_disks()
+    elif disks:
+        disks = find_disks(*disks)
+    else:
+        disks = bootable_disks()
+
+    print(disks)
+
+
 def _print(**kwargs):
     print(kwargs)
 
@@ -33,7 +54,7 @@ def _print(**kwargs):
 depthchargectl = types.SimpleNamespace(
     build=_print,
     check=_print,
-    partitions=_print,
+    partitions=_partitions,
     rm=_print,
     set_good=_print,
     target=_print,
