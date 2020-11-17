@@ -62,6 +62,32 @@ def find_disks(*args):
     return phys_disk_devs
 
 
+def findmnt(mntpoint, fstab=False):
+    args = ["findmnt"]
+    if fstab:
+        args += ["--fstab"]
+    args = [*args, "-M", mntpoint, "--evaluate", "-n", "-o", "SOURCE"]
+    proc = subprocess.run(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        encoding="utf-8",
+    )
+
+    if proc.returncode == 0:
+        return proc.stdout.splitlines()[0]
+
+
+def bootable_disks():
+    boot = findmnt("/boot", fstab=True)
+    if boot is None:
+        boot = findmnt("/boot")
+    root = findmnt("/", fstab=True)
+    if root is None:
+        root = findmnt("/")
+    return find_disks(boot, root)
+
+
 class Path(pathlib.PosixPath):
     def copy_to(self, dest):
         dest = shutil.copy2(self, dest)
