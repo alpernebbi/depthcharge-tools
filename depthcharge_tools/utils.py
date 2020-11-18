@@ -5,6 +5,7 @@ import collections
 import logging
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import tempfile
@@ -95,7 +96,23 @@ def depthcharge_partitions(*args):
         stderr=subprocess.DEVNULL,
         encoding="utf-8",
     )
-    return set(Path(dev) for dev in proc.stdout.splitlines())
+    parts = sorted(Partition(dev) for dev in proc.stdout.splitlines())
+
+    output = []
+    for part in parts:
+        proc = subprocess.run(
+            ["sudo", "cgpt", "show", "-A", "-i", part.partno, part.disk],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            encoding="utf-8",
+        )
+        attr = int(proc.stdout, 16)
+        priority = (attr) & 0xF
+        tries = (attr >> 4) & 0xF
+        successful = (attr >> 8) & 0x1
+        output += [(part, priority, tries, successful)]
+
+    return output
 
 
 class Path(pathlib.PosixPath):
@@ -160,6 +177,42 @@ class Path(pathlib.PosixPath):
         return any((
             "dtb" in self.name,
         ))
+
+
+class Partition(Path):
+    @classmethod
+    def from_parts(cls, disk, partno):
+        if partno is None:
+            return cls(disk)
+        if disk[-1].isnumeric():
+            return cls("{}p{}".format(disk, partno))
+        else:
+            return cls("{}{}".format(disk, partno))
+
+    @property
+    def disk(self):
+        return self.parent / self.devparts[0]
+
+    @property
+    def partno(self):
+        return self.devparts[1]
+
+    @property
+    def devparts(self):
+        for s in ("boot", "rpmb", "dm-", "loop", "mtd"):
+            if s in self.name:
+                return (self.name, None)
+
+        if re.findall("mmcblk[0-9]$", self.name):
+            return (self.name, None)
+        elif re.findall("nvme[0-9]n[0-9]$", self.name):
+            return (self.name, None)
+        elif re.findall("[0-9]p[0-9]", self.name):
+            return tuple(self.name.rsplit("p", 1))
+        elif re.findall("[0-9]$", self.name):
+            return re.match("(.*[^0-9])([0-9]+)$", self.name).groups()
+        else:
+            return (self.name, None)
 
 
 class Architecture(str):
