@@ -39,13 +39,16 @@ def _partitions(
     verbose=None,
 ):
     if all_disks:
-        disks = find_disks()
+        phys_disks = find_disks()
     elif disks:
-        disks = find_disks(*disks)
+        phys_disks = find_disks(*disks)
     else:
-        disks = bootable_disks()
+        phys_disks = bootable_disks()
 
-    for tup in depthcharge_partitions(*disks):
+    if disks and not phys_disks:
+        phys_disks = disks
+
+    for tup in depthcharge_partitions(*phys_disks):
         print(tup)
 
 
