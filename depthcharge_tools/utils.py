@@ -7,10 +7,16 @@ import os
 import pathlib
 import re
 import shutil
-import subprocess
 import tempfile
 
 from depthcharge_tools import __version__
+from depthcharge_tools.process import (
+    gzip,
+    lz4,
+    lzma,
+    cgpt,
+    findmnt,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -63,49 +69,30 @@ def find_disks(*args):
     return phys_disk_devs
 
 
-def findmnt(mntpoint, fstab=False):
-    args = ["findmnt"]
-    if fstab:
-        args += ["--fstab"]
-    args = [*args, "-M", mntpoint, "--evaluate", "-n", "-o", "SOURCE"]
-    proc = subprocess.run(
-        args,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        encoding="utf-8",
-    )
-
-    if proc.returncode == 0:
-        return proc.stdout.splitlines()[0]
-
-
 def bootable_disks():
-    boot = findmnt("/boot", fstab=True)
+    def findmnt_(mntpoint, fstab=False):
+        proc = findmnt.find(mntpoint, fstab=fstab)
+        if proc.returncode == 0:
+            return proc.stdout.splitlines()[0]
+
+    boot = findmnt_("/boot", fstab=True)
     if boot is None:
-        boot = findmnt("/boot")
-    root = findmnt("/", fstab=True)
+        boot = findmnt_("/boot")
+
+    root = findmnt_("/", fstab=True)
     if root is None:
-        root = findmnt("/")
+        root = findmnt_("/")
+
     return find_disks(boot, root)
 
 
 def depthcharge_partitions(*args):
-    proc = subprocess.run(
-        ["sudo", "cgpt", "find", "-t", "kernel", *args],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        encoding="utf-8",
-    )
-    parts = sorted(Partition(dev) for dev in proc.stdout.splitlines())
+    proc = cgpt("find", "-t", "kernel", *args)
+    parts = [Partition(dev) for dev in proc.stdout.splitlines()]
 
     output = []
     for part in parts:
-        proc = subprocess.run(
-            ["sudo", "cgpt", "show", "-A", "-i", part.partno, part.disk],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            encoding="utf-8",
-        )
+        proc = cgpt("show", "-A", "-i", part.partno, part.disk)
         attr = int(proc.stdout, 16)
         priority = (attr) & 0xF
         tries = (attr >> 4) & 0xF
@@ -121,7 +108,7 @@ class Path(pathlib.PosixPath):
         return Path(dest)
 
     def is_gzip(self):
-        proc = subprocess.run(["gzip", "-t", self])
+        proc = gzip.test(self)
         return proc.returncode == 0
 
     def gunzip(self, dest=None):
@@ -130,31 +117,19 @@ class Path(pathlib.PosixPath):
                 dest = self.parent / self.name[:-3]
             else:
                 dest = self.parent / (self.name + ".gunzip")
-
-        with self.open() as s:
-            with dest.open('w') as d:
-                proc = subprocess.run(["gzip", "-d"], stdin=s, stdout=d)
-        proc.check_returncode()
+        gzip.decompress(self, dest)
         return Path(dest)
 
     def lz4(self, dest=None):
         if dest is None:
             dest = self.parent / (self.name + ".lz4")
-
-        with self.open() as s:
-            with dest.open('w') as d:
-                proc = subprocess.run(["lz4", "-z", "-9"], stdin=s, stdout=d)
-        proc.check_returncode()
+        lz4.compress(self, dest)
         return Path(dest)
 
     def lzma(self, dest=None):
         if dest is None:
             dest = self.parent / (self.name + ".lzma")
-
-        with self.open() as s:
-            with dest.open('w') as d:
-                proc = subprocess.run(["lzma", "-z"], stdin=s, stdout=d)
-        proc.check_returncode()
+        lzma.compress(self, dest)
         return Path(dest)
 
     def is_vmlinuz(self):

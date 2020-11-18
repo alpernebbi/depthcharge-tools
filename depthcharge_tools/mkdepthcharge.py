@@ -3,10 +3,13 @@
 import argparse
 import logging
 import platform
-import subprocess
 import sys
 
 from depthcharge_tools import __version__
+from depthcharge_tools.process import (
+    mkimage,
+    vbutil_kernel,
+)
 from depthcharge_tools.utils import (
     Architecture,
     Path,
@@ -188,29 +191,32 @@ def mkdepthcharge(
         if image_format == "fit":
             fit_image = tmpdir / "depthcharge.fit"
 
-            mkimage_cmd = [
-                "mkimage",
+            initramfs_args = []
+            if initramfs is not None:
+                initramfs_args += ["-i", initramfs]
+
+            dtb_args = []
+            for dtb in dtbs:
+                dtb_args += ["-b", dtb]
+
+            mkimage(
                 "-f", "auto",
                 "-A", arch.mkimage,
                 "-O", "linux",
                 "-C", compress,
                 "-n", name,
+                *initramfs_args,
+                *dtb_args,
                 "-d", vmlinuz,
-            ]
-            if initramfs:
-                mkimage_cmd += ["-i", initramfs]
-            for dtb in dtbs:
-                mkimage_cmd += ["-b", dtb]
-            mkimage_cmd.append(fit_image)
-            subprocess.run(mkimage_cmd, check=True)
+                fit_image,
+            )
 
             vmlinuz_vboot = fit_image
 
         elif image_format == "zimage":
             vmlinuz_vboot = vmlinuz
 
-        vboot_cmd = [
-            "futility", "vbutil_kernel",
+        vbutil_kernel(
             "--version", "1",
             "--arch", arch.vboot,
             "--vmlinuz", vmlinuz_vboot,
@@ -218,15 +224,10 @@ def mkdepthcharge(
             "--bootloader", bootloader,
             "--keyblock", keyblock,
             "--signprivate", signprivate,
-            "--pack", output
-        ]
-        subprocess.run(vboot_cmd, check=True)
+            "--pack", output,
+        )
 
-        verify_cmd = [
-            "futility", "vbutil_kernel",
-            "--verify", output,
-        ]
-        subprocess.run(verify_cmd, check=True)
+        vbutil_kernel("--verify", output)
 
 
 def argument_parser():
