@@ -92,7 +92,7 @@ def depthcharge_partitions(*args):
 
     output = []
     for part in parts:
-        proc = cgpt("show", "-A", "-i", part.partno, part.disk)
+        proc = cgpt("show", "-A", "-i", str(part.partno), part.disk)
         attr = int(proc.stdout, 16)
         priority = (attr) & 0xF
         tries = (attr >> 4) & 0xF
@@ -154,40 +154,76 @@ class Path(pathlib.PosixPath):
         ))
 
 
-class Partition(Path):
-    @classmethod
-    def from_parts(cls, disk, partno):
+class Disk(Path):
+    def partition(self, partno):
+        return Partition(self, partno)
+
+
+class Partition(object):
+    def __init__(self, path, partno=None):
+        dev = Path(path).resolve()
+        if not dev.exists():
+            fmt = "Disk or partition '{}' does not exist."
+            msg = fmt.format(str(dev))
+            raise ValueError(msg)
+        elif dev.parent != Path("/dev"):
+            fmt = "Disk or partition '{}' is not in /dev."
+            msg = fmt.format(str(dev))
+            raise ValueError(msg)
+
+        partdev = None
         if partno is None:
-            return cls(disk)
-        if disk[-1].isnumeric():
-            return cls("{}p{}".format(disk, partno))
+            match = re.fullmatch("(.*[0-9])p([0-9]+)", dev.name)
+            if match is None:
+                match = re.fullmatch("(.*[^0-9])([0-9]+)", dev.name)
+            if match:
+                partdev = dev
+                diskname, partno = match.groups()
+                partno = int(partno)
+                dev = partdev.parent / diskname
+
+        disk = Disk(dev)
+        if not disk.exists():
+            fmt = "Disk '{}' does not exist."
+            msg = fmt.format(str(disk))
+            raise ValueError(msg)
+        if not (disk.is_block_device() or disk.is_file()):
+            fmt = "Disk '{}' is not a file or block device."
+            msg = fmt.format(str(disk))
+            raise ValueError(msg)
+
+        if partno is None:
+            fmt = "Partition number not given for disk '{}'."
+            msg = fmt.format(str(disk))
+            raise ValueError(msg)
+        elif not (isinstance(partno, int) and partno > 0):
+            fmt = "Partition number '{}' must be a positive integer."
+            msg = fmt.format(partno)
+            raise ValueError(msg)
+
+        self.disk = disk
+        self.partno = partno
+        self._partdev = partdev
+
+    @property
+    def partdev(self):
+        if self._partdev is not None:
+            return self._partdev
+
+        fmt = "{}p{}" if self.disk.name[-1].isnumeric() else "{}{}"
+        name = fmt.format(self.disk.name, self.partno)
+        partdev = self.disk.parent / name
+
+        if partdev.exists():
+            return partdev
+
+    def __repr__(self):
+        partdev = self.partdev
+        if partdev is not None:
+            return "Partition('{}')".format(partdev)
         else:
-            return cls("{}{}".format(disk, partno))
+            return "Partition('{}', {})".format(self.disk, self.partno)
 
-    @property
-    def disk(self):
-        return self.parent / self.devparts[0]
-
-    @property
-    def partno(self):
-        return self.devparts[1]
-
-    @property
-    def devparts(self):
-        for s in ("boot", "rpmb", "dm-", "loop", "mtd"):
-            if s in self.name:
-                return (self.name, None)
-
-        if re.findall("mmcblk[0-9]$", self.name):
-            return (self.name, None)
-        elif re.findall("nvme[0-9]n[0-9]$", self.name):
-            return (self.name, None)
-        elif re.findall("[0-9]p[0-9]", self.name):
-            return tuple(self.name.rsplit("p", 1))
-        elif re.findall("[0-9]$", self.name):
-            return re.match("(.*[^0-9])([0-9]+)$", self.name).groups()
-        else:
-            return (self.name, None)
 
 
 class Architecture(str):
