@@ -21,71 +21,6 @@ from depthcharge_tools.process import (
 logger = logging.getLogger(__name__)
 
 
-def find_disks(*args):
-    block = Path("/sys/class/block")
-    devs = [block / dev for dev in os.listdir(block)]
-    parents = collections.defaultdict(set)
-
-    for dev in devs:
-        dm_name_path = dev / "dm" / "name"
-        if dm_name_path.is_file():
-            dm_name = dm_name_path.read_text()
-            parents[dm_name].add(dev.name)
-
-        slaves_path = dev / "slaves"
-        if slaves_path.is_dir():
-            for slave in os.listdir(slaves_path):
-                parents[slave].add(dev.name)
-
-        parent = dev.resolve().parent
-        if parent.parent.name == "block":
-            parents[dev.name].add(parent.name)
-        elif parent.name == "block":
-            parents[dev.name].add(dev.name)
-
-    if len(args) == 0:
-        args = parents.keys()
-
-    disks = {
-        Path(arg).resolve().name
-        for arg in args
-        if arg is not None
-    }
-
-    phys_disks = set()
-    while disks:
-        phys_disks.update(*(parents.get(d, set()) for d in disks))
-        if disks == phys_disks:
-            break
-        disks = phys_disks
-        phys_disks = set()
-
-    phys_disk_devs = []
-    for disk in phys_disks:
-        dev = Path("/dev") / disk
-        if dev.is_block_device():
-            phys_disk_devs.append(dev)
-
-    return phys_disk_devs
-
-
-def bootable_disks():
-    def findmnt_(mntpoint, fstab=False):
-        proc = findmnt.find(mntpoint, fstab=fstab)
-        if proc.returncode == 0:
-            return proc.stdout.splitlines()[0]
-
-    boot = findmnt_("/boot", fstab=True)
-    if boot is None:
-        boot = findmnt_("/boot")
-
-    root = findmnt_("/", fstab=True)
-    if root is None:
-        root = findmnt_("/")
-
-    return find_disks(boot, root)
-
-
 def depthcharge_partitions(*args):
     proc = cgpt("find", "-t", "kernel", *args)
     parts = [Partition(dev) for dev in proc.stdout.splitlines()]
@@ -155,6 +90,95 @@ class Path(pathlib.PosixPath):
 
 
 class Disk(Path):
+    _parents = collections.defaultdict(set)
+    _physicals = set()
+
+    def __init__(self, path):
+        path = Path(path).resolve()
+        if path.parent != Path("/dev"):
+            fmt = "Disk '{}' not in /dev."
+            msg = fmt.format(path)
+            raise ValueError(msg)
+
+        super().__init__()
+
+    @classmethod
+    def scan_devices(cls, force=False):
+        if cls._parents and cls._physicals and not force:
+            return
+
+        for dev in Path("/sys/class/block").iterdir():
+            dm_name_path = dev / "dm" / "name"
+            if dm_name_path.is_file():
+                dm_name = dm_name_path.read_text()
+                for name in dm_name.splitlines():
+                    cls._parents[name].add(dev.name)
+
+            slaves_path = dev / "slaves"
+            if slaves_path.is_dir():
+                for slave in slaves_path.iterdir():
+                    cls._parents[dev.name].add(slave.name)
+
+            parent = dev.resolve().parent
+            if parent.parent.name == "block":
+                cls._parents[dev.name].add(parent.name)
+
+            if parent.name == "block" and parent.parent.name != "virtual":
+                cls._physicals.add(dev.name)
+
+    @classmethod
+    def from_mountpoint(cls, mnt):
+        proc = findmnt.find(mnt, fstab=True)
+        if proc.returncode == 0:
+            return cls(proc.stdout.strip())
+
+        proc = findmnt.find(mnt, fstab=False)
+        if proc.returncode == 0:
+            return cls(proc.stdout.strip())
+
+    @classmethod
+    def bootable_physical_disks(cls):
+        boot = cls.from_mountpoint("/boot")
+        root = cls.from_mountpoint("/")
+
+        disks = []
+        if boot is not None:
+            disks += boot.physical_parents()
+        if root is not None:
+            for disk in root.physical_parents():
+                if disk not in disks:
+                    disks.append(disk)
+
+        return disks
+
+    @classmethod
+    def all_physical_disks(cls):
+        disks = []
+        for p in sorted(cls._physicals):
+            dev = Disk(Path("/dev") / p)
+            if dev.is_block_device():
+                disks.append(dev)
+
+        return disks
+
+    def is_physical_disk(self):
+        return self.name in self._physicals
+
+    def physical_parents(self):
+        parents = set(self._parents[self.resolve().name])
+        while parents - self._physicals:
+            for p in parents - self._physicals:
+                parents.remove(p)
+                parents.update(self._parents.get(p, set()))
+
+        parent_devs = []
+        for p in sorted(parents):
+            dev = Disk(Path("/dev") / p)
+            if dev.is_block_device():
+                parent_devs.append(dev)
+
+        return parent_devs
+
     def partition(self, partno):
         return Partition(self, partno)
 

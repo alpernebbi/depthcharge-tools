@@ -7,8 +7,7 @@ import types
 
 from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
-    find_disks,
-    bootable_disks,
+    Disk,
     depthcharge_partitions,
 )
 
@@ -38,12 +37,19 @@ def _partitions(
     output=None,
     verbose=None,
 ):
+    Disk.scan_devices()
+
     if all_disks:
-        phys_disks = find_disks()
+        phys_disks = Disk.all_physical_disks()
     elif disks:
-        phys_disks = find_disks(*disks)
+        disks = [Disk(disk) for disk in disks]
+        phys_disks = []
+        for disk in disks:
+            for phys_disk in disk.physical_parents():
+                if phys_disk not in phys_disks:
+                    phys_disks.append(phys_disk)
     else:
-        phys_disks = bootable_disks()
+        phys_disks = Disk.bootable_physical_disks()
 
     if disks and not phys_disks:
         phys_disks = disks
