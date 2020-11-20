@@ -8,6 +8,10 @@ import types
 from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     Disk,
+    Partition,
+    BlockDevice,
+    DiskDevice,
+    PartitionDevice,
     depthcharge_partitions,
 )
 
@@ -37,22 +41,18 @@ def _partitions(
     output=None,
     verbose=None,
 ):
-    Disk.scan_devices()
-
     if all_disks:
-        phys_disks = Disk.all_physical_disks()
+        phys_disks = BlockDevice.all_physical_disks()
     elif disks:
-        disks = [Disk(disk) for disk in disks]
         phys_disks = []
         for disk in disks:
-            for phys_disk in disk.physical_parents():
-                if phys_disk not in phys_disks:
-                    phys_disks.append(phys_disk)
+            try:
+                for d in BlockDevice(disk).physical_parents():
+                    phys_disks.append(d)
+            except:
+                phys_disks.append(Disk(disk))
     else:
-        phys_disks = Disk.bootable_physical_disks()
-
-    if disks and not phys_disks:
-        phys_disks = disks
+        phys_disks = BlockDevice.bootable_physical_disks()
 
     for tup in depthcharge_partitions(*phys_disks):
         print(tup)
