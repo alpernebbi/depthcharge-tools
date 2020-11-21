@@ -38,8 +38,6 @@ def _partitions(
     output=None,
     verbose=None,
 ):
-    Disk.scan_devices()
-
     if all_disks:
         phys_disks = Disk.all_physical_disks()
 

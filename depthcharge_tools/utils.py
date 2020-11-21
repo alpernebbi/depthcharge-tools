@@ -90,10 +90,68 @@ class Path(pathlib.PosixPath):
             "dtb" in self.name,
         ))
 
+    def iterdir(self, maybe=True):
+        if maybe == False or self.is_dir():
+            return super().iterdir()
+        else:
+            return []
+
+    def read_lines(self, maybe=True):
+        if maybe == False or self.is_file():
+            return self.read_text().splitlines()
+        else:
+            return []
+
+
+
+class SysDevTree(collections.defaultdict):
+    def __init__(self, sys=None, dev=None):
+        super().__init__(set)
+
+        sys = Path(sys or "/sys")
+        dev = Path(dev or "/dev")
+
+        for sysdir in (sys / "class" / "block").iterdir():
+            for device in (sysdir / "dm" / "name").read_lines():
+                self.add(dev / "mapper" / device, dev / sysdir.name)
+
+            for device in (sysdir / "slaves").iterdir():
+                self.add(dev / sysdir.name, dev / device.name)
+
+            parent = sysdir.resolve().parent
+            if parent.parent.name == "block":
+                self.add(dev / sysdir.name, dev / parent.name)
+
+        self.sys = sys
+        self.dev = dev
+
+    def add(self, child, parent):
+        if child.exists() and parent.exists():
+            if child != parent:
+                self[child].add(parent)
+
+    def leaves(self, *children):
+        ls = set()
+
+        if not children:
+            ls.update(*self.values())
+            ls.difference_update(self.keys())
+            return ls
+
+        children = [Path(c) for c in children]
+        while children:
+            c = children.pop(0)
+            if c in self:
+                for p in self[c]:
+                    children.append(p)
+            else:
+                ls.add(c)
+
+        return ls
+
 
 class Disk:
-    _parents = collections.defaultdict(set)
-    _physicals = set()
+    tree = SysDevTree()
 
     def __init__(self, path):
         path = Path(path).resolve()
@@ -104,30 +162,6 @@ class Disk:
             raise ValueError(msg)
 
         self.path = path
-
-    @classmethod
-    def scan_devices(cls, force=False):
-        if cls._parents and cls._physicals and not force:
-            return
-
-        for dev in Path("/sys/class/block").iterdir():
-            dm_name_path = dev / "dm" / "name"
-            if dm_name_path.is_file():
-                dm_name = dm_name_path.read_text()
-                for name in dm_name.splitlines():
-                    cls._parents[name].add(dev.name)
-
-            slaves_path = dev / "slaves"
-            if slaves_path.is_dir():
-                for slave in slaves_path.iterdir():
-                    cls._parents[dev.name].add(slave.name)
-
-            parent = dev.resolve().parent
-            if parent.parent.name == "block":
-                cls._parents[dev.name].add(parent.name)
-
-            if parent.name == "block" and parent.parent.name != "virtual":
-                cls._physicals.add(dev.name)
 
     @classmethod
     def from_mountpoint(cls, mnt):
@@ -157,7 +191,7 @@ class Disk:
     @classmethod
     def all_physical_disks(cls):
         disks = []
-        for p in sorted(cls._physicals):
+        for p in sorted(cls.tree.leaves()):
             try:
                 dev = Disk(Path("/dev") / p)
                 disks.append(dev)
@@ -167,17 +201,8 @@ class Disk:
         return disks
 
     def physical_parents(self):
-        if self.path.name in self._physicals:
-            return [self]
-
-        parents = set(self._parents[self.path.name])
-        while parents - self._physicals:
-            for p in parents - self._physicals:
-                parents.remove(p)
-                parents.update(self._parents.get(p, set()))
-
         parent_devs = []
-        for p in sorted(parents):
+        for p in sorted(self.tree.leaves(self.path)):
             try:
                 dev = Disk(Path("/dev") / p)
                 parent_devs.append(dev)
@@ -187,7 +212,7 @@ class Disk:
         return parent_devs
 
     def is_physical_disk(self):
-        return self.name in self._physicals
+        return self.path not in self.tree
 
     def partition(self, partno):
         return Partition(self, partno)
