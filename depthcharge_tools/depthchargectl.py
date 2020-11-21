@@ -41,16 +41,30 @@ def _partitions(
     output=None,
     verbose=None,
 ):
+    BlockDevice.scan_devices()
+
     if all_disks:
         phys_disks = BlockDevice.all_physical_disks()
+
     elif disks:
         phys_disks = []
         for disk in disks:
             try:
-                for d in BlockDevice(disk).physical_parents():
+                for d in PartitionDevice(disk).physical_parents():
                     phys_disks.append(d)
+                continue
             except:
-                phys_disks.append(Disk(disk))
+                pass
+
+            try:
+                for d in DiskDevice(disk).physical_parents():
+                    phys_disks.append(d)
+                continue
+            except:
+                pass
+
+            phys_disks.append(Disk(disk))
+
     else:
         phys_disks = BlockDevice.bootable_physical_disks()
 
