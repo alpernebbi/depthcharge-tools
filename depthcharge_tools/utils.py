@@ -91,21 +91,16 @@ class Path(pathlib.PosixPath):
         ))
 
 
-class BlockDevice:
+class Disk:
     _parents = collections.defaultdict(set)
     _physicals = set()
 
     def __init__(self, path):
         path = Path(path).resolve()
 
-        if Path("/dev") not in path.parents:
-            fmt = "Path '{}' is not in /dev."
-            msg = fmt.format(dev)
-            raise ValueError(msg)
-
-        if not path.is_block_device():
-            fmt = "Path '{}' is not a block device."
-            msg = fmt.format(path)
+        if not (path.is_file() or path.is_block_device()):
+            fmt = "Disk '{}' is not a file or block device."
+            msg = fmt.format(str(path))
             raise ValueError(msg)
 
         self.path = path
@@ -164,7 +159,7 @@ class BlockDevice:
         disks = []
         for p in sorted(cls._physicals):
             try:
-                dev = DiskDevice(Path("/dev") / p)
+                dev = Disk(Path("/dev") / p)
                 disks.append(dev)
             except:
                 pass
@@ -184,7 +179,7 @@ class BlockDevice:
         parent_devs = []
         for p in sorted(parents):
             try:
-                dev = DiskDevice(Path("/dev") / p)
+                dev = Disk(Path("/dev") / p)
                 parent_devs.append(dev)
             except:
                 pass
@@ -194,24 +189,8 @@ class BlockDevice:
     def is_physical_disk(self):
         return self.name in self._physicals
 
-    def __repr__(self):
-        cls = self.__class__.__name__
-        return "{}('{}')".format(cls, self.path)
-
-
-class Disk:
-    def __init__(self, path):
-        path = Path(path).resolve()
-
-        if not (path.is_file() or path.is_block_device()):
-            fmt = "Disk '{}' is not a file or block device."
-            msg = fmt.format(str(path))
-            raise ValueError(msg)
-
-        self.path = path
-
     def partition(self, partno):
-        return Partition(self.path, partno)
+        return Partition(self, partno)
 
     def __repr__(self):
         cls = self.__class__.__name__
@@ -219,8 +198,31 @@ class Disk:
 
 
 class Partition:
-    def __init__(self, path, partno):
-        disk = path if isinstance(path, Disk) else Disk(path)
+    def __init__(self, path, partno=None):
+        if isinstance(path, Disk):
+            disk = path
+            path = None
+        else:
+            disk = None
+            path = Path(path).resolve()
+
+        if (
+            disk is None
+            and partno is None
+            and path.parent == Path("/dev")
+            and path.is_block_device()
+        ):
+            match = (
+                re.fullmatch("(.*[0-9])p([0-9]+)", path.name)
+                or re.fullmatch("(.*[^0-9])([0-9]+)", path.name)
+            )
+            if match:
+                diskname, partno = match.groups()
+                partno = int(partno)
+                disk = Disk(path.with_name(diskname))
+
+        if disk is None:
+            disk = Disk(path)
 
         if partno is None:
             fmt = "Partition number not given for disk '{}'."
@@ -232,52 +234,24 @@ class Partition:
             msg = fmt.format(partno)
             raise ValueError(msg)
 
+        elif path is None:
+            fmt = "{}p{}" if disk.path.name[-1].isnumeric() else "{}{}"
+            name = fmt.format(disk.path.name, partno)
+            path = disk.path.with_name(name)
+
+        if not (path.is_file() or path.is_block_device()):
+            path = None
+
         self.disk = disk
+        self.path = path
         self.partno = partno
 
     def __repr__(self):
         cls = self.__class__.__name__
-        return "{}('{}', {})".format(cls, self.disk.path, self.partno)
-
-
-class DiskDevice(BlockDevice, Disk):
-    def __init__(self, path, partno=None):
-        path = Path(path).resolve()
-
-        BlockDevice.__init__(self, path)
-        Disk.__init__(self, path)
-
-        self.path = path
-
-    def partition(self, partno):
-        return PartitionDevice(self.path, partno)
-
-
-class PartitionDevice(BlockDevice, Partition):
-    def __init__(self, path, partno=None):
-        path = Path(path).resolve()
-
-        if partno is not None:
-            disk = path
-            fmt = "{}p{}" if disk.name[-1].isnumeric() else "{}{}"
-            name = fmt.format(disk.name, partno)
-            path = disk.parent / name
-
+        if self.path is not None:
+            return "{}('{}')".format(cls, self.path)
         else:
-            match = re.fullmatch("(.*[0-9])p([0-9]+)", path.name)
-            if match is None:
-                match = re.fullmatch("(.*[^0-9])([0-9]+)", path.name)
-            if match:
-                diskname, partno = match.groups()
-                partno = int(partno)
-                disk = path.parent / diskname
-
-        BlockDevice.__init__(self, path)
-        Partition.__init__(self, disk, partno)
-
-        self.path = path
-        self.disk = DiskDevice(disk)
-        self.partno = partno
+            return "{}('{}', {})".format(cls, self.disk.path, self.partno)
 
 
 class Architecture(str):

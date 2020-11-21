@@ -9,9 +9,6 @@ from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     Disk,
     Partition,
-    BlockDevice,
-    DiskDevice,
-    PartitionDevice,
     depthcharge_partitions,
 )
 
@@ -41,23 +38,23 @@ def _partitions(
     output=None,
     verbose=None,
 ):
-    BlockDevice.scan_devices()
+    Disk.scan_devices()
 
     if all_disks:
-        phys_disks = BlockDevice.all_physical_disks()
+        phys_disks = Disk.all_physical_disks()
 
     elif disks:
         phys_disks = []
         for disk in disks:
             try:
-                for d in PartitionDevice(disk).physical_parents():
+                for d in Partition(disk).disk.physical_parents():
                     phys_disks.append(d)
                 continue
             except:
                 pass
 
             try:
-                for d in DiskDevice(disk).physical_parents():
+                for d in Disk(disk).physical_parents():
                     phys_disks.append(d)
                 continue
             except:
@@ -66,7 +63,7 @@ def _partitions(
             phys_disks.append(Disk(disk))
 
     else:
-        phys_disks = BlockDevice.bootable_physical_disks()
+        phys_disks = Disk.bootable_physical_disks()
 
     for tup in depthcharge_partitions(*phys_disks):
         print(tup)
