@@ -21,24 +21,6 @@ from depthcharge_tools.process import (
 logger = logging.getLogger(__name__)
 
 
-def depthcharge_partitions(*disks):
-    parts = []
-    for disk in disks:
-        proc = cgpt("find", "-n", "-t", "kernel", disk.path)
-        parts += [disk.partition(int(n)) for n in proc.stdout.splitlines()]
-
-    output = []
-    for part in parts:
-        proc = cgpt("show", "-A", "-i", str(part.partno), part.disk.path)
-        attr = int(proc.stdout, 16)
-        priority = (attr) & 0xF
-        tries = (attr >> 4) & 0xF
-        successful = (attr >> 8) & 0x1
-        output += [(part, priority, tries, successful)]
-
-    return output
-
-
 class Path(pathlib.PosixPath):
     def copy_to(self, dest):
         dest = shutil.copy2(self, dest)
@@ -202,6 +184,13 @@ class Disk:
     def partition(self, partno):
         return Partition(self, partno)
 
+    def partitions(self):
+        proc = cgpt("find", "-n", "-t", "kernel", self.path)
+        return [
+            Partition(self, int(n))
+            for n in proc.stdout.splitlines()
+        ]
+
     def __repr__(self):
         cls = self.__class__.__name__
         return "{}('{}')".format(cls, self.path)
@@ -255,6 +244,14 @@ class Partition:
         self.disk = disk
         self.path = path
         self.partno = partno
+
+    def attributes(self):
+        proc = cgpt("show", "-A", "-i", str(self.partno), self.disk.path)
+        attr = int(proc.stdout, 16)
+        priority = (attr) & 0xF
+        tries = (attr >> 4) & 0xF
+        successful = (attr >> 8) & 0x1
+        return (priority, tries, successful)
 
     def __repr__(self):
         cls = self.__class__.__name__

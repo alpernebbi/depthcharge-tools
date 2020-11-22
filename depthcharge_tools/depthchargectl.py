@@ -8,7 +8,6 @@ import types
 from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     Disk,
-    depthcharge_partitions,
 )
 
 logger = logging.getLogger(__name__)
@@ -44,8 +43,9 @@ def _partitions(
     else:
         disks = Disk.disks(bootable=True)
 
-    for tup in depthcharge_partitions(*disks):
-        print(tup)
+    for disk in disks:
+        for part in disk.partitions():
+            print(part, part.attributes())
 
 
 def _print(**kwargs):
