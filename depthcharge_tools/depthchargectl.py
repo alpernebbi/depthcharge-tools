@@ -8,7 +8,6 @@ import types
 from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     Disk,
-    Partition,
     depthcharge_partitions,
 )
 
@@ -39,31 +38,13 @@ def _partitions(
     verbose=None,
 ):
     if all_disks:
-        phys_disks = Disk.all_physical_disks()
-
+        disks = Disk.disks()
     elif disks:
-        phys_disks = []
-        for disk in disks:
-            try:
-                for d in Partition(disk).disk.physical_parents():
-                    phys_disks.append(d)
-                continue
-            except:
-                pass
-
-            try:
-                for d in Disk(disk).physical_parents():
-                    phys_disks.append(d)
-                continue
-            except:
-                pass
-
-            phys_disks.append(Disk(disk))
-
+        disks = Disk.disks(*disks)
     else:
-        phys_disks = Disk.bootable_physical_disks()
+        disks = Disk.disks(bootable=True)
 
-    for tup in depthcharge_partitions(*phys_disks):
+    for tup in depthcharge_partitions(*disks):
         print(tup)
 
 

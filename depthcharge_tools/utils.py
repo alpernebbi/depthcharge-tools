@@ -138,7 +138,7 @@ class SysDevTree(collections.defaultdict):
             ls.difference_update(self.keys())
             return ls
 
-        children = [Path(c) for c in children]
+        children = [Path(c).resolve() for c in children]
         while children:
             c = children.pop(0)
             if c in self:
@@ -163,56 +163,41 @@ class Disk:
 
         self.path = path
 
-    @classmethod
-    def from_mountpoint(cls, mnt):
-        proc = findmnt.find(mnt, fstab=True)
-        if proc.returncode == 0:
-            return cls(proc.stdout.strip())
+    def disks(*args, bootable=False):
+        if bootable:
+            boot = Disk.by_mount("/boot")
+            if boot is not None:
+                args = (*args, boot)
 
-        proc = findmnt.find(mnt, fstab=False)
-        if proc.returncode == 0:
-            return cls(proc.stdout.strip())
+            root = Disk.by_mount("/")
+            if root is not None:
+                args = (*args, root)
 
-    @classmethod
-    def bootable_physical_disks(cls):
-        boot = cls.from_mountpoint("/boot")
-        root = cls.from_mountpoint("/")
+        children = []
+        for arg in args:
+            if isinstance(arg, Partition):
+                children.append(arg.path or arg.disk.path)
+            elif isinstance(arg, Disk):
+                children.append(arg.path)
+            elif arg is not None:
+                children.append(arg)
 
         disks = []
-        if boot is not None:
-            disks += boot.physical_parents()
-        if root is not None:
-            for disk in root.physical_parents():
-                if disk not in disks:
-                    disks.append(disk)
-
-        return disks
-
-    @classmethod
-    def all_physical_disks(cls):
-        disks = []
-        for p in sorted(cls.tree.leaves()):
+        for path in sorted(Disk.tree.leaves(*children)):
             try:
-                dev = Disk(Path("/dev") / p)
+                dev = Disk(Path("/dev") / path)
                 disks.append(dev)
-            except:
+            except ValueError:
                 pass
 
         return disks
 
-    def physical_parents(self):
-        parent_devs = []
-        for p in sorted(self.tree.leaves(self.path)):
-            try:
-                dev = Disk(Path("/dev") / p)
-                parent_devs.append(dev)
-            except:
-                pass
-
-        return parent_devs
-
-    def is_physical_disk(self):
-        return self.path not in self.tree
+    @classmethod
+    def by_mount(cls, mnt):
+        for fstab in (True, False):
+            proc = findmnt.find(mnt, fstab=True)
+            if proc.returncode == 0:
+                return Path(proc.stdout.strip())
 
     def partition(self, partno):
         return Partition(self, partno)
