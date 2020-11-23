@@ -16,6 +16,7 @@ from depthcharge_tools.process import (
     lzma,
     cgpt,
     findmnt,
+    blockdev,
 )
 
 logger = logging.getLogger(__name__)
@@ -252,6 +253,15 @@ class Partition:
         tries = (attr >> 4) & 0xF
         successful = (attr >> 8) & 0x1
         return (priority, tries, successful)
+
+    @property
+    def size(self):
+        if self.path is not None:
+            proc = blockdev("--getsize64", self.path)
+            return int(proc.stdout)
+
+        proc = cgpt("show", "-s", "-i", str(self.partno), self.disk.path)
+        return int(proc.stdout) * 512
 
     def __repr__(self):
         cls = self.__class__.__name__

@@ -116,6 +116,11 @@ class FindmntRunner(ProcessRunner):
         return self(*args, check=False)
 
 
+class BlockdevRunner(ProcessRunner):
+    def __init__(self):
+        super().__init__("sudo", "blockdev")
+
+
 gzip = GzipRunner()
 lz4 = Lz4Runner()
 lzma = LzmaRunner()
@@ -123,3 +128,4 @@ mkimage = MkimageRunner()
 vbutil_kernel = VbutilKernelRunner()
 cgpt = CgptRunner()
 findmnt = FindmntRunner()
+blockdev = BlockdevRunner()
