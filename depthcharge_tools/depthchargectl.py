@@ -31,7 +31,7 @@ def main(*argv):
 
 def _partitions(
     disks=None,
-    noheadings=True,
+    headings=True,
     all_disks=False,
     output=None,
     verbose=None,
@@ -190,7 +190,8 @@ def argument_parser():
     )
     partitions_options.add_argument(
         "-n", "--noheadings",
-        action='store_true',
+        dest="headings",
+        action='store_false',
         help="Don't print column headings.",
     )
     partitions_options.add_argument(
