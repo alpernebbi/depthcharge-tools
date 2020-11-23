@@ -43,9 +43,39 @@ def _partitions(
     else:
         disks = Disk.disks(bootable=True)
 
+    if output is None:
+        output = "S,P,T,PATH"
+    elif isinstance(output, list):
+        output = ",".join(output)
+
+    formats = {
+        "SUCCESSFUL": "{0.successful}",
+        "PRIORITY": "{0.priority}",
+        "TRIES": "{0.tries}",
+        "S": "{0.successful}",
+        "P": "{0.priority}",
+        "T": "{0.tries}",
+        "PATH": "{0.path}",
+        "DISKPATH": "{0.disk.path}",
+        "PARTNO": "{0.partno}",
+        "SIZE": "{0.size}",
+    }
+
+    columns = output.split(',')
+    rows = []
+
+    if headings:
+        rows.append(list(columns))
+
     for disk in disks:
         for part in disk.partitions():
-            print(part, part.attributes())
+            row = [formats.get(c, "").format(part) for c in columns]
+            rows.append(row)
+
+    widths = [max(4, *map(len, col)) for col in zip(*rows)]
+    fmt = " ".join("{{:{w}}}".format(w=w) for w in widths)
+    for row in rows:
+        print(fmt.format(*row))
 
 
 def _print(**kwargs):
