@@ -246,13 +246,23 @@ class Partition:
         self.path = path
         self.partno = partno
 
-    def attributes(self):
+    @property
+    def attribute(self):
         proc = cgpt("show", "-A", "-i", str(self.partno), self.disk.path)
         attr = int(proc.stdout, 16)
-        priority = (attr) & 0xF
-        tries = (attr >> 4) & 0xF
-        successful = (attr >> 8) & 0x1
-        return (priority, tries, successful)
+        return attr
+
+    @property
+    def successful(self):
+        return (self.attribute >> 8) & 0x1
+
+    @property
+    def tries(self):
+        return (self.attribute >> 4) & 0xF
+
+    @property
+    def priority(self):
+        return (self.attribute >> 0) & 0xF
 
     @property
     def size(self):
