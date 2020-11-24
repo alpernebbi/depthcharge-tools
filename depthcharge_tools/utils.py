@@ -137,7 +137,10 @@ class Disk:
     tree = SysDevTree()
 
     def __init__(self, path):
-        path = Path(path).resolve()
+        if isinstance(path, Disk):
+            path = path.path
+        else:
+            path = Path(path).resolve()
 
         if not (path.is_file() or path.is_block_device()):
             fmt = "Disk '{}' is not a file or block device."
@@ -181,6 +184,19 @@ class Disk:
             proc = findmnt.find(mnt, fstab=True)
             if proc.returncode == 0:
                 return Path(proc.stdout.strip())
+
+    @classmethod
+    def by_partuuid(cls, partuuid):
+        proc = cgpt("find", "-1", "-u", partuuid)
+        return Path(proc.stdout.strip())
+
+    @classmethod
+    def by_kern_guid(cls):
+        kern_guid = re.findall(
+            "kern_guid=[\"']?([0-9a-fA-F-]+)[\"']?",
+            Path("/proc/cmdline").read_text(),
+        )
+        return cls.by_partuuid(kern_guid[0])
 
     def partition(self, partno):
         return Partition(self, partno)
