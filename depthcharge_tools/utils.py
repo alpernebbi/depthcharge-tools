@@ -101,9 +101,12 @@ class SysDevTree(collections.defaultdict):
             for device in (sysdir / "slaves").iterdir():
                 self.add(dev / sysdir.name, dev / device.name)
 
-            parent = sysdir.resolve().parent
-            if parent.parent.name == "block":
-                self.add(dev / sysdir.name, dev / parent.name)
+            for device in (sysdir / "holders").iterdir():
+                self.add(dev / device.name, dev / sysdir.name)
+
+            for device in sysdir.iterdir():
+                if device.name.startswith(sysdir.name):
+                    self.add(dev / device.name, dev / sysdir.name)
 
         self.sys = sys
         self.dev = dev
