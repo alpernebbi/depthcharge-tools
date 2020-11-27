@@ -12,16 +12,18 @@ def _set_good(*args, **kwargs):
     print(args, kwargs)
 
 
-def argument_parser(commands, add_global_options):
-    set_good = commands.add_parser(
+def argument_parser(parent, add_global_options):
+    parser = parent.add_parser(
         "set-good",
         description="Set the current partition as successfully booted.",
         help="Set the current partition as successfully booted.",
         usage="%(prog)s [options]",
         add_help=False,
     )
-    set_good_options = set_good.add_argument_group(
+
+    options = parser.add_argument_group(
         title="Options",
     )
-    add_global_options(set_good_options)
+    add_global_options(options)
 
+    return parser

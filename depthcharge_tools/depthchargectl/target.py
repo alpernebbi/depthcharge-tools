@@ -46,40 +46,44 @@ def _target(
         print(good_partitions[0])
 
 
-def argument_parser(commands, add_global_options):
-    target = commands.add_parser(
+def argument_parser(parent, add_global_options):
+    parser = parent.add_parser(
         "target",
         description="Choose or validate a ChromeOS Kernel partition to use.",
         help="Choose or validate a ChromeOS Kernel partition to use.",
         usage="%(prog)s [options] [partition | disk ...]",
         add_help=False,
     )
-    target_arguments = target.add_argument_group(
+
+    arguments = parser.add_argument_group(
         title="Positional arguments",
     )
-    target_arguments.add_argument(
+    arguments.add_argument(
         "partition",
         nargs=argparse.SUPPRESS,
         default=argparse.SUPPRESS,
         help="Chrome OS kernel partition to validate.",
     )
-    target_arguments.add_argument(
+    arguments.add_argument(
         "disks",
         nargs="*",
         help="Disks to search for an appropriate Chrome OS kernel partition.",
     )
-    target_options = target.add_argument_group(
+
+    options = parser.add_argument_group(
         title="Options",
     )
-    target_options.add_argument(
+    options.add_argument(
         "-s", "--min-size",
         metavar="BYTES",
         action='store',
         help="Target partitions larger than this size.",
     )
-    target_options.add_argument(
+    options.add_argument(
         "--allow-current",
         action='store_true',
         help="Allow targeting the currently booted partition.",
     )
-    add_global_options(target_options)
+    add_global_options(options)
+
+    return parser

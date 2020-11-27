@@ -59,41 +59,45 @@ def _partitions(
         print(fmt.format(*row))
 
 
-def argument_parser(commands, add_global_options):
-    partitions = commands.add_parser(
+def argument_parser(parent, add_global_options):
+    parser = parent.add_parser(
         "partitions",
         description="List ChromeOS kernel partitions.",
         help="List ChromeOS kernel partitions.",
         usage="%(prog)s [options] [disk ...]",
         add_help=False,
     )
-    partitions_arguments = partitions.add_argument_group(
+
+    arguments = parser.add_argument_group(
         title="Positional arguments",
     )
-    partitions_arguments.add_argument(
+    arguments.add_argument(
         "disks",
         metavar="disk",
         nargs="*",
         help="Disks to check for ChromeOS kernel partitions.",
     )
-    partitions_options = partitions.add_argument_group(
+
+    options = parser.add_argument_group(
         title="Options",
     )
-    partitions_options.add_argument(
+    options.add_argument(
         "-n", "--noheadings",
         dest="headings",
         action='store_false',
         help="Don't print column headings.",
     )
-    partitions_options.add_argument(
+    options.add_argument(
         "-a", "--all-disks",
         action='store_true',
         help="List partitions on all disks.",
     )
-    partitions_options.add_argument(
+    options.add_argument(
         "-o", "--output",
         metavar="COLUMNS",
         action='append',
         help="Comma separated list of columns to output.",
     )
-    add_global_options(partitions_options)
+    add_global_options(options)
+
+    return parser

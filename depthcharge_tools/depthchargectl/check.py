@@ -16,24 +16,27 @@ def _check(*args, **kwargs):
     print(args, kwargs)
 
 
-def argument_parser(commands, add_global_options):
-    check = commands.add_parser(
+def argument_parser(parent, add_global_options):
+    parser = parent.add_parser(
         "check",
         description="Check if a depthcharge image can be booted.",
         help="Check if a depthcharge image can be booted.",
         usage="%(prog)s [options] image",
         add_help=False,
     )
-    check_arguments = check.add_argument_group(
+
+    arguments = parser.add_argument_group(
         title="Positional arguments",
     )
-    check_arguments.add_argument(
+    arguments.add_argument(
         "image",
         nargs="?",
         help="Depthcharge image to check validity of.",
     )
-    check_options = check.add_argument_group(
+
+    options = parser.add_argument_group(
         title="Options",
     )
-    add_global_options(check_options)
+    add_global_options(options)
 
+    return parser
