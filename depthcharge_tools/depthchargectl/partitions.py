@@ -16,7 +16,6 @@ def _partitions(
     headings=True,
     all_disks=False,
     output=None,
-    verbose=None,
 ):
     if all_disks:
         disks = Disk.disks()

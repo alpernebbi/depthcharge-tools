@@ -352,6 +352,25 @@ class TemporaryDirectory(tempfile.TemporaryDirectory):
         return Path(super().__enter__())
 
 
+class LoggingLevelAction(argparse.Action):
+    def __init__(self, option_strings, dest, level, nargs=None, **kwargs):
+        super().__init__(option_strings, dest, nargs=0, **kwargs)
+        self.level = level
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        logger = logging.getLogger()
+
+        if isinstance(self.level, str):
+            level = logger.getEffectiveLevel()
+            if self.level.startswith("-"):
+                logger.setLevel(level - int(self.level[1:]))
+            elif self.level.startswith("+"):
+                logger.setLevel(level + int(self.level[1:]))
+
+        else:
+            self.logger.setLevel(self.level)
+
+
 class MixedArgumentsAction(argparse.Action):
     def __init_subclass__(cls, *args, **kwargs):
         super().__init_subclass__(*args, **kwargs)

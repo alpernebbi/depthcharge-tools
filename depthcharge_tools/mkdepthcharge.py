@@ -14,6 +14,7 @@ from depthcharge_tools.utils import (
     Architecture,
     Path,
     TemporaryDirectory,
+    LoggingLevelAction,
     MixedArgumentsAction,
 )
 
@@ -48,7 +49,6 @@ def mkdepthcharge(
     name=None,
     output=None,
     signprivate=None,
-    verbose=None,
     vmlinuz=None,
 ):
     # Use helper class for input files
@@ -285,7 +285,9 @@ def argument_parser():
     )
     options.add_argument(
         "-v", "--verbose",
-        action='store_true',
+        dest=argparse.SUPPRESS,
+        action=LoggingLevelAction,
+        level="-10",
         help="Print more detailed output.",
     )
     options.add_argument(

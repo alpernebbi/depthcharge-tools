@@ -18,7 +18,6 @@ def _target(
     disks=None,
     min_size=None,
     allow_current=False,
-    verbose=False,
 ):
     if not disks:
         disks = Disk.disks(bootable=True)

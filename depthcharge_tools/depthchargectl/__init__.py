@@ -9,6 +9,7 @@ from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     Disk,
     Partition,
+    LoggingLevelAction,
 )
 from depthcharge_tools.depthchargectl import (
     build,
@@ -57,18 +58,6 @@ def argument_parser():
         add_help=False
     )
 
-    class VerboseAction(argparse.Action):
-        __subparsers = []
-
-        def __init__(self, option_strings, dest, subparser, nargs=None, **kwargs):
-            super().__init__(option_strings, dest, nargs=0, **kwargs)
-            self.__subparsers.append(subparser)
-
-        def __call__(self, parser, namespace, values, option_string=None):
-            namespace.verbose = True
-            for subparser in self.__subparsers:
-                subparser.set_defaults(verbose=True)
-
     def add_global_options(group):
         group.add_argument(
             "-h", "--help",
@@ -83,9 +72,9 @@ def argument_parser():
         )
         group.add_argument(
             "-v", "--verbose",
-            action=VerboseAction,
-            subparser=group,
-            default=False,
+            dest=argparse.SUPPRESS,
+            action=LoggingLevelAction,
+            level="-10",
             help="Print more detailed output.",
         )
 
