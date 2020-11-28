@@ -307,7 +307,7 @@ class Command:
         self._parent = parent
 
         if hasattr(parent, "_prog"):
-            self._prog = self._parent._prog
+            self._prog = "{} {}".format(self._parent._prog, self._name)
         else:
             self._prog = self._name
 
@@ -321,36 +321,34 @@ class Command:
                 title="Positional arguments",
             )
             self._init_arguments(self._arguments)
-        else:
-            self._arguments = None
 
-        if (
-            hasattr(self, "_init_options")
-            or hasattr(self, "_init_globals")
-            or hasattr(self._parent, "_init_globals")
-        ):
+        option_inits = []
+        cmd = self
+        if hasattr(self, "_init_options"):
+            option_inits += [self._init_options]
+        while cmd is not None:
+            if hasattr(cmd, "_init_globals"):
+                option_inits += [cmd._init_globals]
+            cmd = cmd._parent
+
+        if option_inits:
             self._options = self._parser.add_argument_group(
                 title="Options",
             )
-        else:
-            self._options = None
-
-        if hasattr(self, "_init_options"):
-            self._init_options(self._options)
-        if hasattr(self, "_init_globals"):
-            self._init_globals(self._options)
-        if hasattr(parent, "_init_globals"):
-            self._parent._init_globals(self._options)
+            for init in option_inits:
+                init(self._options)
 
         if hasattr(self, "_init_commands"):
             self._commands = self._parser.add_subparsers(
                 title="Supported commands",
-                dest="command",
                 prog=self._prog,
             )
             self._init_commands()
-        else:
-            self._commands = None
+
+        self._parser.set_defaults(_command=self)
+
+    def __call__(self, *args, **kwargs):
+        pass
 
     def _init_parser(self, *args, **kwargs):
         if self._parent is None:
@@ -373,13 +371,9 @@ class Command:
             prog, *argv = sys.argv
 
         args = self._parser.parse_args(argv)
+        command = args._command
         kwargs = vars(args)
-
-        if self._commands is None:
-            command = self
-        else:
-            command = getattr(self, args.command.replace("-", "_"))
-            del kwargs["command"]
+        del kwargs["_command"]
 
         try:
             command(**kwargs)

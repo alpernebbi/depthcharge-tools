@@ -37,6 +37,9 @@ class Depthchargectl(Command):
     def __init__(self, name="depthchargectl", parent=None):
         super().__init__(name, parent)
 
+    def __call__(self):
+        self.partitions()
+
     def _init_parser(self):
         return super()._init_parser(
             description="Manage Chrome OS kernel partitions.",
@@ -72,7 +75,6 @@ class Depthchargectl(Command):
         self.set_good = Depthchargectl.SetGood('set-good', self)
         self.target = Depthchargectl.Target('target', self)
         self.write = Depthchargectl.Write('write', self)
-        self._parser.set_defaults(command="partitions")
 
 
 depthchargectl = Depthchargectl()
