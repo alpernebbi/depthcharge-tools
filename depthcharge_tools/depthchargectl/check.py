@@ -7,6 +7,7 @@ from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     Disk,
     Partition,
+    Command,
 )
 
 logger = logging.getLogger(__name__)
@@ -16,27 +17,20 @@ def _check(*args, **kwargs):
     print(args, kwargs)
 
 
-def argument_parser(parent, add_global_options):
-    parser = parent.add_parser(
-        "check",
-        description="Check if a depthcharge image can be booted.",
-        help="Check if a depthcharge image can be booted.",
-        usage="%(prog)s [options] image",
-        add_help=False,
-    )
+class DepthchargectlCheck(Command):
+    def __init__(self, name="depthchargectl check", parent=None):
+        super().__init__(name, parent)
 
-    arguments = parser.add_argument_group(
-        title="Positional arguments",
-    )
-    arguments.add_argument(
-        "image",
-        nargs="?",
-        help="Depthcharge image to check validity of.",
-    )
+    def _init_parser(self):
+        return super()._init_parser(
+            description="Check if a depthcharge image can be booted.",
+            usage="%(prog)s [options] image",
+            add_help=False,
+        )
 
-    options = parser.add_argument_group(
-        title="Options",
-    )
-    add_global_options(options)
-
-    return parser
+    def _init_arguments(self, arguments):
+        arguments.add_argument(
+            "image",
+            nargs="?",
+            help="Depthcharge image to check validity of.",
+        )

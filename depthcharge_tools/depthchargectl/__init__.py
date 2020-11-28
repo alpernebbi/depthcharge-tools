@@ -9,6 +9,7 @@ from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     Disk,
     Partition,
+    Command,
     LoggingLevelAction,
 )
 from depthcharge_tools.depthchargectl import (
@@ -28,8 +29,9 @@ def main(*argv):
     if len(argv) == 0:
         prog, *argv = sys.argv
 
-    parser = argument_parser()
-    args = parser.parse_args(argv)
+    name = prog.split("/")[-1]
+    depthchargectl = Depthchargectl(name)
+    args = depthchargectl._parser.parse_args(argv)
     command = getattr(depthchargectl, args.command.replace("-", "_"))
     kwargs = vars(args)
     del kwargs["command"]
@@ -40,37 +42,38 @@ def main(*argv):
         parser.error(err.args[0])
 
 
-depthchargectl = types.SimpleNamespace(
-    build=build._build,
-    check=check._check,
-    partitions=partitions._partitions,
-    rm=rm._rm,
-    set_good=set_good._set_good,
-    target=target._target,
-    write=write._write,
-)
+class Depthchargectl(Command):
+    Build = build.DepthchargectlBuild
+    Check = check.DepthchargectlCheck
+    Partitions = partitions.DepthchargectlPartitions
+    Rm = rm.DepthchargectlRm
+    SetGood = set_good.DepthchargectlSetGood
+    Target = target.DepthchargectlTarget
+    Write = write.DepthchargectlWrite
 
+    def __init__(self, name="depthchargectl", parent=None):
+        super().__init__(name, parent)
 
-def argument_parser():
-    parser = argparse.ArgumentParser(
-        description="Manage Chrome OS kernel partitions.",
-        usage="%(prog)s [options] command ...",
-        add_help=False
-    )
+    def _init_parser(self):
+        return super()._init_parser(
+            description="Manage Chrome OS kernel partitions.",
+            usage="%(prog)s [options] command ...",
+            add_help=False,
+        )
 
-    def add_global_options(group):
-        group.add_argument(
+    def _init_globals(self, options):
+        options.add_argument(
             "-h", "--help",
             action='help',
             help="Show this help message.",
         )
-        group.add_argument(
+        options.add_argument(
             "--version",
             action='version',
             version="depthcharge-tools %(prog)s {}".format(__version__),
             help="Print program version.",
         )
-        group.add_argument(
+        options.add_argument(
             "-v", "--verbose",
             dest=argparse.SUPPRESS,
             action=LoggingLevelAction,
@@ -78,28 +81,17 @@ def argument_parser():
             help="Print more detailed output.",
         )
 
-    options = parser.add_argument_group(
-        title="Options",
-    )
-    add_global_options(options)
+    def _init_commands(self):
+        self.build = Depthchargectl.Build('build', self)
+        self.check = Depthchargectl.Check('check', self)
+        self.partitions = Depthchargectl.Partitions('partitions', self)
+        self.rm = Depthchargectl.Rm('rm', self)
+        self.set_good = Depthchargectl.SetGood('set-good', self)
+        self.target = Depthchargectl.Target('target', self)
+        self.write = Depthchargectl.Write('write', self)
+        self._parser.set_defaults(command="partitions")
 
-    commands = parser.add_subparsers(
-        title="Supported commands",
-        dest="command",
-        prog="depthchargectl",
-    )
 
-    build.argument_parser(commands, add_global_options)
-    check.argument_parser(commands, add_global_options)
-    partitions.argument_parser(commands, add_global_options)
-    rm.argument_parser(commands, add_global_options)
-    set_good.argument_parser(commands, add_global_options)
-    target.argument_parser(commands, add_global_options)
-    write.argument_parser(commands, add_global_options)
-
-    parser.set_defaults(command='partitions')
-
-    return parser
 
 
 if __name__ == "__main__":

@@ -300,6 +300,74 @@ class Partition:
             return "{}('{}', {})".format(cls, self.disk.path, self.partno)
 
 
+class Command:
+    def __init__(self, name=None, parent=None):
+        self._name = name
+        self._parent = parent
+
+        if hasattr(parent, "_prog"):
+            self._prog = self._parent._prog
+        else:
+            self._prog = self._name
+
+        self._parser = self._init_parser()
+        self._arguments = None
+        self._options = None
+        self._commands = None
+
+        if hasattr(self, "_init_arguments"):
+            self._arguments = self._parser.add_argument_group(
+                title="Positional arguments",
+            )
+            self._init_arguments(self._arguments)
+        else:
+            self._arguments = None
+
+        if (
+            hasattr(self, "_init_options")
+            or hasattr(self, "_init_globals")
+            or hasattr(self._parent, "_init_globals")
+        ):
+            self._options = self._parser.add_argument_group(
+                title="Options",
+            )
+        else:
+            self._options = None
+
+        if hasattr(self, "_init_options"):
+            self._init_options(self._options)
+        if hasattr(self, "_init_globals"):
+            self._init_globals(self._options)
+        if hasattr(parent, "_init_globals"):
+            self._parent._init_globals(self._options)
+
+        if hasattr(self, "_init_commands"):
+            self._commands = self._parser.add_subparsers(
+                title="Supported commands",
+                dest="command",
+                prog=self._prog,
+            )
+            self._init_commands()
+        else:
+            self._commands = None
+
+    def _init_parser(self, *args, **kwargs):
+        if self._parent is None:
+            return argparse.ArgumentParser(
+                *args,
+                prog=self._prog,
+                **kwargs,
+            )
+
+        else:
+            return self._parent._commands.add_parser(
+                self._name,
+                *args,
+                help=kwargs.get("description"),
+                **kwargs,
+            )
+
+
 class Architecture(str):
     arm_32 = ["arm"]
     arm_64 = ["arm64", "aarch64"]

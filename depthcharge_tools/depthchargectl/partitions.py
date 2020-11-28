@@ -6,6 +6,7 @@ import logging
 from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     Disk,
+    Command,
 )
 
 logger = logging.getLogger(__name__)
@@ -59,45 +60,40 @@ def _partitions(
         print(fmt.format(*row))
 
 
-def argument_parser(parent, add_global_options):
-    parser = parent.add_parser(
-        "partitions",
-        description="List ChromeOS kernel partitions.",
-        help="List ChromeOS kernel partitions.",
-        usage="%(prog)s [options] [disk ...]",
-        add_help=False,
-    )
+class DepthchargectlPartitions(Command):
+    def __init__(self, name="depthchargectl partitions", parent=None):
+        super().__init__(name, parent)
 
-    arguments = parser.add_argument_group(
-        title="Positional arguments",
-    )
-    arguments.add_argument(
-        "disks",
-        metavar="disk",
-        nargs="*",
-        help="Disks to check for ChromeOS kernel partitions.",
-    )
+    def _init_parser(self):
+        return super()._init_parser(
+            description="List ChromeOS kernel partitions.",
+            usage="%(prog)s [options] [disk ...]",
+            add_help=False,
+        )
 
-    options = parser.add_argument_group(
-        title="Options",
-    )
-    options.add_argument(
-        "-n", "--noheadings",
-        dest="headings",
-        action='store_false',
-        help="Don't print column headings.",
-    )
-    options.add_argument(
-        "-a", "--all-disks",
-        action='store_true',
-        help="List partitions on all disks.",
-    )
-    options.add_argument(
-        "-o", "--output",
-        metavar="COLUMNS",
-        action='append',
-        help="Comma separated list of columns to output.",
-    )
-    add_global_options(options)
+    def _init_arguments(self, arguments):
+        arguments.add_argument(
+            "disks",
+            metavar="disk",
+            nargs="*",
+            help="Disks to check for ChromeOS kernel partitions.",
+        )
 
-    return parser
+    def _init_options(self, options):
+        options.add_argument(
+            "-n", "--noheadings",
+            dest="headings",
+            action='store_false',
+            help="Don't print column headings.",
+        )
+        options.add_argument(
+            "-a", "--all-disks",
+            action='store_true',
+            help="List partitions on all disks.",
+        )
+        options.add_argument(
+            "-o", "--output",
+            metavar="COLUMNS",
+            action='append',
+            help="Comma separated list of columns to output.",
+        )

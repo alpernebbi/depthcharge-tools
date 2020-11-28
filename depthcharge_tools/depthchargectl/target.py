@@ -9,6 +9,7 @@ from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     Disk,
     Partition,
+    Command,
 )
 
 logger = logging.getLogger(__name__)
@@ -46,44 +47,39 @@ def _target(
         print(good_partitions[0])
 
 
-def argument_parser(parent, add_global_options):
-    parser = parent.add_parser(
-        "target",
-        description="Choose or validate a ChromeOS Kernel partition to use.",
-        help="Choose or validate a ChromeOS Kernel partition to use.",
-        usage="%(prog)s [options] [partition | disk ...]",
-        add_help=False,
-    )
+class DepthchargectlTarget(Command):
+    def __init__(self, name="depthchargectl target", parent=None):
+        super().__init__(name, parent)
 
-    arguments = parser.add_argument_group(
-        title="Positional arguments",
-    )
-    arguments.add_argument(
-        "partition",
-        nargs=argparse.SUPPRESS,
-        default=argparse.SUPPRESS,
-        help="Chrome OS kernel partition to validate.",
-    )
-    arguments.add_argument(
-        "disks",
-        nargs="*",
-        help="Disks to search for an appropriate Chrome OS kernel partition.",
-    )
+    def _init_parser(self):
+        return super()._init_parser(
+            description="Choose or validate a ChromeOS Kernel partition to use.",
+            usage="%(prog)s [options] [partition | disk ...]",
+            add_help=False,
+        )
 
-    options = parser.add_argument_group(
-        title="Options",
-    )
-    options.add_argument(
-        "-s", "--min-size",
-        metavar="BYTES",
-        action='store',
-        help="Target partitions larger than this size.",
-    )
-    options.add_argument(
-        "--allow-current",
-        action='store_true',
-        help="Allow targeting the currently booted partition.",
-    )
-    add_global_options(options)
+    def _init_arguments(self, arguments):
+        arguments.add_argument(
+            "partition",
+            nargs=argparse.SUPPRESS,
+            default=argparse.SUPPRESS,
+            help="Chrome OS kernel partition to validate.",
+        )
+        arguments.add_argument(
+            "disks",
+            nargs="*",
+            help="Disks to search for an appropriate Chrome OS kernel partition.",
+        )
 
-    return parser
+    def _init_options(self, options):
+        options.add_argument(
+            "-s", "--min-size",
+            metavar="BYTES",
+            action='store',
+            help="Target partitions larger than this size.",
+        )
+        options.add_argument(
+            "--allow-current",
+            action='store_true',
+            help="Allow targeting the currently booted partition.",
+        )
