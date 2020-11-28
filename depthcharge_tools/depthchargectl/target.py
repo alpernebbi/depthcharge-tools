@@ -15,41 +15,41 @@ from depthcharge_tools.utils import (
 logger = logging.getLogger(__name__)
 
 
-def _target(
-    disks=None,
-    min_size=None,
-    allow_current=False,
-):
-    if not disks:
-        disks = Disk.disks(bootable=True)
-
-    partitions = []
-    for d in disks:
-        try:
-            partitions.append(Partition(d))
-        except:
-            partitions.extend(Disk(d).partitions())
-
-    good_partitions = []
-    for p in partitions:
-        if min_size is not None and p.size < int(min_size):
-            continue
-        if not allow_current and p.path == Disk.by_kern_guid():
-            continue
-        good_partitions.append(p)
-
-    good_partitions = sorted(
-        good_partitions,
-        key=lambda p: (p.successful, p.priority, p.tries, p.size),
-    )
-
-    if good_partitions:
-        print(good_partitions[0])
-
-
 class DepthchargectlTarget(Command):
     def __init__(self, name="depthchargectl target", parent=None):
         super().__init__(name, parent)
+
+    def __call__(
+        self,
+        disks=None,
+        min_size=None,
+        allow_current=False,
+    ):
+        if not disks:
+            disks = Disk.disks(bootable=True)
+
+        partitions = []
+        for d in disks:
+            try:
+                partitions.append(Partition(d))
+            except:
+                partitions.extend(Disk(d).partitions())
+
+        good_partitions = []
+        for p in partitions:
+            if min_size is not None and p.size < int(min_size):
+                continue
+            if not allow_current and p.path == Disk.by_kern_guid():
+                continue
+            good_partitions.append(p)
+
+        good_partitions = sorted(
+            good_partitions,
+            key=lambda p: (p.successful, p.priority, p.tries, p.size),
+        )
+
+        if good_partitions:
+            print(good_partitions[0])
 
     def _init_parser(self):
         return super()._init_parser(

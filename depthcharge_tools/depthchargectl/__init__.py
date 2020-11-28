@@ -25,23 +25,6 @@ from depthcharge_tools.depthchargectl import (
 logger = logging.getLogger(__name__)
 
 
-def main(*argv):
-    if len(argv) == 0:
-        prog, *argv = sys.argv
-
-    name = prog.split("/")[-1]
-    depthchargectl = Depthchargectl(name)
-    args = depthchargectl._parser.parse_args(argv)
-    command = getattr(depthchargectl, args.command.replace("-", "_"))
-    kwargs = vars(args)
-    del kwargs["command"]
-
-    try:
-        command(**kwargs)
-    except ValueError as err:
-        parser.error(err.args[0])
-
-
 class Depthchargectl(Command):
     Build = build.DepthchargectlBuild
     Check = check.DepthchargectlCheck
@@ -92,7 +75,8 @@ class Depthchargectl(Command):
         self._parser.set_defaults(command="partitions")
 
 
+depthchargectl = Depthchargectl()
 
 
 if __name__ == "__main__":
-    main()
+    depthchargectl._main()

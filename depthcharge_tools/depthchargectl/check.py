@@ -13,13 +13,12 @@ from depthcharge_tools.utils import (
 logger = logging.getLogger(__name__)
 
 
-def _check(*args, **kwargs):
-    print(args, kwargs)
-
-
 class DepthchargectlCheck(Command):
     def __init__(self, name="depthchargectl check", parent=None):
         super().__init__(name, parent)
+
+    def __call__(self, *args, **kwargs):
+        print(args, kwargs)
 
     def _init_parser(self):
         return super()._init_parser(

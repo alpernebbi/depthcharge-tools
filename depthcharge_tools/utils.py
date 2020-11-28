@@ -7,6 +7,7 @@ import os
 import pathlib
 import re
 import shutil
+import sys
 import tempfile
 
 from depthcharge_tools import __version__
@@ -366,6 +367,24 @@ class Command:
                 help=kwargs.get("description"),
                 **kwargs,
             )
+
+    def _main(self, *argv):
+        if len(argv) == 0:
+            prog, *argv = sys.argv
+
+        args = self._parser.parse_args(argv)
+        kwargs = vars(args)
+
+        if self._commands is None:
+            command = self
+        else:
+            command = getattr(self, args.command.replace("-", "_"))
+            del kwargs["command"]
+
+        try:
+            command(**kwargs)
+        except ValueError as err:
+            command._parser.error(err.args[0])
 
 
 class Architecture(str):
