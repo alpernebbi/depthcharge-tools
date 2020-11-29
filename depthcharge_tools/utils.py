@@ -300,6 +300,9 @@ class Partition:
     def priority(self, p):
         cgpt("add", "-P", str(p), "-i", str(self.partno), self.disk.path)
 
+    def prioritize(self):
+        cgpt("prioritize", "-i", str(self.partno), self.disk.path)
+
     @property
     def size(self):
         if self.path is not None:

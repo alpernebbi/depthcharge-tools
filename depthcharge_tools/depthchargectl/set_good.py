@@ -5,6 +5,8 @@ import logging
 
 from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
+    Disk,
+    Partition,
     Command,
 )
 
@@ -15,8 +17,10 @@ class DepthchargectlSetGood(Command):
     def __init__(self, name="depthchargectl set-good", parent=None):
         super().__init__(name, parent)
 
-    def __call__(self, *args, **kwargs):
-        print(args, kwargs)
+    def __call__(self):
+        part = Partition(Disk.by_kern_guid())
+        part.attribute = 0x111
+        part.prioritize()
 
     def _init_parser(self):
         return super()._init_parser(
