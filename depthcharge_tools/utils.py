@@ -272,17 +272,33 @@ class Partition:
         attr = int(proc.stdout, 16)
         return attr
 
+    @attribute.setter
+    def attribute(self, attr):
+        cgpt("add", "-A", hex(attr), "-i", str(self.partno), self.disk.path)
+
     @property
     def successful(self):
         return (self.attribute >> 8) & 0x1
+
+    @successful.setter
+    def successful(self, s):
+        cgpt("add", "-S", str(s), "-i", str(self.partno), self.disk.path)
 
     @property
     def tries(self):
         return (self.attribute >> 4) & 0xF
 
+    @tries.setter
+    def tries(self, t):
+        cgpt("add", "-T", str(t), "-i", str(self.partno), self.disk.path)
+
     @property
     def priority(self):
         return (self.attribute >> 0) & 0xF
+
+    @priority.setter
+    def priority(self, p):
+        cgpt("add", "-P", str(p), "-i", str(self.partno), self.disk.path)
 
     @property
     def size(self):
