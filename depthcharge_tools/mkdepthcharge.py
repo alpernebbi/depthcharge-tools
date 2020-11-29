@@ -6,11 +6,9 @@ import platform
 import sys
 
 from depthcharge_tools import __version__
-from depthcharge_tools.process import (
+from depthcharge_tools.utils import (
     mkimage,
     vbutil_kernel,
-)
-from depthcharge_tools.utils import (
     Architecture,
     Path,
     TemporaryDirectory,
