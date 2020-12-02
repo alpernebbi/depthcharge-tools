@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 from depthcharge_tools.utils.argparse import *
+from depthcharge_tools.utils.configparser import *
 from depthcharge_tools.utils.os import *
 from depthcharge_tools.utils.pathlib import *
 from depthcharge_tools.utils.platform import *
