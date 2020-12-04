@@ -7,6 +7,71 @@ from depthcharge_tools import __version__
 from depthcharge_tools.utils.pathlib import Path
 
 
+class Kernel:
+    def __init__(self, release, kernel, initrd=None, fdtdir=None):
+        self.release = release
+        self.kernel = kernel
+        self.initrd = initrd
+        self.fdtdir = fdtdir
+
+    @classmethod
+    def all(cls):
+        kernels = {}
+        initrds = {}
+        fdtdirs = {}
+
+        for f in Path("/boot").iterdir():
+            f = f.resolve()
+            if not f.is_file():
+                continue
+
+            if (
+                f.name.startswith("vmlinuz-")
+                or f.name.startswith("vmlinux-")
+            ):
+                _, _, release = f.name.partition("-")
+                kernels[release] = f
+
+            if f.name in (
+                "vmlinux", "vmlinuz",
+                "Image", "zImage", "bzImage",
+            ):
+                kernels[None] = f
+
+            if (
+                f.name.startswith("initrd-")
+                or f.name.startswith("initrd.img-")
+            ):
+                _, _, release = f.name.partition("-")
+                initrds[release] = f
+
+            if f.name in ("initrd", "initrd.img"):
+                initrds[None] = f
+
+        for d in Path("/usr/lib").iterdir():
+            if not d.is_dir():
+                continue
+
+            if d.name.startswith("linux-image-"):
+                _, _, release = d.name.partition("linux-image-")
+                fdtdirs[release] = d
+
+        for d in Path("/boot/dtbs").iterdir():
+            if d.name in kernels:
+                fdtdirs[d.name] = d
+            else:
+                fdtdirs[None] = Path("/boot/dtbs")
+
+        return [
+            cls(
+                release,
+                kernel=kernels[release],
+                initrd=initrds.get(release, None),
+                fdtdir=fdtdirs.get(release, None),
+            ) for release in kernels.keys()
+        ]
+
+
 class Architecture(str):
     arm_32 = ["arm"]
     arm_64 = ["arm64", "aarch64"]
