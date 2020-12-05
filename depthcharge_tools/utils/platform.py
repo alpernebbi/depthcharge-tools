@@ -135,6 +135,50 @@ class Kernel:
         else:
             return "{}, with Linux {}".format(os_name, self.release)
 
+    def _release_parts(self):
+        return [
+            [
+                (
+                    not (dot.startswith("rc") or dot.startswith("trunk")),
+                    int(dot) if dot.isnumeric() else -1,
+                    str(dot),
+                )
+                for dot in dash.split(".")
+            ]
+            for dash in self.release.split("-")
+        ]
+
+    def _comparable_parts(self, other):
+        end = (True, -1, "")
+
+        s, o = self._release_parts(), other._release_parts()
+        for si, oi in zip(s, o):
+            if len(si) > len(oi):
+                oi += [end] * (len(si) - len(oi))
+            if len(oi) > len(si):
+                si += [end] * (len(oi) - len(si))
+
+        if len(s) > len(o):
+            o += [[end]] * (len(s) - len(o))
+        if len(o) > len(s):
+            s += [[end]] * (len(o) - len(s))
+
+        return s, o
+
+    def __lt__(self, other):
+        if not isinstance(other, Kernel):
+            return NotImplemented
+
+        s, o = self._comparable_parts(other)
+        return s < o
+
+    def __gt__(self, other):
+        if not isinstance(other, Kernel):
+            return NotImplemented
+
+        s, o = self._comparable_parts(other)
+        return s > o
+
 
 class Architecture(str):
     arm_32 = ["arm"]
