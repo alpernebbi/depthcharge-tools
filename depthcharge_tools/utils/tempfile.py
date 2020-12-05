@@ -2,7 +2,6 @@
 
 import tempfile
 
-from depthcharge_tools import __version__
 from depthcharge_tools.utils.pathlib import Path
 
 

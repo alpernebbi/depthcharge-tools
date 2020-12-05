@@ -5,8 +5,6 @@ import logging
 import pathlib
 import subprocess
 
-from depthcharge_tools import __version__
-
 logger = logging.getLogger(__name__)
 
 

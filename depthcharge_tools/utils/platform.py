@@ -4,7 +4,6 @@ import collections
 import platform
 import shlex
 
-from depthcharge_tools import __version__
 from depthcharge_tools.utils.pathlib import Path
 
 

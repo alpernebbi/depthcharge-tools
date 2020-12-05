@@ -2,7 +2,6 @@
 
 import re
 
-from depthcharge_tools import __version__
 from depthcharge_tools.utils.pathlib import Path
 from depthcharge_tools.utils.platform import (
     kernel_cmdline,

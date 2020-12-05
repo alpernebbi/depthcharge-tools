@@ -4,8 +4,6 @@ import argparse
 import logging
 import sys
 
-from depthcharge_tools import __version__
-
 
 class Command:
     def __init__(self, name=None, parent=None):

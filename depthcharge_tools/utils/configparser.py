@@ -4,8 +4,6 @@ import configparser
 import pathlib
 import re
 
-from depthcharge_tools import __version__
-
 
 def read_machinedb():
     parser = configparser.ConfigParser()

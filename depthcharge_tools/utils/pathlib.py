@@ -3,7 +3,6 @@
 import pathlib
 import shutil
 
-from depthcharge_tools import __version__
 from depthcharge_tools.utils.subprocess import (
     gzip,
     lz4,
