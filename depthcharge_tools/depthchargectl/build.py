@@ -8,6 +8,7 @@ from depthcharge_tools.utils import (
     Disk,
     Partition,
     Command,
+    Kernel,
 )
 
 logger = logging.getLogger(__name__)
@@ -17,8 +18,25 @@ class DepthchargectlBuild(Command):
     def __init__(self, name="depthchargectl build", parent=None):
         super().__init__(name, parent)
 
-    def __call__(self, *args, **kwargs):
-        print(args, kwargs)
+    def __call__(
+        self,
+        kernel_version=None,
+        all=False,
+        force=False,
+        reproducible=False,
+    ):
+        if all:
+            kernels = Kernel.all()
+        elif kernel_version is not None:
+            kernels = [
+                k for k in Kernel.all()
+                if k.release == kernel_version
+            ]
+        else:
+            kernels = [max(Kernel.all())]
+
+        for k in kernels:
+            print(k.release)
 
     def _init_parser(self):
         return super()._init_parser(
