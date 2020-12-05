@@ -64,7 +64,7 @@ class Mkdepthcharge(Command):
         if devkeys is not None:
             devkeys = Path(devkeys)
         if signprivate is not None:
-            signprivate = Path(devkeys)
+            signprivate = Path(signprivate)
         if keyblock is not None:
             keyblock = Path(keyblock)
 
