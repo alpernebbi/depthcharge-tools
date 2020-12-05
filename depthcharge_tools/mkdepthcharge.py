@@ -133,6 +133,12 @@ class Mkdepthcharge(Command):
         if output is None:
             msg = "output argument is required."
             raise ValueError(msg)
+        if keyblock is None:
+            msg = "Couldn't find a usable keyblock file."
+            raise ValueError(msg)
+        if signprivate is None:
+            msg = "Couldn't find a usable signprivate file."
+            raise ValueError(msg)
 
         # Check incompatible combinations
         if image_format == "zimage":
