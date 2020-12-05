@@ -2,6 +2,7 @@
 
 import collections
 import platform
+import shlex
 
 from depthcharge_tools import __version__
 from depthcharge_tools.utils.pathlib import Path
@@ -17,6 +18,16 @@ def os_release():
             os_release[lhs] = rhs.strip('\'"')
 
     return os_release
+
+
+def kernel_cmdline():
+    cmdline = ""
+
+    cmdline_f = Path("/proc/cmdline")
+    if cmdline_f.exists():
+        cmdline = cmdline_f.read_text().rstrip("\n")
+
+    return shlex.split(cmdline)
 
 
 class Kernel:

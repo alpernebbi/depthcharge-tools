@@ -4,7 +4,10 @@ import re
 
 from depthcharge_tools import __version__
 from depthcharge_tools.utils.pathlib import Path
-from depthcharge_tools.utils.platform import SysDevTree
+from depthcharge_tools.utils.platform import (
+    kernel_cmdline,
+    SysDevTree
+)
 from depthcharge_tools.utils.subprocess import (
     cgpt,
     findmnt,
@@ -71,11 +74,10 @@ class Disk:
 
     @classmethod
     def by_kern_guid(cls):
-        kern_guid = re.findall(
-            "kern_guid=[\"']?([0-9a-fA-F-]+)[\"']?",
-            Path("/proc/cmdline").read_text(),
-        )
-        return cls.by_partuuid(kern_guid[0])
+        for arg in kernel_cmdline():
+            lhs, _, rhs = arg.partition("=")
+            if lhs == "kern_guid":
+                return cls.by_partuuid(rhs)
 
     def partition(self, partno):
         return Partition(self, partno)
