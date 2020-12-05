@@ -7,6 +7,18 @@ from depthcharge_tools import __version__
 from depthcharge_tools.utils.pathlib import Path
 
 
+def os_release():
+    os_release = {}
+
+    os_release_f = Path("/etc/os-release")
+    if os_release_f.exists():
+        for line in os_release_f.read_text().splitlines():
+            lhs, _, rhs = line.partition("=")
+            os_release[lhs] = rhs.strip('\'"')
+
+    return os_release
+
+
 class Kernel:
     def __init__(self, release, kernel, initrd=None, fdtdir=None):
         self.release = release
@@ -70,6 +82,15 @@ class Kernel:
                 fdtdir=fdtdirs.get(release, None),
             ) for release in kernels.keys()
         ]
+
+    @property
+    def description(self):
+        os_name = os_release().get("NAME", None)
+
+        if os_name is None:
+            return "Linux {}".format(self.release)
+        else:
+            return "{}, with Linux {}".format(os_name, self.release)
 
 
 class Architecture(str):
