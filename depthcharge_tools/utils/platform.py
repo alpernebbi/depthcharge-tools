@@ -8,6 +8,12 @@ from depthcharge_tools import __version__
 from depthcharge_tools.utils.pathlib import Path
 
 
+def board_name():
+    dt_model = Path("/proc/device-tree/model")
+    if dt_model.exists():
+        return dt_model.read_text().strip("\x00")
+
+
 def os_release():
     os_release = {}
 
