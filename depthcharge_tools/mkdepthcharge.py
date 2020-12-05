@@ -9,6 +9,7 @@ from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     mkimage,
     vbutil_kernel,
+    vboot_keys,
     Architecture,
     Path,
     TemporaryDirectory,
@@ -106,21 +107,24 @@ class Mkdepthcharge(Command):
             cmdline = " ".join(("kern_guid=%U", cmdline))
 
         # Default to distro-specific paths for necessary files.
-        if devkeys is None:
-            if keyblock is None and signprivate is None:
-                devkeys = Path("/usr/share/vboot/devkeys")
-            elif keyblock is not None and signprivate is not None:
-                if keyblock.parent == signprivate.parent:
-                    devkeys = signprivate.parent
-            elif signprivate is not None:
-                devkeys = signprivate.parent
-            elif keyblock is not None:
-                devkeys = keyblock.parent
+        if keyblock is None and signprivate is None:
+            if devkeys is not None:
+                _, keyblock, signprivate, _ = vboot_keys(devkeys)
+            else:
+                devkeys, keyblock, signprivate, _ = vboot_keys()
 
-        if keyblock is None:
-            keyblock = devkeys / "kernel.keyblock"
-        if signprivate is None:
-            signprivate = devkeys / "kernel_data_key.vbprivk"
+        elif keyblock is not None and signprivate is not None:
+            pass
+
+        elif signprivate is not None:
+            devkeys, keyblock, _, _ = vboot_keys(
+                devkeys or signprivate.parent,
+            )
+
+        elif keyblock is not None:
+            devkeys, _, signprivate, _ = vboot_keys(
+                devkeys or keyblock.parent,
+            )
 
         # Check for required arguments
         if vmlinuz is None:

@@ -36,6 +36,32 @@ def kernel_cmdline():
     return shlex.split(cmdline)
 
 
+def vboot_keys(*keydirs):
+    if not keydirs:
+        keydirs = (
+            "/usr/share/vboot/devkeys",
+            "/usr/local/share/vboot/devkeys",
+        )
+
+    for devkeys in keydirs:
+        devkeys = Path(devkeys)
+        if not devkeys.is_dir():
+            continue
+
+        keyblock = devkeys / "kernel.keyblock"
+        signprivate = devkeys / "kernel_data_key.vbprivk"
+        signpubkey = devkeys / "kernel_subkey.vbpubk"
+
+        if (
+            keyblock.exists()
+            and signprivate.exists()
+            and signpubkey.exists()
+        ):
+            return devkeys, keyblock, signprivate, signpubkey
+
+    return None, None, None, None
+
+
 class Kernel:
     def __init__(self, release, kernel, initrd=None, fdtdir=None):
         self.release = release
