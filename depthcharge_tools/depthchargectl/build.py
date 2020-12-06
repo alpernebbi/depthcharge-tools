@@ -3,8 +3,13 @@
 import argparse
 import logging
 
-from depthcharge_tools import __version__
+from depthcharge_tools import (
+    __version__,
+    config,
+    boards,
+)
 from depthcharge_tools.utils import (
+    board_name,
     Disk,
     Partition,
     Command,
@@ -34,6 +39,13 @@ class DepthchargectlBuild(Command):
             ]
         else:
             kernels = [max(Kernel.all())]
+
+        board = config.machine
+        if board is None:
+            board = board_name()
+
+        board = boards[board]
+        print(board.name)
 
         for k in kernels:
             print(k.release)
