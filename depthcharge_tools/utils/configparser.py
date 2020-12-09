@@ -3,6 +3,7 @@
 import configparser
 import pathlib
 import re
+import shlex
 
 
 class BoardInfo:
@@ -32,11 +33,13 @@ class Board:
 
     @property
     def kernel_compression(self):
-        return self._info.get("kernel-compression")
+        compress = self._info.get("kernel-compression")
+        if compress is not None:
+            return compress.split(" ")
 
     @property
     def max_size(self):
-        return self._info.get("max-size")
+        return self._info.getint("max-size")
 
     @property
     def image_format(self):
@@ -61,15 +64,19 @@ class Config:
 
     @property
     def kernel_cmdline(self):
-        return self._config.get("kernel-cmdline")
+        cmdline = self._config.get("kernel-cmdline")
+        if cmdline is not None:
+            return shlex.split(cmdline)
 
     @property
     def kernel_compression(self):
-        return self._config.get("kernel-compression")
+        compress = self._config.get("kernel-compression")
+        if compress is not None:
+            return compress.split(" ")
 
     @property
     def ignore_initramfs(self):
-        return self._config.get("ignore-initramfs")
+        return self._config.getboolean("ignore-initramfs", False)
 
     @property
     def vboot_keyblock(self):
