@@ -113,6 +113,14 @@ class FindmntRunner(ProcessRunner):
             args.insert(0, "--fstab")
         return self(*args, check=False)
 
+    def fstab(self, mntpoint):
+        args = ["-M", mntpoint, "--fstab", "-n", "-o", "SOURCE"]
+        return self(*args, check=False)
+
+    def kernel(self, mntpoint):
+        args = ["-M", mntpoint, "--kernel", "-n", "-o", "SOURCE"]
+        return self(*args, check=False)
+
 
 class BlockdevRunner(ProcessRunner):
     def __init__(self):
