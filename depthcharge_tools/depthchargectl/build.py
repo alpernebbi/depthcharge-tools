@@ -14,6 +14,7 @@ from depthcharge_tools.mkdepthcharge import mkdepthcharge
 from depthcharge_tools.utils import (
     board_name,
     root_requires_initramfs,
+    vboot_keys,
     Disk,
     Partition,
     Path,
@@ -87,6 +88,14 @@ class DepthchargectlBuild(Command):
             if k.initrd is None and root_requires_initramfs(root):
                 raise ValueError("root-initramfs")
 
+            _, keyblock, signprivate, signpubkey = vboot_keys()
+            if config.vboot_keyblock is not None:
+                keyblock = config.vboot_keyblock
+            if config.vboot_private_key is not None:
+                signprivate = config.vboot_private_key
+            if config.vboot_public_key is not None:
+                signpubkey = config.vboot_public_key
+
             compress = (
                 config.kernel_compression
                 or board.kernel_compression
@@ -115,10 +124,10 @@ class DepthchargectlBuild(Command):
                     dtbs=dtbs,
                     image_format=board.image_format,
                     initramfs=k.initrd,
-                    keyblock=config.vboot_keyblock,
+                    keyblock=keyblock,
                     name=k.description,
                     output=outtmp,
-                    signprivate=config.vboot_private_key,
+                    signprivate=signprivate,
                     vmlinuz=k.kernel,
                 )
 
