@@ -2,6 +2,7 @@
 
 import collections
 import platform
+import re
 import shlex
 
 from depthcharge_tools.utils.pathlib import Path
@@ -33,6 +34,31 @@ def kernel_cmdline():
         cmdline = cmdline_f.read_text().rstrip("\n")
 
     return shlex.split(cmdline)
+
+
+def root_requires_initramfs(root):
+    x = "[0-9a-fA-F]"
+    uuid = "{x}{{8}}-{x}{{4}}-{x}{{4}}-{x}{{4}}-{x}{{12}}".format(x=x)
+    ntsig = "{x}{{8}}-{x}{{2}}".format(x=x)
+
+    for pat in (
+        "[0-9a-fA-F]{4}",
+        "/dev/nfs",
+        "/dev/[0-9a-zA-Z]+",
+        "/dev/[0-9a-zA-Z]+[0-9]+",
+        "/dev/[0-9a-zA-Z]+p[0-9]+",
+        "PARTUUID=({uuid}|{ntsig})".format(uuid=uuid, ntsig=ntsig),
+        "PARTUUID=({uuid}|{ntsig})/PARTNROFF=[0-9]+".format(
+            uuid=uuid, ntsig=ntsig,
+        ),
+        "[0-9]+:[0-9]+",
+        "PARTLABEL=.+",
+        "/dev/cifs",
+    ):
+        if re.fullmatch(pat, root):
+            return False
+
+    return True
 
 
 def vboot_keys(*keydirs):

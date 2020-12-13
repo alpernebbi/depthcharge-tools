@@ -13,6 +13,7 @@ from depthcharge_tools import (
 from depthcharge_tools.mkdepthcharge import mkdepthcharge
 from depthcharge_tools.utils import (
     board_name,
+    root_requires_initramfs,
     Disk,
     Partition,
     Path,
@@ -77,13 +78,14 @@ class DepthchargectlBuild(Command):
                 if not root:
                     raise ValueError("root")
 
-                # check_root_cmdline()
-
                 cmdline.append("root={}".format(root))
 
             if config.ignore_initramfs:
                 k.initrd = None
                 cmdline.append("noinitrd")
+
+            if k.initrd is None and root_requires_initramfs(root):
+                raise ValueError("root-initramfs")
 
             compress = (
                 config.kernel_compression
