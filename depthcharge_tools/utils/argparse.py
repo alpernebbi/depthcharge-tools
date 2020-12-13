@@ -80,7 +80,9 @@ class Command:
         del kwargs["_command"]
 
         try:
-            command(**kwargs)
+            output = command(**kwargs)
+            if output is not None:
+                print(output)
         except ValueError as err:
             command._parser.error(err.args[0])
         except OSError as err:

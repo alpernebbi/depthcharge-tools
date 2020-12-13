@@ -61,8 +61,7 @@ class DepthchargectlPartitions(Command):
 
         widths = [max(4, *map(len, col)) for col in zip(*rows)]
         fmt = " ".join("{{:{w}}}".format(w=w) for w in widths)
-        for row in rows:
-            print(fmt.format(*row))
+        return "\n".join(fmt.format(*row) for row in rows)
 
     def _init_parser(self):
         return super()._init_parser(

@@ -183,8 +183,7 @@ class DepthchargectlBuild(Command):
                 and inputs.exists()
                 and inputs.read_text() == report
             ):
-                print(output)
-                return
+                return output
 
             intmps.write_text(report)
 
@@ -222,7 +221,8 @@ class DepthchargectlBuild(Command):
             outtmp.copy_to(output)
             outtmp.unlink()
             intmps.unlink()
-            print(output)
+
+            return output
 
     def _init_parser(self):
         return super()._init_parser(

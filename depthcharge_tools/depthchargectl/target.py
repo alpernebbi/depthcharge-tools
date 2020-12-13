@@ -49,7 +49,7 @@ class DepthchargectlTarget(Command):
         )
 
         if good_partitions:
-            print(good_partitions[0])
+            return good_partitions[0]
 
     def _init_parser(self):
         return super()._init_parser(
