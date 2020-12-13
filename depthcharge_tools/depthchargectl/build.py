@@ -3,6 +3,7 @@
 import argparse
 import logging
 import os
+import textwrap
 
 from depthcharge_tools import (
     __version__,
@@ -21,6 +22,7 @@ from depthcharge_tools.utils import (
     Command,
     Kernel,
     findmnt,
+    sha256sum,
 )
 
 logger = logging.getLogger(__name__)
@@ -112,10 +114,79 @@ class DepthchargectlBuild(Command):
                     date = int(k.kernel.stat().st_mtime)
                 os.environ["SOURCE_DATE_EPOCH"] = str(date)
 
-            # write_inputs()
-
             output = Path(LOCALSTATEDIR / "{}.img".format(k.release))
             outtmp = Path(LOCALSTATEDIR / "{}.img.tmp".format(k.release))
+            inputs = Path(LOCALSTATEDIR / "{}.img.inputs".format(k.release))
+            intmps = Path(LOCALSTATEDIR / "{}.img.tmp.inputs".format(k.release))
+
+            infiles = [
+                f for f in (
+                    k.kernel,
+                    k.initrd,
+                    *dtbs,
+                    keyblock,
+                    signpubkey,
+                    signprivate,
+                )
+                if f is not None
+            ]
+
+            report = textwrap.dedent("""\
+                # Software versions:
+                Depthchargectl-Version: {version}
+                Mkdepthcharge-Version: {version}
+
+                # Machine info:
+                Machine: {board.name}
+                DTB-Name: {board.dtb_name}
+                Max-Size: {board.max_size}
+                Kernel-Compression: {board_compress}
+                Image-Format: {board.image_format}
+
+                # Image configuration:
+                Kernel-Version: {kernel.release}
+                Kernel-Cmdline: {cmdline}
+                Kernel-Compression: {compress}
+                Kernel-Name: {kernel.description}
+                Source-Date-Epoch: {epoch}
+
+                # Image inputs:
+                Vmlinuz: {kernel.kernel}
+                Initramfs: {kernel.initrd}
+                {dtbs}
+
+                # Signing keys:
+                Vboot-Keyblock: {keyblock}
+                Vboot-Public-Key: {signpubkey}
+                Vboot-Private-Key: {signprivate}
+
+                # SHA256 checksums:
+                {sha256sums}
+            """).rstrip("\n").format(
+                version=__version__,
+                board=board,
+                kernel=k,
+                board_compress=" ".join(board.kernel_compression),
+                compress=" ".join(compress),
+                cmdline=" ".join(cmdline),
+                epoch=os.environ.get("SOURCE_DATE_EPOCH", "unset"),
+                dtbs=("\n".join("DTB: {}".format(d) for d in dtbs)),
+                keyblock=keyblock,
+                signpubkey=signpubkey,
+                signprivate=signprivate,
+                sha256sums=sha256sum(*infiles).stdout
+            )
+
+            if (
+                not force
+                and output.exists()
+                and inputs.exists()
+                and inputs.read_text() == report
+            ):
+                print(output)
+                return
+
+            intmps.write_text(report)
 
             for c in compress:
                 mkdepthcharge(
@@ -138,10 +209,19 @@ class DepthchargectlBuild(Command):
             else:
                 raise RuntimeError("output")
 
-            # check_reproducible()
+            if (
+                force
+                and reproducible
+                and output.exists()
+                and inputs.read_text() == intmps.read_text()
+                and output.read_bytes() != outtmp.read_bytes()
+            ):
+                logger.warning("was not reproducible")
 
+            intmps.copy_to(inputs)
             outtmp.copy_to(output)
             outtmp.unlink()
+            intmps.unlink()
             print(output)
 
     def _init_parser(self):
