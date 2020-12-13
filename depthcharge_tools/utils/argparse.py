@@ -80,9 +80,11 @@ class Command:
         del kwargs["_command"]
 
         try:
-            sys.exit(command(**kwargs))
+            command(**kwargs)
         except ValueError as err:
             command._parser.error(err.args[0])
+        except OSError as err:
+            sys.exit(err.errno)
 
 
 class LoggingLevelAction(argparse.Action):

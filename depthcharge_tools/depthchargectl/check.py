@@ -43,15 +43,17 @@ class DepthchargectlCheck(Command):
             signpubkey = config.vboot_public_key
 
         if not image.is_file():
-            return 2
+            raise OSError(2, "not a file")
 
         if image.stat().st_size > board.max_size:
+            raise OSError(3, "too big")
             return 3
 
         if vbutil_kernel(
             "--verify", image,
             check=False,
         ).returncode != 0:
+            raise OSError(4, "vboot verify")
             return 4
 
         if vbutil_kernel(
@@ -59,6 +61,7 @@ class DepthchargectlCheck(Command):
             "--signpubkey", signpubkey,
             check=False,
         ).returncode != 0:
+            raise OSError(5, "wrong signpubkey")
             return 5
 
         with TemporaryDirectory("-depthchargectl") as tmpdir:
@@ -72,11 +75,11 @@ class DepthchargectlCheck(Command):
             if board.image_format == "fit":
                 proc = mkimage("-l", itb)
                 if proc.returncode != 0:
-                    return 6
+                    raise OSError(6, "mkimage can't recognize")
 
                 head = proc.stdout.splitlines()[0]
                 if not head.startswith("FIT description:"):
-                    return 6
+                    raise OSError(6, "not a FIT")
 
     def _init_parser(self):
         return super()._init_parser(
