@@ -107,9 +107,9 @@ class DepthchargectlBuild(Command):
 
             if reproducible and not "SOURCE_DATE_EPOCH" in os.environ:
                 if k.initrd is not None:
-                    date = k.initrd.stat().st_mtime
+                    date = int(k.initrd.stat().st_mtime)
                 else:
-                    date = k.kernel.stat().st_mtime
+                    date = int(k.kernel.stat().st_mtime)
                 os.environ["SOURCE_DATE_EPOCH"] = str(date)
 
             # write_inputs()
