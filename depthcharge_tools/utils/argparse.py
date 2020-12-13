@@ -80,7 +80,7 @@ class Command:
         del kwargs["_command"]
 
         try:
-            command(**kwargs)
+            sys.exit(command(**kwargs))
         except ValueError as err:
             command._parser.error(err.args[0])
 
