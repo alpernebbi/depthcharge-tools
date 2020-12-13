@@ -127,6 +127,11 @@ class BlockdevRunner(ProcessRunner):
         super().__init__("sudo", "blockdev")
 
 
+class Sha256sumRunner(ProcessRunner):
+    def __init__(self):
+        super().__init__("sha256sum")
+
+
 gzip = GzipRunner()
 lz4 = Lz4Runner()
 lzma = LzmaRunner()
@@ -135,3 +140,4 @@ vbutil_kernel = VbutilKernelRunner()
 cgpt = CgptRunner()
 findmnt = FindmntRunner()
 blockdev = BlockdevRunner()
+sha256sum = Sha256sumRunner()
