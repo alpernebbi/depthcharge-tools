@@ -52,19 +52,27 @@ class Mkdepthcharge(Command):
         signprivate=None,
         vmlinuz=None,
     ):
-        # Use helper class for input files
+        # Normalize input arguments
         if vmlinuz is not None:
             vmlinuz = Path(vmlinuz).resolve()
+        else:
+            msg = "vmlinuz argument is required."
+            raise ValueError(msg)
+
         if initramfs is not None:
             initramfs = Path(initramfs).resolve()
         if dtbs is not None:
             dtbs = [Path(dtb).resolve() for dtb in dtbs]
+
         if bootloader is not None:
             bootloader = Path(bootloader).resolve()
+
         if devkeys is not None:
             devkeys = Path(devkeys).resolve()
+
         if signprivate is not None:
             signprivate = Path(signprivate).resolve()
+
         if keyblock is not None:
             keyblock = Path(keyblock).resolve()
 
@@ -127,16 +135,10 @@ class Mkdepthcharge(Command):
                 devkeys or keyblock.parent,
             )
 
-        # Check for required arguments
-        if vmlinuz is None:
-            msg = "vmlinuz argument is required."
-            raise ValueError(msg)
-        if output is None:
-            msg = "output argument is required."
-            raise ValueError(msg)
         if keyblock is None:
             msg = "Couldn't find a usable keyblock file."
             raise ValueError(msg)
+
         if signprivate is None:
             msg = "Couldn't find a usable signprivate file."
             raise ValueError(msg)
@@ -155,6 +157,11 @@ class Mkdepthcharge(Command):
             if dtbs:
                 msg = "Device tree files not supported with zimage format."
                 raise ValueError(msg)
+
+        # Output path is obviously required
+        if output is None:
+            msg = "output argument is required."
+            raise ValueError(msg)
 
         with TemporaryDirectory(prefix="mkdepthcharge-") as tmpdir:
             # mkimage can't open files when they are read-only for some
