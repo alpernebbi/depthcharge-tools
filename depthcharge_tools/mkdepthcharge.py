@@ -55,14 +55,19 @@ class Mkdepthcharge(Command):
         # Normalize input arguments
         if vmlinuz is not None:
             vmlinuz = Path(vmlinuz).resolve()
+            logger.info("Using vmlinuz: '{}'.".format(vmlinuz))
         else:
             msg = "vmlinuz argument is required."
             raise ValueError(msg)
 
         if initramfs is not None:
             initramfs = Path(initramfs).resolve()
+            logger.info("Using initramfs: '{}'.".format(initramfs))
+
         if dtbs is not None:
             dtbs = [Path(dtb).resolve() for dtb in dtbs]
+            for dtb in dtbs:
+                logger.info("Using dtb: '{}'.".format(dtb))
         else:
             dtbs = []
 
@@ -82,6 +87,7 @@ class Mkdepthcharge(Command):
         # the default should be this machine's.
         if arch is None:
             arch = Architecture(platform.machine())
+            logger.info("Assuming CPU architecture '{}'.".format(arch))
         else:
             arch = Architecture(arch)
 
@@ -91,6 +97,7 @@ class Mkdepthcharge(Command):
                 image_format = "fit"
             elif arch in Architecture.x86:
                 image_format = "zimage"
+            logger.info("Assuming image format '{}'.".format(image_format))
 
         if image_format == "fit":
             # We need to pass "-C none" to mkimage or it assumes gzip.
@@ -120,28 +127,37 @@ class Mkdepthcharge(Command):
         # Default to distro-specific paths for necessary files.
         if keyblock is None and signprivate is None:
             if devkeys is not None:
+                logger.info(
+                    "Searching for keyblock and signprivate in dir '{}'."
+                    .format(devkeys)
+                )
                 _, keyblock, signprivate, _ = vboot_keys(devkeys)
             else:
+                logger.info("Searching for keyblock and signprivate.")
                 devkeys, keyblock, signprivate, _ = vboot_keys()
 
         elif keyblock is not None and signprivate is not None:
             pass
 
-        elif signprivate is not None:
-            devkeys, keyblock, _, _ = vboot_keys(
-                devkeys or signprivate.parent,
-            )
+        elif keyblock is None:
+            d = devkeys or signprivate.parent
+            logger.info("Searching for keyblock in dir '{}'.".format(d))
+            devkeys, keyblock, _, _ = vboot_keys(d)
 
-        elif keyblock is not None:
-            devkeys, _, signprivate, _ = vboot_keys(
-                devkeys or keyblock.parent,
-            )
+        elif signprivate is None:
+            logger.info("Searching for signprivate in dir '{}'.".format(d))
+            devkeys, _, signprivate, _ = vboot_keys(d)
 
-        if keyblock is None:
+        # We might still not have the vboot keys after all that.
+        if keyblock is not None:
+            logger.info("Using keyblock file '{}'.".format(keyblock))
+        else:
             msg = "Couldn't find a usable keyblock file."
             raise ValueError(msg)
 
-        if signprivate is None:
+        if signprivate is not None:
+            logger.info("Using signprivate file '{}'.".format(signprivate))
+        else:
             msg = "Couldn't find a usable signprivate file."
             raise ValueError(msg)
 
@@ -166,6 +182,8 @@ class Mkdepthcharge(Command):
             raise ValueError(msg)
 
         with TemporaryDirectory(prefix="mkdepthcharge-") as tmpdir:
+            logger.debug("Working in temp dir '{}'.".format(tmpdir))
+
             # mkimage can't open files when they are read-only for some
             # reason. Copy them into a temp dir in fear of modifying the
             # originals.
@@ -184,12 +202,15 @@ class Mkdepthcharge(Command):
             # Debian packs the arm64 kernel uncompressed, but the bindeb-pkg
             # kernel target packs it as gzip.
             if vmlinuz.is_gzip():
+                logger.info("Kernel is gzip compressed, decompressing.")
                 vmlinuz = vmlinuz.gunzip()
 
             # Depthcharge on arm64 with FIT supports these two compressions.
             if compress == "lz4":
+                logger.info("Compressing kernel with lz4.")
                 vmlinuz = vmlinuz.lz4()
             elif compress == "lzma":
+                logger.info("Compressing kernel with lzma.")
                 vmlinuz = vmlinuz.lzma()
             elif compress is not None and compress != "none":
                 fmt = "Compression type '{}' is not supported."
@@ -207,6 +228,7 @@ class Mkdepthcharge(Command):
             else:
                 bootloader = tmpdir / "bootloader.bin"
                 bootloader.write_bytes(bytes(512))
+                logger.info("Using dummy file for bootloader.")
 
             if image_format == "fit":
                 fit_image = tmpdir / "depthcharge.fit"
@@ -219,7 +241,8 @@ class Mkdepthcharge(Command):
                 for dtb in dtbs:
                     dtb_args += ["-b", dtb]
 
-                mkimage(
+                logger.info("Packing files as FIT image:")
+                proc = mkimage(
                     "-f", "auto",
                     "-A", arch.mkimage,
                     "-O", "linux",
@@ -230,13 +253,17 @@ class Mkdepthcharge(Command):
                     "-d", vmlinuz,
                     fit_image,
                 )
+                logger.info(proc.stdout)
 
+                logger.info("Using FIT image as vboot kernel.")
                 vmlinuz_vboot = fit_image
 
             elif image_format == "zimage":
+                logger.info("Using vmlinuz file as vboot kernel.")
                 vmlinuz_vboot = vmlinuz
 
-            vbutil_kernel(
+            logger.info("Packing files as depthcharge image.")
+            proc = vbutil_kernel(
                 "--version", "1",
                 "--arch", arch.vboot,
                 "--vmlinuz", vmlinuz_vboot,
@@ -246,8 +273,11 @@ class Mkdepthcharge(Command):
                 "--signprivate", signprivate,
                 "--pack", output,
             )
+            logger.info(proc.stdout)
 
-            vbutil_kernel("--verify", output)
+            logger.info("Verifying built depthcharge image:")
+            proc = vbutil_kernel("--verify", output)
+            logger.info(proc.stdout)
 
     def _init_parser(self):
         return super()._init_parser(
