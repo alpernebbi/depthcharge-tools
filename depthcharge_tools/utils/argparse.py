@@ -86,6 +86,7 @@ class Command:
         except ValueError as err:
             command._parser.error(err.args[0])
         except OSError as err:
+            logging.getLogger(self.__module__).error(err)
             sys.exit(err.errno)
 
 
