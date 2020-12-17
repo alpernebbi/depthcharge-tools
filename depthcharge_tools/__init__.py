@@ -10,7 +10,8 @@ from depthcharge_tools.utils import (
 
 
 logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
+log_handler = logging.StreamHandler()
+logger.addHandler(log_handler)
 
 __version__ = 'v0.5.0-dev'
 
