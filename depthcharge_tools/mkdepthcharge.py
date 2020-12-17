@@ -54,19 +54,19 @@ class Mkdepthcharge(Command):
     ):
         # Use helper class for input files
         if vmlinuz is not None:
-            vmlinuz = Path(vmlinuz)
+            vmlinuz = Path(vmlinuz).resolve()
         if initramfs is not None:
-            initramfs = Path(initramfs)
+            initramfs = Path(initramfs).resolve()
         if dtbs is not None:
-            dtbs = [Path(dtb) for dtb in dtbs]
+            dtbs = [Path(dtb).resolve() for dtb in dtbs]
         if bootloader is not None:
-            bootloader = Path(bootloader)
+            bootloader = Path(bootloader).resolve()
         if devkeys is not None:
-            devkeys = Path(devkeys)
+            devkeys = Path(devkeys).resolve()
         if signprivate is not None:
-            signprivate = Path(signprivate)
+            signprivate = Path(signprivate).resolve()
         if keyblock is not None:
-            keyblock = Path(keyblock)
+            keyblock = Path(keyblock).resolve()
 
         # We should be able to make an image for other architectures, but
         # the default should be this machine's.
