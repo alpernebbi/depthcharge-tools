@@ -82,15 +82,16 @@ class Mkdepthcharge(Command):
             elif arch in Architecture.x86:
                 image_format = "zimage"
 
-        # We need to pass "-C none" to mkimage or it assumes gzip.
-        if compress is None:
-            compress = "none"
+        if image_format == "fit":
+            # We need to pass "-C none" to mkimage or it assumes gzip.
+            if compress is None:
+                compress = "none"
 
-        # If we don't pass "-n <name>" to mkimage, the kernel image
-        # description is left blank. But other images get "unavailable" as
-        # their description, so it looks better if we match that.
-        if name is None:
-            name = "unavailable"
+            # If we don't pass "-n <name>" to mkimage, the kernel image
+            # description is left blank. Other images get "unavailable"
+            # as their description, so it looks better if we match that.
+            if name is None:
+                name = "unavailable"
 
         # If the cmdline is empty vbutil_kernel returns an error. We can use
         # "--" instead of putting a newline or a space into the cmdline.
@@ -181,7 +182,7 @@ class Mkdepthcharge(Command):
                 vmlinuz = vmlinuz.lz4()
             elif compress == "lzma":
                 vmlinuz = vmlinuz.lzma()
-            elif compress != "none":
+            elif compress is not None and compress != "none":
                 fmt = "Compression type '{}' is not supported."
                 msg = fmt.format(compress)
                 raise ValueError(msg)
@@ -321,15 +322,11 @@ class Mkdepthcharge(Command):
         )
 
     def _init_fit_options(self, fit_options):
-        def compress_type(s):
-            return None if s == "none" else s
-
         fit_options.add_argument(
             "-C", "--compress",
             metavar="TYPE",
             action='store',
-            choices=[None, "lz4", "lzma"],
-            type=compress_type,
+            choices=["none", "lz4", "lzma"],
             help="Compress vmlinuz file before packing.",
         )
         fit_options.add_argument(
