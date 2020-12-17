@@ -63,6 +63,8 @@ class Mkdepthcharge(Command):
             initramfs = Path(initramfs).resolve()
         if dtbs is not None:
             dtbs = [Path(dtb).resolve() for dtb in dtbs]
+        else:
+            dtbs = []
 
         if bootloader is not None:
             bootloader = Path(bootloader).resolve()
