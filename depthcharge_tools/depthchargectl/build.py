@@ -41,11 +41,15 @@ class DepthchargectlBuild(Command):
     ):
         if all:
             kernels = Kernel.all()
+
         elif kernel_version is not None:
             kernels = [
                 k for k in Kernel.all()
                 if k.release == kernel_version
             ]
+            if not kernels:
+                raise ValueError("kernel_version")
+
         else:
             kernels = [max(Kernel.all())]
 
