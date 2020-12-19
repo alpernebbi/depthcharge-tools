@@ -24,17 +24,29 @@ class DepthchargectlPartitions(Command):
         output=None,
     ):
         if all_disks:
+            logger.info("Searching all disks.")
             disks = Disk.disks()
         elif disks:
+            logger.info("Searching real disks for {}.".format(disks))
             disks = Disk.disks(*disks)
         else:
+            logger.info("Searching bootable disks.")
             disks = Disk.disks(bootable=True)
+
+        if disks:
+            logger.info("Using disks: {}.".format(disks))
+        else:
+            raise ValueError("Could not find any matching disks.")
 
         if output is None:
             output = "S,P,T,PATH"
+            logger.info("Using default output format '{}'.".format(output))
         elif isinstance(output, list):
             output = ",".join(output)
+            logger.info("Using output format '{}'.".format(output))
 
+        # This is just trying to getattr things, but getting DISKPATH is
+        # easier this way.
         formats = {
             "SUCCESSFUL": "{0.successful}",
             "PRIORITY": "{0.priority}",
@@ -51,14 +63,26 @@ class DepthchargectlPartitions(Command):
         columns = output.split(',')
         rows = []
 
+        for c in columns:
+            if c not in formats:
+                raise ValueError(
+                    "Unsupported output column '{}'."
+                    .format(c)
+                )
+
         if headings:
+            logger.info("Including headings.")
             rows.append(list(columns))
 
+        # Get the actual table data we want to print
         for disk in disks:
             for part in disk.partitions():
                 row = [formats.get(c, "").format(part) for c in columns]
                 rows.append(row)
 
+        # Using tab characters makes things misalign when the data
+        # widths vary, so find max width for each column from its data,
+        # and format everything to those widths.
         widths = [max(4, *map(len, col)) for col in zip(*rows)]
         fmt = " ".join("{{:{w}}}".format(w=w) for w in widths)
         return "\n".join(fmt.format(*row) for row in rows)
