@@ -31,45 +31,99 @@ class DepthchargectlWrite(Command):
     ):
         kernels = Kernel.all()
 
+        # No image given, try creating one.
         if image is None:
-            image = self._parent.build(max(kernels).release)
+            version = max(kernels).release
+            logger.info(
+                "Using image for newest installed kernel version '{}'."
+                .format(version)
+            )
+            image = self._parent.build(version)
 
         elif isinstance(image, str):
             for k in kernels:
                 if image == k.release:
+                    logger.info(
+                        "Using image for given kernel version '{}'."
+                        .format(k.release)
+                    )
                     image = self._parent.build(k.release)
                     break
             else:
                 image = Path(image).resolve()
+                logger.info("Using given image '{}'.".format(image))
 
         try:
+            # This also checks if the machine is supported.
             self._parent.check(image)
         except Exception as err:
-            if not force:
-                raise
+            if force:
+                logger.warn(
+                    "Depthcharge image '{}' is not bootable on this "
+                    "board, continuing due to --force."
+                    .format(image)
+                )
+            else:
+                raise ValueError(
+                    "Depthcharge image '{}' is not bootable on this "
+                    "board."
+                    .format(image)
+                )
 
-        target = self._parent.target(
-            disks=[target] if target else None,
-            min_size=image.stat().st_size,
-            allow_current=allow_current,
-        )
-
-        if target is None:
-            raise RuntimeError("target")
+        # We don't want target to unconditionally avoid the current
+        # partition since we will also check that here. But whatever we
+        # choose must be bigger than the image we'll write to it.
+        logger.info("Searching disks for a target partition.")
+        try:
+            target = self._parent.target(
+                disks=[target] if target else None,
+                min_size=image.stat().st_size,
+                allow_current=allow_current,
+            )
+        except:
+            raise ValueError(
+                "Couldn't find a usable partition to write to."
+            )
 
         if target.path is None:
-            raise RuntimeError("target path")
+            raise ValueError(
+                "Cannot write to target partition '{}' without a path."
+                .format(target)
+            )
 
+        logger.info("Targeted partition '{}'.".format(target))
+
+        # Check and warn if we targeted the currently booted partition,
+        # as that usually means it's the only partition.
         current = Disk.by_kern_guid()
         if allow_current and target.path == current:
-            logger.warn("overwriting")
+            logger.warn(
+                "Overwriting the currently booted partition '{}'. "
+                "This might make your system unbootable."
+                .format(target)
+            )
 
-        target.attribute = 0x010
+        logger.info(
+            "Writing depthcharge image '{}' to partition '{}'."
+            .format(image, target)
+        )
         target.path.write_bytes(image.read_bytes())
+        logger.info(
+            "Wrote depthcharge image '{}' to partition '{}'."
+            .format(image, target)
+        )
 
         if prioritize:
+            logger.info(
+                "Setting '{}' as the highest-priority bootable part."
+                .format(target)
+            )
+            target.attribute = 0x010
             target.prioritize()
-
+            logger.info(
+                "Set partition '{}' as next to boot."
+                .format(target)
+            )
 
     def _init_parser(self):
         return super()._init_parser(
