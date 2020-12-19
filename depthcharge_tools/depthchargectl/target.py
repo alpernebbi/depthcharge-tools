@@ -28,6 +28,9 @@ class DepthchargectlTarget(Command):
         if not disks:
             disks = Disk.disks(bootable=True)
 
+        if not disks:
+            raise ValueError("no-disks")
+
         partitions = []
         for d in disks:
             try:
