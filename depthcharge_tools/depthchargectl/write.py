@@ -11,6 +11,7 @@ from depthcharge_tools.utils import (
     Command,
     Kernel,
     Path,
+    Disk,
 )
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,10 @@ class DepthchargectlWrite(Command):
 
         if target.path is None:
             raise RuntimeError("target path")
+
+        current = Disk.by_kern_guid()
+        if allow_current and target.path == current:
+            logger.warn("overwriting")
 
         target.attribute = 0x010
         target.path.write_bytes(image.read_bytes())
