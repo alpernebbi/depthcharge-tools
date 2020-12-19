@@ -18,9 +18,23 @@ class DepthchargectlSetGood(Command):
         super().__init__(name, parent)
 
     def __call__(self):
-        part = Partition(Disk.by_kern_guid())
+        try:
+            part = Partition(Disk.by_kern_guid())
+        except:
+            raise ValueError(
+                "Couldn't figure out the currently booted partition."
+            )
+
+        logger.info(
+            "Setting '{}' as the highest-priority bootable part."
+            .format(part)
+        )
         part.attribute = 0x111
         part.prioritize()
+        logger.info(
+            "Set '{}' as next to boot and successful."
+            .format(part)
+        )
 
     def _init_parser(self):
         return super()._init_parser(
