@@ -118,6 +118,10 @@ class DepthchargectlBuild(Command):
                 if c != "none" and c not in board.kernel_compression:
                     raise ValueError("compress")
 
+            if board.image_format == "zimage":
+                if compress != ["none"]:
+                    raise ValueError("zimage-compress")
+
             if reproducible and not "SOURCE_DATE_EPOCH" in os.environ:
                 if k.initrd is not None:
                     date = int(k.initrd.stat().st_mtime)
