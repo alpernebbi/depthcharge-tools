@@ -147,6 +147,11 @@ class DepthchargectlTarget(Command):
 
         if good_partitions:
             return good_partitions[0]
+        else:
+            raise ValueError(
+                "No usable Chrome OS Kernel partition found "
+                "for given input arguments."
+            )
 
     def _init_parser(self):
         return super()._init_parser(
