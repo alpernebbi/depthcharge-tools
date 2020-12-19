@@ -53,6 +53,72 @@ class DepthchargectlTarget(Command):
                 logger.info("Using '{}' as a disk.".format(d))
                 partitions.extend(d.partitions())
 
+        # We will need to check partitions against this if allow_current
+        # is false.
+        current = Disk.by_kern_guid()
+
+        # Given a single partition, check if the partition is valid.
+        if len(partitions) == 1:
+            part = partitions[0]
+
+            logger.info("Checking if target partition is writable.")
+            if part.path is not None and not part.path.is_block_device():
+                raise OSError(
+                    2,
+                    "Target '{}' is not a valid block device."
+                    .format(part),
+                )
+
+            logger.info("Checking if targeted partition's disk is writable.")
+            if not part.disk.path.is_block_device():
+                raise OSError(
+                    3,
+                    "Target '{}' is not a valid block device."
+                    .format(part),
+                )
+
+            logger.info(
+                "Checking if we can parse targeted partition's "
+                "partition number."
+            )
+            if part.partno is None:
+                raise OSError(
+                    4,
+                    "Could not parse partition number for '{}'."
+                    .format(part),
+                )
+
+            logger.info(
+                "Checking if targeted partition's type is Chrome OS Kernel."
+            )
+            if part.partno not in (p.partno for p in part.disk.partitions()):
+                raise OSError(
+                    5,
+                    "Partition '{}' is not of type Chrome OS Kernel."
+                    .format(part),
+                )
+
+            logger.info(
+                "Checking if targeted partition is currently booted one."
+            )
+            if not allow_current and part.path == current:
+                raise OSError(
+                    6,
+                    "Partition '{}' is the currently booted parttiion."
+                    .format(part),
+                )
+
+            logger.info(
+                "Checking if targeted partition is bigger than given "
+                "minimum size."
+            )
+            if min_size is not None and part.size < int(min_size):
+                raise OSError(
+                    7,
+                    "Partition '{}' smaller than '{}' bytes."
+                    .format(part, min_size),
+                )
+
         good_partitions = []
         for p in partitions:
             if min_size is not None and p.size < int(min_size):
@@ -62,7 +128,7 @@ class DepthchargectlTarget(Command):
                 )
                 continue
 
-            if not allow_current and p.path == Disk.by_kern_guid():
+            if not allow_current and p.path == current:
                 logger.info(
                     "Skipping currently booted partition '{}'."
                     .format(p)
