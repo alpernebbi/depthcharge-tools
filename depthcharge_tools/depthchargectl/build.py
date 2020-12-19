@@ -60,6 +60,10 @@ class DepthchargectlBuild(Command):
         board = boards[board]
 
         for k in kernels:
+            # vmlinuz is always mandatory
+            if k.kernel is None:
+                raise ValueError("vmlinuz")
+
             if board.image_format == "fit":
                 if board.dtb_name is not None:
                     if k.fdtdir is None:
