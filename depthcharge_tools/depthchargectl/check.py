@@ -32,8 +32,16 @@ class DepthchargectlCheck(Command):
         if board is None:
             board = board_name()
 
-        board = boards[board]
+        try:
+            board = boards[board]
+        except KeyError:
+            raise ValueError(
+                "Cannot verify images for unsupported board '{}'."
+                .format(board)
+            )
 
+        # Default to OS-distributed keys, override with custom
+        # values if given.
         _, keyblock, signprivate, signpubkey = vboot_keys()
         if config.vboot_keyblock is not None:
             keyblock = config.vboot_keyblock
@@ -43,26 +51,38 @@ class DepthchargectlCheck(Command):
             signpubkey = config.vboot_public_key
 
         if not image.is_file():
-            raise OSError(2, "not a file")
+            raise OSError(
+                2,
+                "Image is not a file."
+            )
 
+        logger.info("Checking if image fits into size limit.")
         if image.stat().st_size > board.max_size:
-            raise OSError(3, "too big")
-            return 3
+            raise OSError(
+                3,
+                "Depthcharge image is too big for this machine.",
+            )
 
+        logger.info("Checking depthcharge image validity.")
         if vbutil_kernel(
             "--verify", image,
             check=False,
         ).returncode != 0:
-            raise OSError(4, "vboot verify")
-            return 4
+            raise OSError(
+                4,
+                "Image couldn't be interpreted by vbutil_kernel.",
+            )
 
+        logger.info("Checking depthcharge image signatures.")
         if vbutil_kernel(
             "--verify", image,
             "--signpubkey", signpubkey,
             check=False,
         ).returncode != 0:
-            raise OSError(5, "wrong signpubkey")
-            return 5
+            raise OSError(
+                5,
+                "Depthcharge image not signed by configured keys.",
+            )
 
         with TemporaryDirectory("-depthchargectl") as tmpdir:
             itb = tmpdir / "{}.itb".format(image.name)
@@ -73,13 +93,20 @@ class DepthchargectlCheck(Command):
             )
 
             if board.image_format == "fit":
+                logger.info("Checking FIT image format.")
                 proc = mkimage("-l", itb)
                 if proc.returncode != 0:
-                    raise OSError(6, "mkimage can't recognize")
+                    raise OSError(
+                        6,
+                        "Packed vmlinuz image not recognized by mkimage.",
+                    )
 
                 head = proc.stdout.splitlines()[0]
                 if not head.startswith("FIT description:"):
-                    raise OSError(6, "not a FIT")
+                    raise OSError(
+                        6,
+                        "Packed vmlinuz image is not a FIT image.",
+                    )
 
     def _init_parser(self):
         return super()._init_parser(
