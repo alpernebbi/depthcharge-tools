@@ -58,7 +58,7 @@ class DepthchargectlTarget(Command):
         current = Disk.by_kern_guid()
 
         # Given a single partition, check if the partition is valid.
-        if len(partitions) == 1:
+        if len(partitions) == 1 and len(disks) == 0:
             part = partitions[0]
 
             logger.info("Checking if target partition is writable.")
