@@ -205,7 +205,7 @@ class DepthchargectlBuild(Command):
             for c in compress:
                 mkdepthcharge(
                     cmdline=cmdline,
-                    compress=c,
+                    compress=(c if c != "none" else None),
                     dtbs=dtbs,
                     image_format=board.image_format,
                     initramfs=k.initrd,
