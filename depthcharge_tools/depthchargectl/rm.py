@@ -32,15 +32,45 @@ class DepthchargectlRm(Command):
             for k in kernels:
                 if image == k.release:
                     image = LOCALSTATEDIR / "{}.img".format(k.release)
+                    if not image.is_file():
+                        raise ValueError(
+                            "No image found for kernel version '{}'."
+                            .format(k.release)
+                        )
+                    logger.info(
+                        "Disabling partitions for kernel version '{}'."
+                        .format(k.release)
+                    )
                     break
+
             else:
                 image = Path(image).resolve()
+                if not image.is_file():
+                    raise ValueError(
+                        "Image to remove '{}' is not a file."
+                        .format(image)
+                    )
+                logger.info(
+                    "Disabling partitions for depthcharge image '{}'."
+                    .format(image)
+                )
 
+        # When called with --vblockonly vbutil_kernel creates a file of
+        # size 64KiB == 0x10000.
         image_vblock = image.read_bytes()[:0x10000]
 
+        logger.info(
+            "Searching for Chrome OS Kernel partitions containing '{}'."
+            .format(image)
+        )
         badparts = []
         for disk in Disk.disks(bootable=True):
             for part in disk.partitions():
+                logger.info("Checking partition '{}'.".format(part))
+
+                # It's OK to check only the vblock header, as that
+                # contains signatures on the content and those will be
+                # different if the content is different.
                 with part.path.open("rb") as p:
                     if p.read(0x10000) == image_vblock:
                         if part.attribute:
@@ -49,16 +79,31 @@ class DepthchargectlRm(Command):
         current = Disk.by_kern_guid()
         for part in badparts:
             if part.path == current and not force:
-                raise ValueError("current")
+                raise ValueError(
+                    "Refusing to disable currently booted partition."
+                )
 
         for part in badparts:
+            logger.info("Deactivating '{}'.".format(part))
             part.attribute = 0x000
+            logger.info("Deactivated '{}'.".format(part))
 
         if image.parent == LOCALSTATEDIR:
+            logger.info(
+                "Image '{}' is in images dir, deleting."
+                .format(image)
+            )
+
             inputs = LOCALSTATEDIR / "{}.inputs".format(image.name)
             image.unlink()
+            logger.info("Deleted image '{}'.".format(image))
+
             if inputs.exists():
                 inputs.unlink()
+                logger.info("Deleted inputs file '{}'.".format(inputs))
+
+        else:
+            logger.info("Not deleting image file '{}'.")
 
         if badparts:
             return badparts
