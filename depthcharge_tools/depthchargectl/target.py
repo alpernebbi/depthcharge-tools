@@ -32,11 +32,16 @@ class DepthchargectlTarget(Command):
             raise ValueError("no-disks")
 
         partitions = []
-        for d in disks:
+        for d in list(disks):
             try:
                 partitions.append(Partition(d))
+                disks.remove(d)
             except:
-                partitions.extend(Disk(d).partitions())
+                pass
+
+        if disks:
+            for d in Disk.disks(*disks):
+                partitions.extend(d.partitions())
 
         good_partitions = []
         for p in partitions:
