@@ -48,10 +48,11 @@ class DepthchargectlRm(Command):
 
         current = Disk.by_kern_guid()
         for part in badparts:
-            if part.path != current:
-                part.attribute = 0x000
-            elif force:
-                part.attribute = 0x000
+            if part.path == current and not force:
+                raise ValueError("current")
+
+        for part in badparts:
+            part.attribute = 0x000
 
         if image.parent == LOCALSTATEDIR:
             inputs = LOCALSTATEDIR / "{}.inputs".format(image.name)
