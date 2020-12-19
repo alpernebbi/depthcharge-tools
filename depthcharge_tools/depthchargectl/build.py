@@ -64,8 +64,8 @@ class DepthchargectlBuild(Command):
             if k.kernel is None:
                 raise ValueError("vmlinuz")
 
-            if board.image_format == "fit":
-                if board.dtb_name is not None:
+            if board.dtb_name is not None:
+                if board.image_format == "fit":
                     if k.fdtdir is None:
                         raise ValueError("kernel.fdtdir")
 
@@ -75,6 +75,9 @@ class DepthchargectlBuild(Command):
 
                     if not dtbs:
                         raise ValueError("dtbs")
+
+                elif board.image_format == "zimage":
+                    raise ValueError("dtb-zimage")
 
             cmdline = config.kernel_cmdline or []
             for c in cmdline:
