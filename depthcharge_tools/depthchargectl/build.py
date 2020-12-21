@@ -318,15 +318,30 @@ class DepthchargectlBuild(Command):
                     vmlinuz=k.kernel,
                 )
 
-                # check(outtmp)
-
-                if outtmp.stat().st_size < board.max_size:
+                try:
+                    self._parent.check(outtmp)
                     break
-                else:
+                except OSError as err:
+                    if err.errno != 3:
+                        raise RuntimeError(
+                            "Failed while creating depthcharge image."
+                        )
                     logger.warn(
                         "Image with compression '{}' is too big "
                         "for this board."
                         .format(c)
+                    )
+                    if c != compress[-1]:
+                        continue
+                    logger.error(
+                        "The initramfs might be too big for this machine. "
+                        "Usually this can be resolved by including less "
+                        "modules in the initramfs and/or compressing it "
+                        "with a better algorithm. Please check your distro's "
+                        "documentation for how to do this."
+                    )
+                    raise RuntimeError(
+                        "Couldn't build a small enough image for this machine."
                     )
             else:
                 raise RuntimeError(
