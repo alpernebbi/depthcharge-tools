@@ -15,9 +15,9 @@ logger.addHandler(log_handler)
 
 __version__ = 'v0.5.0-dev'
 
-DATADIR = pathlib.Path("conf")
-SYSCONFDIR = pathlib.Path("conf")
-LOCALSTATEDIR = pathlib.Path("var")
+DATADIR = pathlib.Path("conf").resolve()
+SYSCONFDIR = pathlib.Path("conf").resolve()
+LOCALSTATEDIR = pathlib.Path("var").resolve()
 
 config = Config(SYSCONFDIR / "config")
 boards = BoardInfo(DATADIR / "db", DATADIR / "userdb")
