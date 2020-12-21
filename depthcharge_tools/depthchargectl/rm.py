@@ -29,31 +29,29 @@ class DepthchargectlRm(Command):
         kernels = Kernel.all()
 
         if isinstance(image, str):
-            for k in kernels:
-                if image == k.release:
-                    image = LOCALSTATEDIR / "{}.img".format(k.release)
-                    if not image.is_file():
-                        raise ValueError(
-                            "No image found for kernel version '{}'."
-                            .format(k.release)
-                        )
-                    logger.info(
-                        "Disabling partitions for kernel version '{}'."
-                        .format(k.release)
-                    )
-                    break
+            # This can be run after the kernel is uninstalled, where the
+            # version would no longer be valid, so don't check for that.
+            # Instead just check if we have it as an image.
+            img = (LOCALSTATEDIR / "{}.img".format(image)).resolve()
+            if img.parent == LOCALSTATEDIR and img.is_file():
+                logger.info(
+                    "Disabling partitions for kernel version '{}'."
+                    .format(image)
+                )
+                image = img
 
             else:
                 image = Path(image).resolve()
-                if not image.is_file():
-                    raise ValueError(
-                        "Image to remove '{}' is not a file."
-                        .format(image)
-                    )
                 logger.info(
                     "Disabling partitions for depthcharge image '{}'."
                     .format(image)
                 )
+
+        if not image.is_file():
+            raise ValueError(
+                "Image to remove '{}' is not a file."
+                .format(image)
+            )
 
         # When called with --vblockonly vbutil_kernel creates a file of
         # size 64KiB == 0x10000.
