@@ -74,6 +74,9 @@ class DepthchargectlRm(Command):
                         if part.attribute:
                             badparts.append(part)
 
+        if not badparts:
+            logger.info("No partitions contain the given image.")
+
         current = Disk.by_kern_guid()
         for part in badparts:
             if part.path == current and not force:
