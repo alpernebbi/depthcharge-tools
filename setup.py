@@ -3,10 +3,23 @@
 import os
 import re
 import setuptools
+import subprocess
 
 root = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(root, 'README.rst'), encoding='utf-8') as f:
     readme = f.read()
+
+if not os.path.exists("mkdepthcharge.1"):
+    subprocess.run(
+        ["rst2man", "mkdepthcharge.rst", "mkdepthcharge.1"],
+        check=True,
+    )
+
+if not os.path.exists("depthchargectl.8"):
+    subprocess.run(
+        ["rst2man", "depthchargectl.rst", "depthchargectl.8"],
+        check=True,
+    )
 
 def version(module):
     init_py = os.path.join(root, module, '__init__.py')
