@@ -1,21 +1,22 @@
 #! /usr/bin/env python3
 
 import os
+import pathlib
 import re
 import setuptools
 import subprocess
 
-root = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(root, 'README.rst'), encoding='utf-8') as f:
-    readme = f.read()
 
-if not os.path.exists("mkdepthcharge.1"):
+root = pathlib.Path(__file__).resolve().parent
+readme = (root / 'README.rst').read_text()
+
+if not (root / "mkdepthcharge.1"):
     subprocess.run(
         ["rst2man", "mkdepthcharge.rst", "mkdepthcharge.1"],
         check=True,
     )
 
-if not os.path.exists("depthchargectl.8"):
+if not (root / "depthchargectl.8"):
     subprocess.run(
         ["rst2man", "depthchargectl.rst", "depthchargectl.8"],
         check=True,
