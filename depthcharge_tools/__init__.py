@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import configparser
 import logging
 import pathlib
 import pkg_resources
@@ -16,6 +17,16 @@ try:
     PACKAGENAME = self.project_name
     VERSION = self.version
     GITHASH = None
+
+    dirs = pkg_resources.resource_filename(__name__, "dirs")
+    dirconfig = configparser.ConfigParser()
+    dirconfig.optionxform = str.upper
+    dirconfig.read(dirs)
+    dirconfig = dirconfig["DEFAULT"]
+
+    DATADIR = pathlib.Path(dirconfig.get("DATADIR"))
+    SYSCONFDIR = pathlib.Path(dirconfig.get("SYSCONFDIR"))
+    LOCALSTATEDIR = pathlib.Path(dirconfig.get("LOCALSTATEDIR"))
 
 except pkg_resources.DistributionNotFound:
     PACKAGENAME = "depthcharge-tools"
@@ -40,6 +51,10 @@ except pkg_resources.DistributionNotFound:
             if proc.returncode == 0:
                 VERSION, _ , GITHASH = proc.stdout.partition("-g")
 
+        DATADIR = path / "conf"
+        SYSCONFDIR = path / "conf"
+        LOCALSTATEDIR = path / "var"
+
         break
 
 
@@ -50,9 +65,6 @@ logger.addHandler(log_handler)
 VERSION = pkg_resources.parse_version(VERSION)
 __version__ = VERSION
 
-DATADIR = pathlib.Path("conf").resolve()
-SYSCONFDIR = pathlib.Path("conf").resolve()
-LOCALSTATEDIR = pathlib.Path("var").resolve()
 
 config = Config(SYSCONFDIR / "config")
 boards = BoardInfo(DATADIR / "db", DATADIR / "userdb")
