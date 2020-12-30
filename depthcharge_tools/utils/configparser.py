@@ -49,6 +49,7 @@ class Board:
 class Config:
     def __init__(self, *paths):
         parser = configparser.ConfigParser()
+        parser.add_section("CONFIG")
         for path in paths:
             parser.read_string(
                 "\n".join(("[CONFIG]", pathlib.Path(path).read_text())),
