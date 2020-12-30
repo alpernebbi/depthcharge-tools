@@ -28,6 +28,18 @@ try:
     SYSCONFDIR = pathlib.Path(dirconfig.get("SYSCONFDIR"))
     LOCALSTATEDIR = pathlib.Path(dirconfig.get("LOCALSTATEDIR"))
 
+    config_files = [
+        *SYSCONFDIR.glob("depthcharge-tools/config"),
+        *SYSCONFDIR.glob("depthcharge-tools/config.d/*"),
+    ]
+
+    db_files = [
+        *DATADIR.glob("depthcharge-tools/db"),
+        *SYSCONFDIR.glob("depthcharge-tools/userdb"),
+        *SYSCONFDIR.glob("depthcharge-tools/userdb.d/*"),
+    ]
+
+
 except pkg_resources.DistributionNotFound:
     PACKAGENAME = "depthcharge-tools"
     VERSION = None
@@ -55,6 +67,17 @@ except pkg_resources.DistributionNotFound:
         SYSCONFDIR = path / "conf"
         LOCALSTATEDIR = path / "var"
 
+        config_files = [
+            *SYSCONFDIR.glob("config"),
+            *SYSCONFDIR.glob("config.d/*"),
+        ]
+
+        db_files = [
+            *DATADIR.glob("db"),
+            *SYSCONFDIR.glob("userdb"),
+            *SYSCONFDIR.glob("userdb.d/*"),
+        ]
+
         break
 
 
@@ -65,6 +88,5 @@ logger.addHandler(log_handler)
 VERSION = pkg_resources.parse_version(VERSION)
 __version__ = VERSION
 
-
-config = Config(SYSCONFDIR / "config")
-boards = BoardInfo(DATADIR / "db", DATADIR / "userdb")
+config = Config(*config_files)
+boards = BoardInfo(*db_files)
