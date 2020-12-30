@@ -90,4 +90,22 @@ setuptools.setup(
     package_data={
         "depthcharge_tools": ["dirs"],
     },
+    data_files=(
+        (str(SYSCONFDIR / "depthcharge-tools"), [
+            "conf/config",
+            "conf/userdb",
+        ]),
+        (str(DATADIR / "depthcharge-tools"), ["conf/db"]),
+        (str(MANDIR), ["mkdepthcharge.1", "depthchargectl.8"]),
+        (str(SYSTEMDDIR), ["systemd/depthchargectl-set-good.service"]),
+        (str(INITDDIR), ["init.d/depthchargectl-set-good"]),
+        (str(BASHCOMPDIR), [
+            "completions/_mkdepthcharge.bash",
+            "completions/_depthchargectl.bash",
+        ]),
+        (str(ZSHCOMPDIR), [
+            "completions/_mkdepthcharge.zsh",
+            "completions/_depthchargectl.zsh",
+        ]),
+    ),
 )
