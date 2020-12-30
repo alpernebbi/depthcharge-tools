@@ -85,7 +85,8 @@ logger = logging.getLogger(__name__)
 log_handler = logging.StreamHandler()
 logger.addHandler(log_handler)
 
-VERSION = pkg_resources.parse_version(VERSION)
+if VERSION is not None:
+    VERSION = pkg_resources.parse_version(VERSION)
 __version__ = VERSION
 
 config = Config(*config_files)
