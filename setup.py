@@ -6,11 +6,12 @@ import pathlib
 import re
 import setuptools
 import subprocess
+import sys
 
 def envdir(name, default):
     return pathlib.Path(os.environ.get(name, default))
 
-PREFIX = envdir("PREFIX", "/usr/local")
+PREFIX = envdir("PREFIX", sys.prefix)
 BINDIR = envdir("BINDIR", PREFIX / "bin")
 SBINDIR = envdir("SBINDIR", PREFIX / "sbin")
 DATADIR = envdir("DATADIR", PREFIX / "share")
