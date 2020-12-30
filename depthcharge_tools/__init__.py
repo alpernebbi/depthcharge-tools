@@ -48,7 +48,7 @@ log_handler = logging.StreamHandler()
 logger.addHandler(log_handler)
 
 VERSION = pkg_resources.parse_version(VERSION)
-__version__ = 'v0.5.0-dev'
+__version__ = VERSION
 
 DATADIR = pathlib.Path("conf").resolve()
 SYSCONFDIR = pathlib.Path("conf").resolve()
