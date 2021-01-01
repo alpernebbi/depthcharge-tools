@@ -65,7 +65,7 @@ def datadir(d):
 
 setuptools.setup(
     name='depthcharge-tools',
-    version='0.5.0.dev0',
+    version='0.5.0.dev1',
     description='Tools to manage the Chrome OS bootloader',
     long_description=readme,
     long_description_content_type="text/x-rst",
