@@ -221,12 +221,17 @@ class DepthchargectlBuild(Command):
                         "nor vmlinuz."
                     )
 
+            # Keep images in their own directory, which might not be
+            # created at install-time
+            images = Path(LOCALSTATEDIR / "depthcharge-tools" / "images")
+            os.makedirs(images, exist_ok=True)
+
             # Build to temporary files so we do not overwrite existing
             # images with an unbootable image.
-            output = Path(LOCALSTATEDIR / "{}.img".format(k.release))
-            outtmp = Path(LOCALSTATEDIR / "{}.img.tmp".format(k.release))
-            inputs = Path(LOCALSTATEDIR / "{}.img.inputs".format(k.release))
-            intmps = Path(LOCALSTATEDIR / "{}.img.tmp.inputs".format(k.release))
+            output = images / "{}.img".format(k.release)
+            outtmp = images / "{}.img.tmp".format(k.release)
+            inputs = images / "{}.img.inputs".format(k.release)
+            intmps = images / "{}.img.tmp.inputs".format(k.release)
 
             infiles = [
                 f for f in (
