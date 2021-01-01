@@ -102,6 +102,18 @@ class CgptRunner(ProcessRunner):
     def __init__(self):
         super().__init__("sudo", "cgpt")
 
+    def __call__(self, *args, **kwargs):
+        proc = super().__call__(*args, **kwargs)
+        lines = proc.stdout.splitlines()
+
+        # Sometimes cgpt prints duplicate output.
+        # https://bugs.chromium.org/p/chromium/issues/detail?id=463414
+        mid = len(lines) // 2
+        if lines[:mid] == lines[mid:]:
+            proc.stdout = "\n".join(lines[:mid])
+
+        return proc
+
 
 class FindmntRunner(ProcessRunner):
     def __init__(self):
