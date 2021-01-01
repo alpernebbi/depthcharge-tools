@@ -72,10 +72,14 @@ utilities (``util-linux``, ``coreutils``, etc.) that are usually
 installed by default on most Linux systems. You also need ``docutils``
 to build the manual pages with ``rst2man``, but only during the build.
 
-To install depthcharge-tools to ``/usr/local/``, run::
+Proper packaging and installation for this project are still under
+development. Things might work if you install it with pip in user mode::
 
-    $ make
-    $ sudo make install
+    $ USER_BASE="$(python3 -c 'import site; print(site.USER_BASE)')"
+    $ echo $USER_BASE
+    /home/alpernebbi/.local
+
+    $ PREFIX="$USER_BASE" pip3 install --user .
 
 Hopefully, you should be able to use depthchargectl with just that::
 
@@ -88,23 +92,26 @@ Hopefully, you should be able to use depthchargectl with just that::
 After that, you can edit |CONFIG_FILE|_ to set the kernel command line or
 vboot keys to be used.
 
-.. |CONFIG_FILE| replace:: ``/usr/local/etc/depthcharge-tools/config``
+.. |CONFIG_FILE| replace:: ``~/.local/etc/depthcharge-tools/config``
 .. _CONFIG_FILE: https://github.com/alpernebbi/depthcharge-tools/blob/master/conf/config
 
 There is also an optional systemd service to set partitions as
 successful on boot::
 
-    $ sudo make install-systemd
+    $ sudo cp systemd/depthchargectl-set-good.service /usr/local/lib/systemd/system/
     $ systemctl daemon-reload
     $ systemctl --enable depthchargectl-set-good
 
-You can also run the files directly from the repository but you would
-need to add the repository to ``$PATH`` first. This is mostly useful
-for development::
+You can also run the files directly from the repository but you might
+need to add the repository to ``$PYTHONPATH`` first if you're running
+the commands from somewhere else. This is mostly useful for development::
 
-    # From the root of the repository:
-    $ PATH=".:$PATH" ./mkdepthcharge ...
-    $ sudo PATH=".:$PATH" ./depthchargectl ...
+    $ export PYTHONPATH="/path/to/depthcharge-tools:$PYTHONPATH"
+    $ python3 -m depthcharge_tools.depthchargectl.__init__ partitions
+    S  P  T  DEVICE
+    1  2  0  /dev/mmcblk0p2
+    1  1  0  /dev/mmcblk0p4
+    0  0  15 /dev/mmcblk0p6
 
 
 Contributing
