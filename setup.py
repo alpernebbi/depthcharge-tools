@@ -60,6 +60,9 @@ dirs = root / "depthcharge_tools" / "dirs"
 with dirs.open(mode="w") as f:
     dirconfig.write(f)
 
+def datadir(d):
+    return str(os.path.relpath(d, PREFIX))
+
 setuptools.setup(
     name='depthcharge-tools',
     version='0.5.0.dev0',
@@ -92,19 +95,28 @@ setuptools.setup(
         "depthcharge_tools": ["dirs"],
     },
     data_files=(
-        (str(SYSCONFDIR / "depthcharge-tools"), [
+        (datadir(SYSCONFDIR / "depthcharge-tools"), [
             "conf/config",
             "conf/userdb",
         ]),
-        (str(DATADIR / "depthcharge-tools"), ["conf/db"]),
-        (str(MANDIR), ["mkdepthcharge.1", "depthchargectl.8"]),
-        (str(SYSTEMDDIR), ["systemd/depthchargectl-set-good.service"]),
-        (str(INITDDIR), ["init.d/depthchargectl-set-good"]),
-        (str(BASHCOMPDIR), [
+        (datadir(DATADIR / "depthcharge-tools"), [
+            "conf/db",
+        ]),
+        (datadir(MANDIR), [
+            "mkdepthcharge.1",
+            "depthchargectl.8",
+        ]),
+        (datadir(SYSTEMDDIR), [
+            "systemd/depthchargectl-set-good.service",
+        ]),
+        (datadir(INITDDIR), [
+            "init.d/depthchargectl-set-good",
+        ]),
+        (datadir(BASHCOMPDIR), [
             "completions/_mkdepthcharge.bash",
             "completions/_depthchargectl.bash",
         ]),
-        (str(ZSHCOMPDIR), [
+        (datadir(ZSHCOMPDIR), [
             "completions/_mkdepthcharge.zsh",
             "completions/_depthchargectl.zsh",
         ]),
