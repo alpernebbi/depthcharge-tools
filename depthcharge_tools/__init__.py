@@ -2,6 +2,7 @@
 
 import configparser
 import logging
+import glob
 import pathlib
 import pkg_resources
 import subprocess
@@ -17,24 +18,6 @@ try:
     PACKAGENAME = self.project_name
     VERSION = self.version
     GITHASH = None
-
-    DATADIR = pathlib.Path("/usr/share")
-    SYSCONFDIR = pathlib.Path("/etc")
-
-    config_files = [
-        pkg_resources.resource_filename(__name__, "config"),
-        *SYSCONFDIR.glob("depthcharge-tools/config"),
-        *SYSCONFDIR.glob("depthcharge-tools/config.d/*"),
-    ]
-
-    db_files = [
-        pkg_resources.resource_filename(__name__, "db"),
-        *DATADIR.glob("depthcharge-tools/db"),
-        pkg_resources.resource_filename(__name__, "userdb"),
-        *SYSCONFDIR.glob("depthcharge-tools/userdb"),
-        *SYSCONFDIR.glob("depthcharge-tools/userdb.d/*"),
-    ]
-
 
 except pkg_resources.DistributionNotFound:
     PACKAGENAME = "depthcharge-tools"
@@ -59,16 +42,8 @@ except pkg_resources.DistributionNotFound:
             if proc.returncode == 0:
                 VERSION, _ , GITHASH = proc.stdout.partition("-g")
 
-        config_files = [
-            *path.glob("depthcharge_tools/config"),
-        ]
-
-        db_files = [
-            *path.glob("depthcharge_tools/db"),
-            *path.glob("depthcharge_tools/userdb"),
-        ]
-
         break
+
 
 
 logger = logging.getLogger(__name__)
@@ -79,5 +54,18 @@ if VERSION is not None:
     VERSION = pkg_resources.parse_version(VERSION)
 __version__ = VERSION
 
+config_files = [
+    pkg_resources.resource_filename(__name__, "config"),
+    *glob.glob("/usr/share/depthcharge-tools/config"),
+    *glob.glob("/usr/share/depthcharge-tools/config.d/*"),
+]
 config = Config(*config_files)
+
+db_files = [
+    pkg_resources.resource_filename(__name__, "db"),
+    *glob.glob("/usr/share/depthcharge-tools/db"),
+    pkg_resources.resource_filename(__name__, "userdb"),
+    *glob.glob("/etc/depthcharge-tools/userdb"),
+    *glob.glob("/etc/depthcharge-tools/userdb.d/*"),
+]
 boards = BoardInfo(*db_files)
