@@ -1,67 +1,10 @@
 #! /usr/bin/env python3
 
-import configparser
-import os
 import pathlib
-import re
 import setuptools
-import subprocess
-import sys
-
-def envdir(name, default):
-    return pathlib.Path(os.environ.get(name, default))
-
-PREFIX = envdir("PREFIX", sys.prefix)
-BINDIR = envdir("BINDIR", PREFIX / "bin")
-SBINDIR = envdir("SBINDIR", PREFIX / "sbin")
-DATADIR = envdir("DATADIR", PREFIX / "share")
-SYSCONFDIR = envdir("SYSCONFDIR", PREFIX / "etc")
-LOCALSTATEDIR = envdir("LOCALSTATEDIR", PREFIX / "var")
-LIBDIR = envdir("LIBDIR", PREFIX / "lib")
-MANDIR = envdir("MANDIR", DATADIR / "man")
-INITDDIR = envdir("INITDDIR", SYSCONFDIR / "init.d")
-SYSTEMDDIR = envdir("SYSTEMDDIR", LIBDIR / "systemd/system")
-BASHCOMPDIR = envdir("BASHCOMPDIR", DATADIR / "bash-completion/completions")
-ZSHCOMPDIR = envdir("ZSHCOMPDIR", DATADIR / "zsh/site-functions")
 
 root = pathlib.Path(__file__).resolve().parent
 readme = (root / 'README.rst').read_text()
-
-if not (root / "mkdepthcharge.1"):
-    subprocess.run(
-        ["rst2man", "mkdepthcharge.rst", "mkdepthcharge.1"],
-        check=True,
-    )
-
-if not (root / "depthchargectl.8"):
-    subprocess.run(
-        ["rst2man", "depthchargectl.rst", "depthchargectl.8"],
-        check=True,
-    )
-
-dirconfig = configparser.ConfigParser()
-dirconfig.optionxform = str.upper
-dirconfig["DEFAULT"].update(
-    PREFIX=str(PREFIX),
-    BINDIR=str(BINDIR),
-    SBINDIR=str(SBINDIR),
-    DATADIR=str(DATADIR),
-    SYSCONFDIR=str(SYSCONFDIR),
-    LOCALSTATEDIR=str(LOCALSTATEDIR),
-    LIBDIR=str(LIBDIR),
-    MANDIR=str(MANDIR),
-    INITDDIR=str(INITDDIR),
-    SYSTEMDDIR=str(SYSTEMDDIR),
-    BASHCOMPDIR=str(BASHCOMPDIR),
-    ZSHCOMPDIR=str(ZSHCOMPDIR),
-)
-
-dirs = root / "depthcharge_tools" / "dirs"
-with dirs.open(mode="w") as f:
-    dirconfig.write(f)
-
-def datadir(d):
-    return str(os.path.relpath(d, PREFIX))
 
 setuptools.setup(
     name='depthcharge-tools',
@@ -91,34 +34,4 @@ setuptools.setup(
     keywords='ChromeOS ChromiumOS depthcharge vboot vbutil_kernel',
     packages=setuptools.find_packages(),
     install_requires=[''],
-    package_data={
-        "depthcharge_tools": ["dirs"],
-    },
-    data_files=(
-        (datadir(SYSCONFDIR / "depthcharge-tools"), [
-            "conf/config",
-            "conf/userdb",
-        ]),
-        (datadir(DATADIR / "depthcharge-tools"), [
-            "conf/db",
-        ]),
-        (datadir(MANDIR), [
-            "mkdepthcharge.1",
-            "depthchargectl.8",
-        ]),
-        (datadir(SYSTEMDDIR), [
-            "systemd/depthchargectl-set-good.service",
-        ]),
-        (datadir(INITDDIR), [
-            "init.d/depthchargectl-set-good",
-        ]),
-        (datadir(BASHCOMPDIR), [
-            "completions/_mkdepthcharge.bash",
-            "completions/_depthchargectl.bash",
-        ]),
-        (datadir(ZSHCOMPDIR), [
-            "completions/_mkdepthcharge.zsh",
-            "completions/_depthchargectl.zsh",
-        ]),
-    ),
 )

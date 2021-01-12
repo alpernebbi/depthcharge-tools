@@ -18,15 +18,9 @@ try:
     VERSION = self.version
     GITHASH = None
 
-    dirs = pkg_resources.resource_filename(__name__, "dirs")
-    dirconfig = configparser.ConfigParser()
-    dirconfig.optionxform = str.upper
-    dirconfig.read(dirs)
-    dirconfig = dirconfig["DEFAULT"]
-
-    DATADIR = pathlib.Path(dirconfig.get("DATADIR"))
-    SYSCONFDIR = pathlib.Path(dirconfig.get("SYSCONFDIR"))
-    LOCALSTATEDIR = pathlib.Path(dirconfig.get("LOCALSTATEDIR"))
+    DATADIR = pathlib.Path("/usr/share")
+    SYSCONFDIR = pathlib.Path("/etc")
+    LOCALSTATEDIR = pathlib.Path("/var/lib")
 
     config_files = [
         *SYSCONFDIR.glob("depthcharge-tools/config"),
