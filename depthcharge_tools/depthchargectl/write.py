@@ -5,7 +5,6 @@ import logging
 
 from depthcharge_tools import (
     __version__,
-    LOCALSTATEDIR,
 )
 from depthcharge_tools.utils import (
     Command,

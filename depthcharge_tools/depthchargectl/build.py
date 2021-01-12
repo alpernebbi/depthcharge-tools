@@ -7,7 +7,6 @@ import textwrap
 
 from depthcharge_tools import (
     __version__,
-    LOCALSTATEDIR,
     config,
     boards,
 )
@@ -223,7 +222,7 @@ class DepthchargectlBuild(Command):
 
             # Keep images in their own directory, which might not be
             # created at install-time
-            images = Path(LOCALSTATEDIR / "depthcharge-tools" / "images")
+            images = Path("/boot/depthcharge-tools/images")
             os.makedirs(images, exist_ok=True)
 
             # Build to temporary files so we do not overwrite existing

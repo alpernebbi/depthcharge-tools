@@ -20,7 +20,6 @@ try:
 
     DATADIR = pathlib.Path("/usr/share")
     SYSCONFDIR = pathlib.Path("/etc")
-    LOCALSTATEDIR = pathlib.Path("/var/lib")
 
     config_files = [
         *SYSCONFDIR.glob("depthcharge-tools/config"),
@@ -59,7 +58,6 @@ except pkg_resources.DistributionNotFound:
 
         DATADIR = path / "conf"
         SYSCONFDIR = path / "conf"
-        LOCALSTATEDIR = path / "var"
 
         config_files = [
             *SYSCONFDIR.glob("config"),

@@ -5,7 +5,6 @@ import logging
 
 from depthcharge_tools import (
     __version__,
-    LOCALSTATEDIR,
 )
 from depthcharge_tools.utils import (
     Command,
@@ -32,8 +31,9 @@ class DepthchargectlRm(Command):
             # This can be run after the kernel is uninstalled, where the
             # version would no longer be valid, so don't check for that.
             # Instead just check if we have it as an image.
-            img = (LOCALSTATEDIR / "{}.img".format(image)).resolve()
-            if img.parent == LOCALSTATEDIR and img.is_file():
+            images = Path("/boot/depthcharge-tools/images")
+            img = (images / "{}.img".format(image)).resolve()
+            if img.parent == images and img.is_file():
                 logger.info(
                     "Disabling partitions for kernel version '{}'."
                     .format(image)
@@ -89,13 +89,13 @@ class DepthchargectlRm(Command):
             part.attribute = 0x000
             logger.info("Deactivated '{}'.".format(part))
 
-        if image.parent == LOCALSTATEDIR:
+        if image.parent == images:
             logger.info(
                 "Image '{}' is in images dir, deleting."
                 .format(image)
             )
 
-            inputs = LOCALSTATEDIR / "{}.inputs".format(image.name)
+            inputs = images / "{}.inputs".format(image.name)
             image.unlink()
             logger.info("Deleted image '{}'.".format(image))
 
