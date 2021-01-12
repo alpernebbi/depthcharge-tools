@@ -13,26 +13,28 @@ from depthcharge_tools.utils import (
     BoardInfo,
 )
 
+pkg_path = pkg_resources.resource_filename(__name__, '')
+pkg_path = pathlib.Path(pkg_path).resolve()
+
 try:
     self = pkg_resources.require(__name__)[0]
     PACKAGENAME = self.project_name
     VERSION = self.version
-    GITHASH = None
 
 except pkg_resources.DistributionNotFound:
     PACKAGENAME = "depthcharge-tools"
     VERSION = None
-    GITHASH = None
 
-    path = pkg_resources.resource_filename(__name__, '')
+if (pkg_path.parent / ".git").exists():
     proc = subprocess.run(
-        ["git", "-C", path, "describe"],
+        ["git", "-C", pkg_path, "describe"],
         stdout=subprocess.PIPE,
         encoding="utf-8",
         check=False,
     )
     if proc.returncode == 0:
-        VERSION, _ , GITHASH = proc.stdout.partition("-g")
+        tag, *local = proc.stdout.split("-")
+        VERSION = "{}+{}".format(tag, ".".join(local)) if local else tag
 
 logger = logging.getLogger(__name__)
 log_handler = logging.StreamHandler()
