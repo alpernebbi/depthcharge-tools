@@ -24,27 +24,15 @@ except pkg_resources.DistributionNotFound:
     VERSION = None
     GITHASH = None
 
-    for path in sys.path:
-        path = pathlib.Path(path).resolve()
-
-        init = path / "depthcharge_tools" / "__init__.py"
-        if not init.exists():
-            continue
-
-        git = path / ".git"
-        if git.exists():
-            proc = subprocess.run(
-                ["git", "-C", path, "describe"],
-                stdout=subprocess.PIPE,
-                encoding="utf-8",
-                check=False,
-            )
-            if proc.returncode == 0:
-                VERSION, _ , GITHASH = proc.stdout.partition("-g")
-
-        break
-
-
+    path = pkg_resources.resource_filename(__name__, '')
+    proc = subprocess.run(
+        ["git", "-C", path, "describe"],
+        stdout=subprocess.PIPE,
+        encoding="utf-8",
+        check=False,
+    )
+    if proc.returncode == 0:
+        VERSION, _ , GITHASH = proc.stdout.partition("-g")
 
 logger = logging.getLogger(__name__)
 log_handler = logging.StreamHandler()
