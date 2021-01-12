@@ -5,6 +5,7 @@ import logging
 import glob
 import pathlib
 import pkg_resources
+import re
 import subprocess
 import sys
 
@@ -24,6 +25,13 @@ try:
 except pkg_resources.DistributionNotFound:
     PACKAGENAME = "depthcharge-tools"
     VERSION = None
+
+    setup_py = pkg_path.parent / "setup.py"
+    if setup_py.exists():
+        VERSION = re.findall(
+            'version=(\'.+\'|".+"),',
+            setup_py.read_text(),
+        )[0].strip('"\'')
 
 if (pkg_path.parent / ".git").exists():
     proc = subprocess.run(
