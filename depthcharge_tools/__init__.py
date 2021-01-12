@@ -22,12 +22,15 @@ try:
     SYSCONFDIR = pathlib.Path("/etc")
 
     config_files = [
+        pkg_resources.resource_filename(__name__, "config"),
         *SYSCONFDIR.glob("depthcharge-tools/config"),
         *SYSCONFDIR.glob("depthcharge-tools/config.d/*"),
     ]
 
     db_files = [
+        pkg_resources.resource_filename(__name__, "db"),
         *DATADIR.glob("depthcharge-tools/db"),
+        pkg_resources.resource_filename(__name__, "userdb"),
         *SYSCONFDIR.glob("depthcharge-tools/userdb"),
         *SYSCONFDIR.glob("depthcharge-tools/userdb.d/*"),
     ]
@@ -56,18 +59,13 @@ except pkg_resources.DistributionNotFound:
             if proc.returncode == 0:
                 VERSION, _ , GITHASH = proc.stdout.partition("-g")
 
-        DATADIR = path / "conf"
-        SYSCONFDIR = path / "conf"
-
         config_files = [
-            *SYSCONFDIR.glob("config"),
-            *SYSCONFDIR.glob("config.d/*"),
+            *path.glob("depthcharge_tools/config"),
         ]
 
         db_files = [
-            *DATADIR.glob("db"),
-            *SYSCONFDIR.glob("userdb"),
-            *SYSCONFDIR.glob("userdb.d/*"),
+            *path.glob("depthcharge_tools/db"),
+            *path.glob("depthcharge_tools/userdb"),
         ]
 
         break
