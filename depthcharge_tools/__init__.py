@@ -57,8 +57,8 @@ __version__ = get_version()
 
 config_files = [
     pkg_resources.resource_filename(__name__, "config"),
-    *glob.glob("/usr/share/depthcharge-tools/config"),
-    *glob.glob("/usr/share/depthcharge-tools/config.d/*"),
+    *glob.glob("/etc/depthcharge-tools/config"),
+    *glob.glob("/etc/depthcharge-tools/config.d/*"),
 ]
 config = Config(*config_files)
 
