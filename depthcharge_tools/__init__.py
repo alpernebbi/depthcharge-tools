@@ -7,10 +7,7 @@ import pkg_resources
 import re
 import subprocess
 
-from depthcharge_tools.utils import (
-    Config,
-    BoardInfo,
-)
+from depthcharge_tools.utils import Config
 
 logger = logging.getLogger(__name__)
 log_handler = logging.StreamHandler()
@@ -56,17 +53,8 @@ __version__ = get_version()
 
 
 config_files = [
-    pkg_resources.resource_filename(__name__, "config"),
+    pkg_resources.resource_filename(__name__, "config.ini"),
     *glob.glob("/etc/depthcharge-tools/config"),
     *glob.glob("/etc/depthcharge-tools/config.d/*"),
 ]
 config = Config(*config_files)
-
-db_files = [
-    pkg_resources.resource_filename(__name__, "db"),
-    *glob.glob("/usr/share/depthcharge-tools/db"),
-    pkg_resources.resource_filename(__name__, "userdb"),
-    *glob.glob("/etc/depthcharge-tools/userdb"),
-    *glob.glob("/etc/depthcharge-tools/userdb.d/*"),
-]
-boards = BoardInfo(*db_files)

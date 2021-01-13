@@ -6,19 +6,6 @@ import re
 import shlex
 
 
-class BoardInfo:
-    def __init__(self, *paths):
-        parser = configparser.ConfigParser()
-        parser.SECTCRE = re.compile("^Machine: (?P<header>.*)$")
-        parser.read(paths)
-
-        self._parser = parser
-
-    def __getitem__(self, board):
-        section = self._parser[board]
-        return Board(section)
-
-
 class Board:
     def __init__(self, info):
         self._info = info
@@ -58,6 +45,10 @@ class Config:
 
         self._parser = parser
         self._config = parser["CONFIG"]
+
+    def __getitem__(self, board):
+        section = self._parser[board]
+        return Board(section)
 
     @property
     def machine(self):

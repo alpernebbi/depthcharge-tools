@@ -8,7 +8,6 @@ import textwrap
 from depthcharge_tools import (
     __version__,
     config,
-    boards,
 )
 from depthcharge_tools.mkdepthcharge import mkdepthcharge
 from depthcharge_tools.utils import (
@@ -60,7 +59,7 @@ class DepthchargectlBuild(Command):
             board = board_name()
 
         try:
-            board = boards[board]
+            board = config[board]
         except KeyError:
             raise ValueError(
                 "Cannot build images for unsupported board '{}'."

@@ -6,7 +6,6 @@ import logging
 from depthcharge_tools import (
     __version__,
     config,
-    boards,
 )
 from depthcharge_tools.utils import (
     board_name,
@@ -33,7 +32,7 @@ class DepthchargectlCheck(Command):
             board = board_name()
 
         try:
-            board = boards[board]
+            board = config[board]
         except KeyError:
             raise ValueError(
                 "Cannot verify images for unsupported board '{}'."
