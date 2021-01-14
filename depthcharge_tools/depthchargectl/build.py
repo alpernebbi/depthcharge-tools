@@ -62,6 +62,10 @@ class DepthchargectlBuild(Command):
 
         try:
             board = config[board]
+            logger.info(
+                "Building images for board '{}' ('{}')."
+                .format(board.name, board.codename)
+            )
         except KeyError:
             raise ValueError(
                 "Cannot build images for unsupported board '{}'."
