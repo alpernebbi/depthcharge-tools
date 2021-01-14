@@ -56,8 +56,8 @@ def read_config(*paths):
         default_section="depthcharge-tools",
     )
 
-    config_ini = pkg_resources.resource_filename(__name__, "config.ini")
-    parser.read([config_ini])
+    config_ini = pkg_resources.resource_string(__name__, "config.ini")
+    parser.read_string(config_ini.decode("utf-8"), source="config.ini")
 
     try:
         for p in parser.read(paths):
