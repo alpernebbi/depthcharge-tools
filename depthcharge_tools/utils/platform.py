@@ -10,10 +10,24 @@ from depthcharge_tools.utils.pathlib import Path
 
 
 def board_name():
-    model = dt_model()
-    for name, section in CONFIG.items():
-        if name == model:
-            return section.get("codename")
+    compatibles = dt_compatibles()
+
+    def preference(config):
+        compat = config.get("dt-compatible")
+
+        try:
+            return compatibles.index(compat)
+        except ValueError:
+            return len(compatibles) + 1
+
+    best_match = min(CONFIG.values(), key=preference)
+    return best_match.get("codename")
+
+
+def dt_compatibles():
+    dt_model = Path("/proc/device-tree/compatible")
+    if dt_model.exists():
+        return dt_model.read_text().strip("\x00").split("\x00")
 
 
 def dt_model():
