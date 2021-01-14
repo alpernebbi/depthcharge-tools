@@ -33,8 +33,8 @@ class Board:
             return compress.split(" ")
 
     @property
-    def max_size(self):
-        return self._info.getint("max-size")
+    def image_max_size(self):
+        return self._info.getint("image-max-size")
 
     @property
     def image_format(self):

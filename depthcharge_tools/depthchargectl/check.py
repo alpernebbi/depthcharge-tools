@@ -58,7 +58,7 @@ class DepthchargectlCheck(Command):
             )
 
         logger.info("Checking if image fits into size limit.")
-        if image.stat().st_size > board.max_size:
+        if image.stat().st_size > board.image_max_size:
             raise OSError(
                 3,
                 "Depthcharge image is too big for this machine.",

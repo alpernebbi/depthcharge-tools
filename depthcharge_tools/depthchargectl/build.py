@@ -254,7 +254,7 @@ class DepthchargectlBuild(Command):
                 # Machine info:
                 Machine: {board.name}
                 DTB-Name: {board.dtb_name}
-                Max-Size: {board.max_size}
+                Max-Size: {board.image_max_size}
                 Kernel-Compression: {board_compress}
                 Image-Format: {board.image_format}
 
