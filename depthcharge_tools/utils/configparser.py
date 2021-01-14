@@ -12,7 +12,7 @@ class Board:
 
     @property
     def name(self):
-        return self._info.name
+        return self._info.get("name")
 
     @property
     def codename(self):
