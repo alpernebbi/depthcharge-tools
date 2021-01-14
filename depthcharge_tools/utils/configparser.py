@@ -50,6 +50,7 @@ class Config:
         for name, section in self._parser.items():
             if section.get("codename") == codename:
                 return Board(section)
+        raise KeyError(codename)
 
     @property
     def board(self):
