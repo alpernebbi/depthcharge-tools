@@ -1,13 +1,12 @@
 #! /usr/bin/env python3
 
+import configparser
 import glob
 import logging
 import pathlib
 import pkg_resources
 import re
 import subprocess
-
-from depthcharge_tools.utils import Config
 
 logger = logging.getLogger(__name__)
 log_handler = logging.StreamHandler()
@@ -52,9 +51,18 @@ def get_version():
 __version__ = get_version()
 
 
-config_files = [
-    pkg_resources.resource_filename(__name__, "config.ini"),
+def read_config(*paths):
+    parser = configparser.ConfigParser(
+        default_section="depthcharge-tools",
+    )
+
+    config_ini = pkg_resources.resource_filename(__name__, "config.ini")
+    parser.read([config_ini])
+    parser.read(paths)
+
+    return parser
+
+CONFIG = read_config(
     *glob.glob("/etc/depthcharge-tools/config"),
     *glob.glob("/etc/depthcharge-tools/config.d/*"),
-]
-config = Config(*config_files)
+)

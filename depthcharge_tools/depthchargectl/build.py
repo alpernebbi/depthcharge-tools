@@ -7,13 +7,14 @@ import textwrap
 
 from depthcharge_tools import (
     __version__,
-    config,
+    CONFIG,
 )
 from depthcharge_tools.mkdepthcharge import mkdepthcharge
 from depthcharge_tools.utils import (
     board_name,
     root_requires_initramfs,
     vboot_keys,
+    Config,
     Disk,
     Partition,
     Path,
@@ -54,6 +55,7 @@ class DepthchargectlBuild(Command):
         else:
             kernels = [max(Kernel.all())]
 
+        config = Config(CONFIG)
         board = config.machine
         if board is None:
             board = board_name()

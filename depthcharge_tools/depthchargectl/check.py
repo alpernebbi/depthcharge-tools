@@ -5,11 +5,12 @@ import logging
 
 from depthcharge_tools import (
     __version__,
-    config,
+    CONFIG,
 )
 from depthcharge_tools.utils import (
     board_name,
     vboot_keys,
+    Config,
     Path,
     Command,
     TemporaryDirectory,
@@ -27,6 +28,7 @@ class DepthchargectlCheck(Command):
     def __call__(self, image):
         image = Path(image)
 
+        config = Config(CONFIG)
         board = config.machine
         if board is None:
             board = board_name()

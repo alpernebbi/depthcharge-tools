@@ -34,17 +34,9 @@ class Board:
 
 
 class Config:
-    def __init__(self, *paths):
-        parser = configparser.ConfigParser()
-        parser.add_section("CONFIG")
-        for path in paths:
-            parser.read_string(
-                "\n".join(("[CONFIG]", pathlib.Path(path).read_text())),
-                source=path,
-            )
-
+    def __init__(self, parser):
         self._parser = parser
-        self._config = parser["CONFIG"]
+        self._config = parser[parser.default_section]
 
     def __getitem__(self, board):
         section = self._parser[board]
