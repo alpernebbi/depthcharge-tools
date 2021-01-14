@@ -15,6 +15,10 @@ class Board:
         return self._info.name
 
     @property
+    def codename(self):
+        return self._info.get("codename")
+
+    @property
     def dtb_name(self):
         return self._info.get("dtb-name")
 
