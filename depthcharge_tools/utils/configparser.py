@@ -23,6 +23,10 @@ class Board:
         return self._info.get("dtb-name")
 
     @property
+    def dt_compatible(self):
+        return self._info.get("dt-compatible")
+
+    @property
     def kernel_compression(self):
         compress = self._info.get("kernel-compression")
         if compress is not None:
