@@ -58,7 +58,16 @@ def read_config(*paths):
 
     config_ini = pkg_resources.resource_filename(__name__, "config.ini")
     parser.read([config_ini])
-    parser.read(paths)
+
+    try:
+        for p in parser.read(paths):
+            logger.debug("Read config file '{}'.".format(p))
+
+    except configparser.ParsingError as err:
+        logger.warning(
+            "Config file '{}' could not be parsed."
+            .format(err.filename)
+        )
 
     return parser
 
