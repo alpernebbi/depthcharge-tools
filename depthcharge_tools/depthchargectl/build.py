@@ -56,7 +56,7 @@ class DepthchargectlBuild(Command):
             kernels = [max(Kernel.all())]
 
         config = Config(CONFIG)
-        board = config.machine
+        board = config.board
         if board is None:
             board = board_name()
 

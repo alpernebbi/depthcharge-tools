@@ -51,8 +51,8 @@ class Config:
         return Board(section)
 
     @property
-    def machine(self):
-        return self._config.get("machine")
+    def board(self):
+        return self._config.get("board")
 
     @property
     def kernel_cmdline(self):

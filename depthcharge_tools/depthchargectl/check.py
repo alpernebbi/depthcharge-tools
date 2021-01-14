@@ -29,7 +29,7 @@ class DepthchargectlCheck(Command):
         image = Path(image)
 
         config = Config(CONFIG)
-        board = config.machine
+        board = config.board
         if board is None:
             board = board_name()
 
