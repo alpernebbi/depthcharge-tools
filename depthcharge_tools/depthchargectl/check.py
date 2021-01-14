@@ -35,6 +35,10 @@ class DepthchargectlCheck(Command):
 
         try:
             board = config[board]
+            logger.info(
+                "Verifying image for board '{}' ('{}')."
+                .format(board.name, board.codename)
+            )
         except KeyError:
             raise ValueError(
                 "Cannot verify images for unsupported board '{}'."
