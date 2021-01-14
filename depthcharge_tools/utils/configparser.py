@@ -46,9 +46,10 @@ class Config:
         self._parser = parser
         self._config = parser[parser.default_section]
 
-    def __getitem__(self, board):
-        section = self._parser[board]
-        return Board(section)
+    def __getitem__(self, codename):
+        for name, section in self._parser.items():
+            if section.get("codename") == codename:
+                return Board(section)
 
     @property
     def board(self):

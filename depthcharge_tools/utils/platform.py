@@ -5,10 +5,18 @@ import platform
 import re
 import shlex
 
+from depthcharge_tools import CONFIG
 from depthcharge_tools.utils.pathlib import Path
 
 
 def board_name():
+    model = dt_model()
+    for name, section in CONFIG.items():
+        if name == model:
+            return section.get("codename")
+
+
+def dt_model():
     dt_model = Path("/proc/device-tree/model")
     if dt_model.exists():
         return dt_model.read_text().strip("\x00")
