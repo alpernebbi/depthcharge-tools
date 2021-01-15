@@ -33,10 +33,21 @@ class Board:
             return re.compile(pattern)
 
     @property
+    def kernel_lz4(self):
+        return self._info.getboolean("kernel-lz4", False)
+
+    @property
+    def kernel_lzma(self):
+        return self._info.getboolean("kernel-lzma", False)
+
+    @property
     def kernel_compression(self):
-        compress = self._info.get("kernel-compression")
-        if compress is not None:
-            return compress.split(" ")
+        compress = ["none"]
+        if self.kernel_lz4:
+            compress += ["lz4"]
+        if self.kernel_lzma:
+            compress += ["lzma"]
+        return compress
 
     @property
     def image_max_size(self):
