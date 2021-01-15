@@ -7,9 +7,22 @@ import shlex
 
 from depthcharge_tools import CONFIG
 from depthcharge_tools.utils.pathlib import Path
+from depthcharge_tools.utils.subprocess import crossystem
 
 
 def board_name():
+    hwid = cros_hwid()
+
+    if hwid:
+        for name, section in CONFIG.items():
+            codename = section.get("codename")
+            if not codename:
+                continue
+
+            hwid_match = section.get("hwid-match")
+            if hwid_match and re.match(hwid_match, hwid):
+                return codename
+
     compatibles = dt_compatibles()
 
     def preference(config):
@@ -34,6 +47,17 @@ def dt_model():
     dt_model = Path("/proc/device-tree/model")
     if dt_model.exists():
         return dt_model.read_text().strip("\x00")
+
+
+def cros_hwid():
+    hwid_file = Path("/proc/device-tree/firmware/chromeos/hardware-id")
+    if hwid_file.exists():
+        return hwid_file.read_text().strip("\x00")
+
+    # If we booted with e.g. u-boot, we don't have dt/firmware/chromeos
+    proc = crossystem("hwid")
+    if proc.returncode == 0:
+        return proc.stdout.strip("\x00")
 
 
 def os_release():

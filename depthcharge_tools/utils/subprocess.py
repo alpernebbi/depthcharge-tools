@@ -144,6 +144,11 @@ class Sha256sumRunner(ProcessRunner):
         super().__init__("sha256sum")
 
 
+class CrossystemRunner(ProcessRunner):
+    def __init__(self):
+        super().__init__("sudo", "crossystem")
+
+
 gzip = GzipRunner()
 lz4 = Lz4Runner()
 lzma = LzmaRunner()
@@ -153,3 +158,4 @@ cgpt = CgptRunner()
 findmnt = FindmntRunner()
 blockdev = BlockdevRunner()
 sha256sum = Sha256sumRunner()
+crossystem = CrossystemRunner()
