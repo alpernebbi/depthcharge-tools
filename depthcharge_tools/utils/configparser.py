@@ -59,9 +59,15 @@ class Board:
 
 
 class Config:
-    def __init__(self, parser):
+    def __init__(self, parser, section=None):
+        if section is None:
+            section = parser.default_section
+
+        if section not in parser.sections():
+            parser.add_section(section)
+
         self._parser = parser
-        self._config = parser[parser.default_section]
+        self._config = parser[section]
 
     def __getitem__(self, codename):
         for name, section in self._parser.items():

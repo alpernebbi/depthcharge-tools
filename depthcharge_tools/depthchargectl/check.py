@@ -28,7 +28,7 @@ class DepthchargectlCheck(Command):
     def __call__(self, image):
         image = Path(image)
 
-        config = Config(CONFIG)
+        config = Config(CONFIG, "depthchargectl/check")
         board = config.board
         if board is None:
             board = board_name()
