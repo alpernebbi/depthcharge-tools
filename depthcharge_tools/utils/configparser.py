@@ -27,6 +27,12 @@ class Board:
         return self._info.get("dt-compatible")
 
     @property
+    def hwid_match(self):
+        pattern = self._info.get("hwid-match")
+        if pattern:
+            return re.compile(pattern)
+
+    @property
     def kernel_compression(self):
         compress = self._info.get("kernel-compression")
         if compress is not None:
