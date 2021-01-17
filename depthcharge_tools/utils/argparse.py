@@ -98,10 +98,11 @@ class Argument:
 
     @command.setter
     def command(self, command):
-        if self._command is None:
-            self._command = command
-        elif self._command is not command:
+        if self._command is not None:
             raise ValueError(command)
+
+        self._command = command
+        command.parser.add_argument(*self._args, **self._kwargs)
 
     @property
     def func(self):
@@ -143,9 +144,6 @@ class Argument:
         self._value = value
         return value
 
-    def add_to_parser(self, parser):
-        parser.add_argument(*self._args, **self._kwargs)
-
 
 class Command:
     def __init__(self, *args, **kwargs):
@@ -154,7 +152,6 @@ class Command:
         for attr, value in vars(self.__class__).items():
             if isinstance(value, Argument):
                 arg = getattr(self, attr)
-                arg.add_to_parser(self.parser)
 
 
 class OldCommand:
