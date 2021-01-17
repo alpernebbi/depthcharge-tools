@@ -17,10 +17,9 @@ class Argument:
         self._inputs = None
         self._value = None
 
-        first, *rest = args
-        if callable(first):
-            self._args = rest
-            self(first)
+        if args and callable(args[0]):
+            self._args = args[1:]
+            self(args[0])
 
     def __call__(self, func):
         if isinstance(func, Argument):
