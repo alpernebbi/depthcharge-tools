@@ -11,6 +11,7 @@ class Argument:
         self._name = None
         self._args = args
         self._kwargs = kwargs
+        self._command = None
 
         first, *rest = args
         if callable(first):
@@ -31,10 +32,30 @@ class Argument:
 
         return self
 
+    def __get__(self, instance, owner):
+        if not isinstance(instance, Command):
+            return self
+
+        name = self.name
+        if name in instance.__dict__:
+            return instance.__dict__[name]
+
+        copy = self.copy()
+        copy.command = instance
+        instance.__dict__[name] = copy
+
+        return copy
+
     def __set_name__(self, owner, name):
         if not issubclass(owner, Command):
             return
         self.name = name
+
+    def copy(self):
+        if self._func is not None:
+            return type(self)(self._func, *self._args, **self._kwargs)
+        else:
+            return type(self)(*self._args, **self._kwargs)
 
     @property
     def name(self):
@@ -46,6 +67,17 @@ class Argument:
             self._name = name
         elif self._name != name:
             raise ValueError(name)
+
+    @property
+    def command(self):
+        return self._command
+
+    @command.setter
+    def command(self, command):
+        if self._command is None:
+            self._command = command
+        elif self._command is not command:
+            raise ValueError(command)
 
     def add_to_parser(self, parser):
         parser.add_argument(*self._args, **self._kwargs)
