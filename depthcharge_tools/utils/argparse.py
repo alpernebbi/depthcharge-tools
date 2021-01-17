@@ -210,6 +210,9 @@ class Argument:
         if "dest" in self._kwargs:
             return self._kwargs["dest"]
 
+        if self.action in ("help", "version"):
+            return argparse.SUPPRESS
+
         if self.name is not None:
             return self.name
         elif self.is_positional() and self._args:
