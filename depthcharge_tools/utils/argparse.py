@@ -23,9 +23,8 @@ class Argument:
 
     @property
     def __call__(self):
-        func = self.func
-        if func is not None:
-            return func
+        if self._func is not None and self._command is not None:
+            return self.func
         else:
             return self.wrap
 
