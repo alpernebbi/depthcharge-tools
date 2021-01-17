@@ -19,9 +19,17 @@ class Argument:
 
         if args and callable(args[0]):
             self._args = args[1:]
-            self(args[0])
+            self.wrap(args[0])
 
-    def __call__(self, func):
+    @property
+    def __call__(self):
+        func = self.func
+        if func is not None:
+            return func
+        else:
+            return self.wrap
+
+    def wrap(self, func):
         if isinstance(func, Argument):
             raise NotImplementedError
 
