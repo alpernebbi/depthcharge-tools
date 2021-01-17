@@ -133,8 +133,10 @@ class Argument:
 
     @property
     def func(self):
-        if self._func is None or self._command is None:
-            return None
+        if self._func is None:
+            raise AttributeError("func")
+        if self._command is None:
+            raise AttributeError("command")
 
         return functools.partial(
             self._func,
@@ -158,8 +160,6 @@ class Argument:
     @property
     def action(self):
         nargs = self.nargs
-        if nargs is None:
-            return None
 
         if nargs == 0:
             return "store_const"
@@ -169,8 +169,6 @@ class Argument:
     @property
     def const(self):
         nargs = self.nargs
-        if nargs is None:
-            return None
 
         if nargs == 0:
             return []
@@ -193,9 +191,6 @@ class Argument:
     @property
     def nargs(self):
         func = self.func
-        if func is None:
-            return None
-
         params = inspect.signature(func).parameters
 
         if any(
