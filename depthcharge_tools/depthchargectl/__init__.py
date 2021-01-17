@@ -9,9 +9,9 @@ from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     Disk,
     Partition,
-    Command,
     LoggingLevelAction,
 )
+from depthcharge_tools.utils import OldCommand as Command
 from depthcharge_tools.depthchargectl import (
     build,
     check,

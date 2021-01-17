@@ -18,11 +18,11 @@ from depthcharge_tools.utils import (
     Disk,
     Partition,
     Path,
-    Command,
     Kernel,
     findmnt,
     sha256sum,
 )
+from depthcharge_tools.utils import OldCommand as Command
 
 logger = logging.getLogger(__name__)
 

@@ -9,8 +9,8 @@ from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     Disk,
     Partition,
-    Command,
 )
+from depthcharge_tools.utils import OldCommand as Command
 
 logger = logging.getLogger(__name__)
 

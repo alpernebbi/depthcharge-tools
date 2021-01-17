@@ -5,7 +5,7 @@ import logging
 import sys
 
 
-class Command:
+class OldCommand:
     def __init__(self, name=None, parent=None):
         self._name = name
         self._parent = parent

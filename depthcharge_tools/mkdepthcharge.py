@@ -13,10 +13,10 @@ from depthcharge_tools.utils import (
     Architecture,
     Path,
     TemporaryDirectory,
-    Command,
     LoggingLevelAction,
     MixedArgumentsAction,
 )
+from depthcharge_tools.utils import OldCommand as Command
 
 logger = logging.getLogger(__name__)
 

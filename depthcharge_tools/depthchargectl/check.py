@@ -12,11 +12,11 @@ from depthcharge_tools.utils import (
     vboot_keys,
     Config,
     Path,
-    Command,
     TemporaryDirectory,
     mkimage,
     vbutil_kernel,
 )
+from depthcharge_tools.utils import OldCommand as Command
 
 logger = logging.getLogger(__name__)
 
