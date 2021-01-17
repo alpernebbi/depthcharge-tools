@@ -159,24 +159,29 @@ class Argument:
 
     @property
     def action(self):
-        nargs = self.nargs
+        if "action" in self._kwargs:
+            return self._kwargs["action"]
 
-        if nargs == 0:
+        if self.nargs == 0:
             return "store_const"
         else:
             return "store"
 
     @property
     def const(self):
-        nargs = self.nargs
+        if "const" in self._kwargs:
+            return self._kwargs["const"]
 
-        if nargs == 0:
+        if self.nargs == 0:
             return []
         else:
             return None
 
     @property
     def dest(self):
+        if "dest" in self._kwargs:
+            return self._kwargs["dest"]
+
         if self.name is not None:
             return self.name
         elif self.is_positional() and self._args:
@@ -184,12 +189,18 @@ class Argument:
 
     @property
     def metavar(self):
+        if "metavar" in self._kwargs:
+            return self._kwargs["metavar"]
+
         if self.name is not None:
             if self.is_positional() and self._args:
                 return self._args[0]
 
     @property
     def nargs(self):
+        if "nargs" in self._kwargs:
+            return self._kwargs["nargs"]
+
         func = self.func
         params = inspect.signature(func).parameters
 
@@ -204,6 +215,9 @@ class Argument:
 
     @property
     def help(self):
+        if "help" in self._kwargs:
+            return self._kwargs["help"]
+
         return inspect.getdoc(self._func)
 
     @property
