@@ -5,6 +5,25 @@ import logging
 import sys
 
 
+class Argument:
+    def __init__(self, *args, **kwargs):
+        self._args = args
+        self._kwargs = kwargs
+
+    def add_to_parser(self, parser):
+        parser.add_argument(*self._args, **self._kwargs)
+
+
+class Command:
+    def __init__(self, *args, **kwargs):
+        self.parser = argparse.ArgumentParser(*args, **kwargs)
+
+        for attr, value in vars(self.__class__).items():
+            if isinstance(value, Argument):
+                arg = getattr(self, attr)
+                arg.add_to_parser(self.parser)
+
+
 class OldCommand:
     def __init__(self, name=None, parent=None):
         self._name = name
