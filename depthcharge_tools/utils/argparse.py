@@ -8,14 +8,16 @@ import sys
 
 
 class Argument:
+    _unset = object()
+
     def __init__(self, *args, **kwargs):
         self._func = None
         self._name = None
         self._args = args
         self._kwargs = kwargs
         self._command = None
-        self._inputs = None
-        self._value = None
+        self._inputs = Argument._unset
+        self._value = Argument._unset
 
         if args and callable(args[0]):
             self._args = args[1:]
@@ -49,7 +51,7 @@ class Argument:
         name = self.name
         if name in instance.__dict__:
             arg = instance.__dict__[name]
-            if arg.inputs is not None:
+            if arg._inputs is not Argument._unset:
                 return arg.value
             else:
                 return arg
@@ -222,11 +224,14 @@ class Argument:
 
     @property
     def inputs(self):
+        if self._inputs is Argument._unset:
+            raise AttributeError("inputs")
+
         return self._inputs
 
     @property
     def value(self):
-        if self._value is not None:
+        if self._value is not Argument._unset:
             return self._value
 
         value = self.func(*self.inputs)
