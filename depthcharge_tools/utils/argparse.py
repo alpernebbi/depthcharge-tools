@@ -8,6 +8,7 @@ import sys
 class Argument:
     def __init__(self, *args, **kwargs):
         self._func = None
+        self._name = None
         self._args = args
         self._kwargs = kwargs
 
@@ -23,11 +24,28 @@ class Argument:
         if self._func is None:
             if callable(func):
                 self._func = func
+                self.name = func.__name__
 
         elif func != self._func:
             raise ValueError(func)
 
         return self
+
+    def __set_name__(self, owner, name):
+        if not issubclass(owner, Command):
+            return
+        self.name = name
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        if self._name is None:
+            self._name = name
+        elif self._name != name:
+            raise ValueError(name)
 
     def add_to_parser(self, parser):
         parser.add_argument(*self._args, **self._kwargs)
