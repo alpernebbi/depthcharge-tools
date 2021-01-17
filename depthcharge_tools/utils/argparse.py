@@ -7,8 +7,27 @@ import sys
 
 class Argument:
     def __init__(self, *args, **kwargs):
+        self._func = None
         self._args = args
         self._kwargs = kwargs
+
+        first, *rest = args
+        if callable(first):
+            self._args = rest
+            self(first)
+
+    def __call__(self, func):
+        if isinstance(func, Argument):
+            raise NotImplementedError
+
+        if self._func is None:
+            if callable(func):
+                self._func = func
+
+        elif func != self._func:
+            raise ValueError(func)
+
+        return self
 
     def add_to_parser(self, parser):
         parser.add_argument(*self._args, **self._kwargs)
