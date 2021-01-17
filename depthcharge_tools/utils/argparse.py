@@ -108,28 +108,54 @@ class Argument:
         args = list(self._args)
         kwargs = dict(self._kwargs)
 
-        action = self.action
-        help = self.help
-        dest = self.dest
-        metavar = self.metavar
-        nargs = self.nargs
-        const = self.const
+        action = kwargs.setdefault("action", self.action)
+        help = kwargs.setdefault("help", self.help)
+        dest = kwargs.setdefault("dest", self.dest)
+        metavar = kwargs.setdefault("metavar", self.metavar)
+        nargs = kwargs.setdefault("nargs", self.nargs)
+        const = kwargs.setdefault("const", self.const)
 
         if args and args[0] in (dest, metavar):
             args = args[1:]
 
-        if action is not None:
-            kwargs.setdefault("action", action)
-        if help is not None:
-            kwargs.setdefault("help", help)
-        if dest is not None:
-            kwargs.setdefault("dest", dest)
-        if metavar is not None:
-            kwargs.setdefault("metavar", metavar)
-        if nargs is not None:
-            kwargs.setdefault("nargs", nargs)
-        if const is not None:
-            kwargs.setdefault("const", const)
+        allowed = {
+            "action", "dest", "nargs", "const", "default", "type",
+            "choices", "required", "help", "metavar",
+        }
+        if action == "store":
+            pass
+
+        elif action == "store_const":
+            allowed -= {"nargs", "type", "choices"}
+
+        elif action == "store_true":
+            allowed -= {"nargs", "const", "type", "choices", "metavar"}
+
+        elif action == "store_false":
+            allowed -= {"nargs", "const", "type", "choices", "metavar"}
+
+        elif action == "append":
+            pass
+
+        elif action == "append_const":
+            allowed -= {"nargs", "type", "choices"}
+
+        elif action == "count":
+            allowed -= {"nargs", "const", "type", "choices", "metavar"}
+
+        elif action == "help":
+            allowed = {"action", "dest", "default", "help"}
+
+        elif action == "version":
+            allowed = {"action", "version", "dest", "default", "help"}
+
+        # add_argument() raises on unknown kwargs, filter them out.
+        # Also let caller unset our defaults by passing _unset
+        kwargs = {
+            key: value
+            for key, value in kwargs.items()
+            if key in allowed and not value is Argument._unset
+        }
 
         command.parser.add_argument(*args, **kwargs)
 
