@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import argparse
+import functools
 import logging
 import sys
 
@@ -78,6 +79,16 @@ class Argument:
             self._command = command
         elif self._command is not command:
             raise ValueError(command)
+
+    @property
+    def func(self):
+        if self._func is None or self._command is None:
+            return None
+
+        return functools.partial(
+            self._func,
+            self._command,
+        )
 
     def add_to_parser(self, parser):
         parser.add_argument(*self._args, **self._kwargs)
