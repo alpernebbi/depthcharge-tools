@@ -102,7 +102,35 @@ class Argument:
             raise ValueError(command)
 
         self._command = command
-        command.parser.add_argument(*self._args, **self._kwargs)
+
+        name = self.name
+        args = list(self._args)
+        kwargs = dict(self._kwargs)
+
+        action = self.action
+        help = self.help
+        dest = self.dest
+        metavar = self.metavar
+        nargs = self.nargs
+        const = self.const
+
+        if args and args[0] in (dest, metavar):
+            args = args[1:]
+
+        if action is not None:
+            kwargs.setdefault("action", action)
+        if help is not None:
+            kwargs.setdefault("help", help)
+        if dest is not None:
+            kwargs.setdefault("dest", dest)
+        if metavar is not None:
+            kwargs.setdefault("metavar", metavar)
+        if nargs is not None:
+            kwargs.setdefault("nargs", nargs)
+        if const is not None:
+            kwargs.setdefault("const", const)
+
+        command.parser.add_argument(*args, **kwargs)
 
     @property
     def func(self):
@@ -113,6 +141,55 @@ class Argument:
             self._func,
             self._command,
         )
+
+    def is_optional(self):
+        if not self._args:
+            return False
+
+        if self._command is None:
+            prefix_chars = "-"
+        else:
+            prefix_chars = self._command.parser.prefix_chars
+
+        return self._args[0][0] in prefix_chars
+
+    def is_positional(self):
+        return not self.is_optional()
+
+    @property
+    def action(self):
+        nargs = self.nargs
+        if nargs is None:
+            return None
+
+        if nargs == 0:
+            return "store_const"
+        else:
+            return "store"
+
+    @property
+    def const(self):
+        nargs = self.nargs
+        if nargs is None:
+            return None
+
+        if nargs == 0:
+            return []
+        else:
+            return None
+
+    @property
+    def dest(self):
+        if self.name is not None:
+            return self.name
+        elif self.is_positional() and self._args:
+            return self._args[0]
+
+    @property
+    def metavar(self):
+        if self.name is not None:
+            if self.is_positional() and self._args:
+                return self._args[0]
 
     @property
     def nargs(self):
@@ -130,6 +207,10 @@ class Argument:
             return "*"
 
         return len(params)
+
+    @property
+    def help(self):
+        return inspect.getdoc(self._func)
 
     @property
     def inputs(self):
