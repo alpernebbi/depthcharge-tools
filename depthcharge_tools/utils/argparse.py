@@ -2,6 +2,7 @@
 
 import argparse
 import functools
+import inspect
 import logging
 import sys
 
@@ -89,6 +90,23 @@ class Argument:
             self._func,
             self._command,
         )
+
+    @property
+    def nargs(self):
+        func = self.func
+        if func is None:
+            return None
+
+        params = inspect.signature(func).parameters
+
+        if any(
+            param.kind == inspect.Parameter.VAR_POSITIONAL
+            or param.kind == inspect.Parameter.VAR_KEYWORD
+            for name, param in params.items()
+        ):
+            return "*"
+
+        return len(params)
 
     def add_to_parser(self, parser):
         parser.add_argument(*self._args, **self._kwargs)
