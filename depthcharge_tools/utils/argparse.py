@@ -12,6 +12,7 @@ class Argument:
 
     def __init__(self, *args, **kwargs):
         self._func = None
+        self._partial = None
         self._name = None
         self._args = args
         self._kwargs = kwargs
@@ -165,11 +166,14 @@ class Argument:
             raise AttributeError("func")
         if self._command is None:
             raise AttributeError("command")
+        if self._partial is not None:
+            return self._partial
 
-        return functools.partial(
+        self._partial = functools.partial(
             self._func,
             self._command,
         )
+        return self._partial
 
     def is_optional(self):
         if not self._args:
