@@ -98,7 +98,10 @@ class Argument:
         name = self.name
         if name in instance.__dict__:
             arg = instance.__dict__[name]
+
             if arg._inputs is not Argument._unset:
+                return arg.value
+            elif arg._value is not Argument._unset:
                 return arg.value
             else:
                 return arg
@@ -116,7 +119,11 @@ class Argument:
         else:
             arg = self
 
-        arg._inputs = value
+        if arg._value is Argument._unset:
+            arg._inputs = value
+        else:
+            arg._inputs = Argument._unset
+            arg._value = value
 
     def __set_name__(self, owner, name):
         if not issubclass(owner, Command):
