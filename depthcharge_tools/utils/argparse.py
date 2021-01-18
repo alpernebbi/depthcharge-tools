@@ -72,7 +72,7 @@ class Argument:
 
     @property
     def __call__(self):
-        if self._func is not None and self._command is not None:
+        if self._command is not None:
             return self.func
         else:
             return self.wrap
@@ -125,9 +125,13 @@ class Argument:
 
     def copy(self):
         if self._func is not None:
-            return type(self)(self._func, *self._args, **self._kwargs)
+            copy = type(self)(self._func, *self._args, **self._kwargs)
         else:
-            return type(self)(*self._args, **self._kwargs)
+            copy = type(self)(*self._args, **self._kwargs)
+
+        copy.name = self.name
+
+        return copy
 
     @property
     def name(self):
@@ -170,12 +174,13 @@ class Argument:
 
     @property
     def func(self):
-        if self._func is None:
-            raise AttributeError("func")
         if self._command is None:
             raise AttributeError("command")
         if self._partial is not None:
             return self._partial
+
+        if self._func is None:
+            return None
 
         self._partial = functools.partial(
             self._func,
@@ -245,6 +250,12 @@ class Argument:
             return self._kwargs["nargs"]
 
         func = self.func
+        if func is None:
+            if self.is_positional():
+                return 1
+            else:
+                return "?"
+
         params = inspect.signature(func).parameters
 
         nargs_min = 0
@@ -302,7 +313,12 @@ class Argument:
         if self._value is not Argument._unset:
             return self._value
 
-        value = self.func(*self.inputs)
+        func = self.func
+        if func is None:
+            value = self.inputs
+        else:
+            value = self.func(*self.inputs)
+
         self._value = value
         return value
 
