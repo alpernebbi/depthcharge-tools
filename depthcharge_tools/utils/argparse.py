@@ -239,14 +239,41 @@ class Argument:
         func = self.func
         params = inspect.signature(func).parameters
 
-        if any(
-            param.kind == inspect.Parameter.VAR_POSITIONAL
-            or param.kind == inspect.Parameter.VAR_KEYWORD
-            for name, param in params.items()
-        ):
+        nargs_min = 0
+        nargs_max = 0
+        variadic = False
+
+        for name, param in params.items():
+            if param.kind == inspect.Parameter.VAR_POSITIONAL:
+                variadic = True
+
+            elif param.kind == inspect.Parameter.VAR_KEYWORD:
+                variadic = True
+                raise NotImplementedError
+
+            elif param.kind == inspect.Parameter.KEYWORD_ONLY:
+                raise NotImplementedError
+
+            elif param.default == inspect.Parameter.empty:
+                nargs_min += 1
+                nargs_max += 1
+
+            else:
+                nargs_max += 1
+
+        if variadic:
+            if nargs_min > 0:
+                return "+"
+            else:
+                return "*"
+
+        if (nargs_min, nargs_max) == (0, 1):
+            return "?"
+
+        if nargs_min != nargs_max:
             return "*"
 
-        return len(params)
+        return nargs_min
 
     @property
     def help(self):
