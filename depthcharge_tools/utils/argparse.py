@@ -7,6 +7,52 @@ import logging
 import sys
 
 
+def filter_action_kwargs(action, kwargs):
+    """
+    Filter out the kwargs which argparse actions don't recognize.
+
+    ArgumentParser.add_argument() raises an error on unknown kwargs,
+    filter them out. Also unset any values that are Argument._unset.
+    """
+
+    allowed = {
+        "action", "dest", "nargs", "const", "default", "type",
+        "choices", "required", "help", "metavar",
+    }
+    if action == "store":
+        pass
+
+    elif action == "store_const":
+        allowed -= {"nargs", "type", "choices"}
+
+    elif action == "store_true":
+        allowed -= {"nargs", "const", "type", "choices", "metavar"}
+
+    elif action == "store_false":
+        allowed -= {"nargs", "const", "type", "choices", "metavar"}
+
+    elif action == "append":
+        pass
+
+    elif action == "append_const":
+        allowed -= {"nargs", "type", "choices"}
+
+    elif action == "count":
+        allowed -= {"nargs", "const", "type", "choices", "metavar"}
+
+    elif action == "help":
+        allowed = {"action", "dest", "default", "help"}
+
+    elif action == "version":
+        allowed = {"action", "version", "dest", "default", "help"}
+
+    return {
+        key: value
+        for key, value in kwargs.items()
+        if key in allowed and not value is Argument._unset
+    }
+
+
 class Argument:
     _unset = object()
 
@@ -118,45 +164,7 @@ class Argument:
 
         if args and args[0] in (dest, metavar):
             args = args[1:]
-
-        allowed = {
-            "action", "dest", "nargs", "const", "default", "type",
-            "choices", "required", "help", "metavar",
-        }
-        if action == "store":
-            pass
-
-        elif action == "store_const":
-            allowed -= {"nargs", "type", "choices"}
-
-        elif action == "store_true":
-            allowed -= {"nargs", "const", "type", "choices", "metavar"}
-
-        elif action == "store_false":
-            allowed -= {"nargs", "const", "type", "choices", "metavar"}
-
-        elif action == "append":
-            pass
-
-        elif action == "append_const":
-            allowed -= {"nargs", "type", "choices"}
-
-        elif action == "count":
-            allowed -= {"nargs", "const", "type", "choices", "metavar"}
-
-        elif action == "help":
-            allowed = {"action", "dest", "default", "help"}
-
-        elif action == "version":
-            allowed = {"action", "version", "dest", "default", "help"}
-
-        # add_argument() raises on unknown kwargs, filter them out.
-        # Also let caller unset our defaults by passing _unset
-        kwargs = {
-            key: value
-            for key, value in kwargs.items()
-            if key in allowed and not value is Argument._unset
-        }
+        kwargs = filter_action_kwargs(action, kwargs)
 
         command.parser.add_argument(*args, **kwargs)
 
