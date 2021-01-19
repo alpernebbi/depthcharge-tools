@@ -263,6 +263,13 @@ class Argument(_AttributeBound):
         if "metavar" in self._kwargs:
             return self._kwargs["metavar"]
 
+        func = self.func
+        if self.is_optional() and func is not None:
+            params = inspect.signature(self.func).parameters
+            metavars = tuple(str.upper(s) for s in params.keys())
+            if len(metavars) == self.nargs:
+                return metavars
+
         if self.name is not None:
             if self.is_positional() and self._args:
                 return self._args[0]
