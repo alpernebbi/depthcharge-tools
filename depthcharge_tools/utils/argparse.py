@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import argparse
+import copy
 import functools
 import inspect
 import logging
@@ -53,26 +54,77 @@ def filter_action_kwargs(action, kwargs):
     }
 
 
-class Argument:
+class _Named:
+    def __init__(self, *args, name=None, **kwargs):
+        super().__init__()
+        self.__name = name
+
+    @property
+    def name(self):
+        return self.__name
+
+    @name.setter
+    def name(self, name):
+        if self.__name is None:
+            self.__name = name
+        elif self.__name != name:
+            raise AttributeError("Can't change name once set")
+
+    def __set_name__(self, owner, name):
+        self.name = name
+
+
+class _AttributeBound(_Named):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__owner = None
+
+    def __get__(self, instance, owner):
+        if self.__owner is not None:
+            return self
+
+        if self.name not in instance.__dict__:
+            bound = copy.copy(self)
+            bound.owner = instance
+            instance.__dict__[self.name] = bound
+
+        return instance.__dict__[self.name]
+
+    @property
+    def owner(self):
+        return self.__owner
+
+    @owner.setter
+    def owner(self, owner):
+        if self.__owner is None:
+            self.__owner = owner
+        elif self.__owner != owner:
+            raise AttributeError("Can't change owner once set")
+
+
+class Argument(_AttributeBound):
     _unset = object()
 
     def __init__(self, *args, **kwargs):
+        super().__init__(
+            name=kwargs.get("name", None),
+        )
+
         self._func = None
-        self._partial = None
-        self._name = None
         self._args = args
         self._kwargs = kwargs
-        self._command = None
-        self._inputs = Argument._unset
-        self._value = Argument._unset
 
         if args and callable(args[0]):
             self._args = args[1:]
             self.wrap(args[0])
 
+        self._partial = None
+        self._inputs = Argument._unset
+        self._value = Argument._unset
+
     @property
     def __call__(self):
-        if self._command is not None:
+        if self.owner is not None:
             return self.func
         else:
             return self.wrap
@@ -92,32 +144,17 @@ class Argument:
         return self
 
     def __get__(self, instance, owner):
-        if not isinstance(instance, Command):
-            return self
+        arg = super().__get__(instance, owner)
 
-        name = self.name
-        if name in instance.__dict__:
-            arg = instance.__dict__[name]
-
-            if arg._inputs is not Argument._unset:
-                return arg.value
-            elif arg._value is not Argument._unset:
-                return arg.value
-            else:
-                return arg
-
-        copy = self.copy()
-        copy.command = instance
-        instance.__dict__[name] = copy
-
-        return copy
+        if arg._inputs is not Argument._unset:
+            return arg.value
+        elif arg._value is not Argument._unset:
+            return arg.value
+        else:
+            return arg
 
     def __set__(self, instance, value):
-        name = self.name
-        if isinstance(instance, Command) and name in instance.__dict__:
-            arg = instance.__dict__[name]
-        else:
-            arg = self
+        arg = super().__get__(instance, type(instance))
 
         if arg._value is Argument._unset:
             arg._inputs = value
@@ -125,42 +162,18 @@ class Argument:
             arg._inputs = Argument._unset
             arg._value = value
 
-    def __set_name__(self, owner, name):
-        if not issubclass(owner, Command):
+    @property
+    def owner(self):
+        return super().owner
+
+    @owner.setter
+    def owner(self, owner):
+        if not isinstance(owner, Command):
             return
-        self.name = name
 
-    def copy(self):
-        if self._func is not None:
-            copy = type(self)(self._func, *self._args, **self._kwargs)
-        else:
-            copy = type(self)(*self._args, **self._kwargs)
-
-        copy.name = self.name
-
-        return copy
-
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, name):
-        if self._name is None:
-            self._name = name
-        elif self._name != name:
-            raise ValueError(name)
-
-    @property
-    def command(self):
-        return self._command
-
-    @command.setter
-    def command(self, command):
-        if self._command is not None:
-            raise ValueError(command)
-
-        self._command = command
+        # https://bugs.python.org/issue14965
+        # "super().owner = owner" doesn't work here
+        super(Argument, self.__class__).owner.__set__(self, owner)
 
         name = self.name
         args = list(self._args)
@@ -177,21 +190,24 @@ class Argument:
             args = args[1:]
         kwargs = filter_action_kwargs(action, kwargs)
 
-        command.parser.add_argument(*args, **kwargs)
+        owner.parser.add_argument(*args, **kwargs)
 
     @property
     def func(self):
-        if self._command is None:
-            raise AttributeError("command")
         if self._partial is not None:
             return self._partial
+
+        if self.owner is None:
+            raise AttributeError(
+                "Can't build partial function from unbound Argument",
+            )
 
         if self._func is None:
             return None
 
         self._partial = functools.partial(
             self._func,
-            self._command,
+            self.owner,
         )
         return self._partial
 
@@ -199,10 +215,10 @@ class Argument:
         if not self._args:
             return False
 
-        if self._command is None:
+        if self.owner is None:
             prefix_chars = "-"
         else:
-            prefix_chars = self._command.parser.prefix_chars
+            prefix_chars = self.owner.parser.prefix_chars
 
         return self._args[0][0] in prefix_chars
 
