@@ -179,14 +179,13 @@ class Argument(_AttributeBound):
         args = list(self._args)
         kwargs = dict(self._kwargs)
 
-        action = kwargs.setdefault("action", self.action)
-        help = kwargs.setdefault("help", self.help)
-        dest = kwargs.setdefault("dest", self.dest)
-        metavar = kwargs.setdefault("metavar", self.metavar)
-        nargs = kwargs.setdefault("nargs", self.nargs)
-        const = kwargs.setdefault("const", self.const)
+        action = kwargs.setdefault("action", ArgumentAction)
+        dest = kwargs.setdefault("dest", self.name)
 
-        kwargs = filter_action_kwargs(action, kwargs)
+        if isinstance(action, type) and issubclass(action, argparse.Action):
+            kwargs.setdefault("argument", self)
+        else:
+            kwargs = filter_action_kwargs(action, kwargs)
 
         owner.parser.add_argument(*args, **kwargs)
 
@@ -209,69 +208,39 @@ class Argument(_AttributeBound):
         )
         return self._partial
 
-    def is_optional(self):
-        if not self._args:
-            return False
+    @property
+    def inputs(self):
+        if self._inputs is Argument._unset:
+            raise AttributeError("inputs")
 
-        if self.owner is None:
-            prefix_chars = "-"
-        else:
-            prefix_chars = self.owner.parser.prefix_chars
-
-        return self._args[0][0] in prefix_chars
-
-    def is_positional(self):
-        return not self.is_optional()
+        return self._inputs
 
     @property
-    def action(self):
-        if "action" in self._kwargs:
-            return self._kwargs["action"]
-
-        if self.nargs == 0:
-            return "store_const"
-        else:
-            return "store"
-
-    @property
-    def const(self):
-        if "const" in self._kwargs:
-            return self._kwargs["const"]
-
-        if self.nargs == 0:
-            return []
-        else:
-            return None
-
-    @property
-    def dest(self):
-        if "dest" in self._kwargs:
-            return self._kwargs["dest"]
-
-        if self.action in ("help", "version"):
-            return argparse.SUPPRESS
-
-        if self.name is not None:
-            return self.name
-
-    @property
-    def metavar(self):
-        if "metavar" in self._kwargs:
-            return self._kwargs["metavar"]
+    def value(self):
+        if self._value is not Argument._unset:
+            return self._value
 
         func = self.func
-        if self.is_optional() and func is not None:
-            params = inspect.signature(self.func).parameters
-            metavars = tuple(str.upper(s) for s in params.keys())
-            if len(metavars) == self.nargs:
-                return metavars
+        if func is None:
+            value = self.inputs
+        else:
+            value = self.func(*self.inputs)
 
-    @property
-    def nargs(self):
-        if "nargs" in self._kwargs:
-            return self._kwargs["nargs"]
+        self._value = value
+        return value
 
-        func = self.func
+
+class ArgumentAction(argparse.Action):
+    def __init__(self, option_strings, dest, argument=None, **kwargs):
+        if not isinstance(argument, Argument):
+            raise TypeError(
+                "ArgumentAction argument 'argument' must be "
+                "an Argument object, not '{}'"
+                .format(type(argument))
+            )
+        self.argument = argument
+        func = self.argument.func
+
         if func is not None:
             params = inspect.signature(func).parameters
         else:
@@ -300,67 +269,70 @@ class Argument(_AttributeBound):
             else:
                 nargs_max += 1
 
+        const = None
+        default = None
+        type_ = None
+        choices = None
+        required = False
+        help_ = inspect.getdoc(func)
+        metavar = tuple(str.upper(s) for s in params.keys())
+
         # attr = Argument()
-        if func is None and not self.is_optional():
+        if func is None and not option_strings:
             nargs = 1
+            metavar = None
 
         # attr = Argument("--arg")
         elif func is None:
             nargs = "?"
+            metavar = None
 
         # func(a, *b)
         elif (f_args or f_kwargs) and nargs_min > 0:
             nargs = "+"
+            metavar = (f_args or f_kwargs).name.upper()
 
         # func(*a)
         elif (f_args or f_kwargs) and nargs_min == 0:
             nargs = "*"
+            metavar = (f_args or f_kwargs).name.upper()
 
         # func()
         elif (nargs_min, nargs_max) == (0, 0):
             nargs = 0
+            metavar = None
 
         # func(a=None)
         elif (nargs_min, nargs_max) == (0, 1):
             nargs = "?"
+            metavar = metavar[0]
 
         # func(a, b=None)
         elif nargs_min != nargs_max:
             nargs = "+"
+            metavar = metavar[0]
 
         # func(a, b)
         else:
             nargs = nargs_min
+            if not option_strings:
+                metavar = None
 
-        return nargs
+        super().__init__(
+            option_strings,
+            dest,
+            nargs=kwargs.get("nargs", nargs),
+            const=kwargs.get("const", const),
+            default=kwargs.get("default", default),
+            type=kwargs.get("type", type_),
+            choices=kwargs.get("choices", choices),
+            required=kwargs.get("required", required),
+            help=kwargs.get("help", help_),
+            metavar=kwargs.get("metavar", metavar),
+        )
 
-    @property
-    def help(self):
-        if "help" in self._kwargs:
-            return self._kwargs["help"]
-
-        return inspect.getdoc(self._func)
-
-    @property
-    def inputs(self):
-        if self._inputs is Argument._unset:
-            raise AttributeError("inputs")
-
-        return self._inputs
-
-    @property
-    def value(self):
-        if self._value is not Argument._unset:
-            return self._value
-
-        func = self.func
-        if func is None:
-            value = self.inputs
-        else:
-            value = self.func(*self.inputs)
-
-        self._value = value
-        return value
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, values)
 
 
 class Command:
