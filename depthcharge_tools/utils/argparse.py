@@ -72,6 +72,7 @@ class Argument(_AttributeBound):
             self._args = args[1:]
             self.wrap(args[0])
 
+        self.action = None
         self._partial = None
         self._inputs = Argument._unset
         self._value = Argument._unset
@@ -139,7 +140,7 @@ class Argument(_AttributeBound):
         if isinstance(action, type) and issubclass(action, argparse.Action):
             kwargs.setdefault("argument", self)
 
-        owner.parser.add_argument(*args, **kwargs)
+        self.action = owner.parser.add_argument(*args, **kwargs)
 
     @property
     def func(self):
