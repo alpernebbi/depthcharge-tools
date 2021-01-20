@@ -154,10 +154,12 @@ class Argument(_AttributeBound):
         if self._func is None:
             return None
 
-        self._partial = functools.partial(
+        wrap = functools.wraps(self._func)
+        self._partial = wrap(functools.partial(
             self._func,
             self.owner,
-        )
+        ))
+
         return self._partial
 
     @property
@@ -194,7 +196,7 @@ class ArgumentAction(argparse.Action):
         func = self.argument.func
 
         if func is not None:
-            params = inspect.signature(func).parameters
+            params = inspect.signature(func, follow_wrapped=False).parameters
         else:
             params = {}
 
