@@ -272,24 +272,22 @@ class Argument(_AttributeBound):
             return self._kwargs["nargs"]
 
         func = self.func
-        if func is None:
-            if self.is_positional():
-                return 1
-            else:
-                return "?"
-
-        params = inspect.signature(func).parameters
+        if func is not None:
+            params = inspect.signature(func).parameters
+        else:
+            params = {}
 
         nargs_min = 0
         nargs_max = 0
-        variadic = False
+        f_args = None
+        f_kwargs = None
 
         for name, param in params.items():
             if param.kind == inspect.Parameter.VAR_POSITIONAL:
-                variadic = True
+                f_args = param
 
             elif param.kind == inspect.Parameter.VAR_KEYWORD:
-                variadic = True
+                f_kwargs = param
                 raise NotImplementedError
 
             elif param.kind == inspect.Parameter.KEYWORD_ONLY:
@@ -302,19 +300,39 @@ class Argument(_AttributeBound):
             else:
                 nargs_max += 1
 
-        if variadic:
-            if nargs_min > 0:
-                return "+"
-            else:
-                return "*"
+        # attr = Argument()
+        if func is None and not self.is_optional():
+            nargs = 1
 
-        if (nargs_min, nargs_max) == (0, 1):
-            return "?"
+        # attr = Argument("--arg")
+        elif func is None:
+            nargs = "?"
 
-        if nargs_min != nargs_max:
-            return "*"
+        # func(a, *b)
+        elif (f_args or f_kwargs) and nargs_min > 0:
+            nargs = "+"
 
-        return nargs_min
+        # func(*a)
+        elif (f_args or f_kwargs) and nargs_min == 0:
+            nargs = "*"
+
+        # func()
+        elif (nargs_min, nargs_max) == (0, 0):
+            nargs = 0
+
+        # func(a=None)
+        elif (nargs_min, nargs_max) == (0, 1):
+            nargs = "?"
+
+        # func(a, b=None)
+        elif nargs_min != nargs_max:
+            nargs = "+"
+
+        # func(a, b)
+        else:
+            nargs = nargs_min
+
+        return nargs
 
     @property
     def help(self):
