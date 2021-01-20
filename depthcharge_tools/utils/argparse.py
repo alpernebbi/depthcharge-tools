@@ -186,8 +186,6 @@ class Argument(_AttributeBound):
         nargs = kwargs.setdefault("nargs", self.nargs)
         const = kwargs.setdefault("const", self.const)
 
-        if args and args[0] in (dest, metavar):
-            args = args[1:]
         kwargs = filter_action_kwargs(action, kwargs)
 
         owner.parser.add_argument(*args, **kwargs)
@@ -255,8 +253,6 @@ class Argument(_AttributeBound):
 
         if self.name is not None:
             return self.name
-        elif self.is_positional() and self._args:
-            return self._args[0]
 
     @property
     def metavar(self):
@@ -269,10 +265,6 @@ class Argument(_AttributeBound):
             metavars = tuple(str.upper(s) for s in params.keys())
             if len(metavars) == self.nargs:
                 return metavars
-
-        if self.name is not None:
-            if self.is_positional() and self._args:
-                return self._args[0]
 
     @property
     def nargs(self):
