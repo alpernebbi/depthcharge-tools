@@ -188,11 +188,36 @@ class Argument(_MethodWrapper):
         self._inputs = Argument._unset
         self._value = Argument._unset
 
-    def wrap(self, func):
-        if isinstance(func, Argument):
-            raise NotImplementedError
+    def wrap(self, wrapped):
+        if isinstance(wrapped, Argument):
+            group = Group()
 
-        return super().wrap(func)
+            group.add(wrapped)
+            if group.name is None:
+                group.name = wrapped.name
+            group.__doc__ = wrapped.__doc__
+            wrapped.__doc__ = None
+
+            if self.name is None:
+                self.name = wrapped.name
+            self.wrap(wrapped.__wrapped__)
+            self.__doc__ = None
+            group.add(self)
+
+            return group
+
+        if isinstance(wrapped, Group):
+            group = wrapped
+
+            if self.name is None:
+                self.name = group.name
+            self.wrap(group._arguments[-1].__wrapped__)
+            self.__doc__ = None
+            group.add(self)
+
+            return group
+
+        return super().wrap(wrapped)
 
     def __get__(self, instance, owner):
         arg = super().__get__(instance, owner)
