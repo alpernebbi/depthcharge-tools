@@ -44,16 +44,19 @@ class _AttributeBound(_Named):
 
         return instance.__dict__[self.name]
 
+    def bind(self, owner):
+        if self.__owner is None:
+            self.__owner = owner
+        elif self.__owner != owner:
+            raise ValueError("Can't bind to multiple owners")
+
     @property
     def owner(self):
         return self.__owner
 
     @owner.setter
     def owner(self, owner):
-        if self.__owner is None:
-            self.__owner = owner
-        elif self.__owner != owner:
-            raise AttributeError("Can't change owner once set")
+        self.bind(owner)
 
 
 class _Wrapper:
@@ -164,18 +167,11 @@ class Argument(_MethodWrapper):
             arg._inputs = Argument._unset
             arg._value = value
 
-    @property
-    def owner(self):
-        return super().owner
-
-    @owner.setter
-    def owner(self, owner):
+    def bind(self, owner):
         if not isinstance(owner, (Command, Group)):
             return
 
-        # https://bugs.python.org/issue14965
-        # "super().owner = owner" doesn't work here
-        super(Argument, self.__class__).owner.__set__(self, owner)
+        super().bind(owner)
 
         name = self.name
         args = list(self._args)
@@ -352,18 +348,11 @@ class Group(_MethodWrapper):
 
         return super().wrap(func)
 
-    @property
-    def owner(self):
-        return super().owner
-
-    @owner.setter
-    def owner(self, owner):
+    def bind(self, owner):
         if not isinstance(owner, Command):
             return
 
-        # https://bugs.python.org/issue14965
-        # "super().owner = owner" doesn't work here
-        super(Group, self.__class__).owner.__set__(self, owner)
+        super().bind(owner)
 
         args = list(self._args)
         kwargs = dict(self._kwargs)
