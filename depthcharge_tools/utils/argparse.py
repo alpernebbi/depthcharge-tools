@@ -407,9 +407,12 @@ class Group(_MethodWrapper):
 
         title = kwargs.setdefault("title", self.name.title())
 
-        docstring = inspect.getdoc(self)
-        paragraph = docstring.split("\n\n")[0].replace("\n", " ")
-        description = kwargs.setdefault("description", paragraph)
+        doc = inspect.getdoc(self)
+        if doc:
+            block = doc.split("\n\n")[0].replace("\n", " ")
+            desc = kwargs.setdefault("description", block)
+        else:
+            desc = None
 
         self.parser = owner.parser.add_argument_group(*args, **kwargs)
 
