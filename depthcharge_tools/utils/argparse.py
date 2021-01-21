@@ -57,17 +57,17 @@ def filter_action_kwargs(action, kwargs):
 class _Named:
     def __init__(self, *args, name=None, **kwargs):
         super().__init__()
-        self.__name = name
+        self.__name__ = name
 
     @property
     def name(self):
-        return self.__name
+        return self.__name__
 
     @name.setter
     def name(self, name):
-        if self.__name is None:
-            self.__name = name
-        elif self.__name != name:
+        if self.__name__ is None:
+            self.__name__ = name
+        elif self.__name__ != name:
             raise AttributeError("Can't change name once set")
 
     def __set_name__(self, owner, name):
