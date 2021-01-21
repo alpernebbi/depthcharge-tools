@@ -123,7 +123,7 @@ class Argument(_AttributeBound):
 
     @owner.setter
     def owner(self, owner):
-        if not isinstance(owner, Command):
+        if not isinstance(owner, (Command, Group)):
             return
 
         # https://bugs.python.org/issue14965
@@ -147,7 +147,11 @@ class Argument(_AttributeBound):
         if self._partial is not None:
             return self._partial
 
-        if self.owner is None:
+        cmd = self
+        while not isinstance(cmd, Command):
+            cmd = cmd.owner
+
+        if cmd is None:
             raise AttributeError(
                 "Can't build partial function from unbound Argument",
             )
@@ -158,7 +162,7 @@ class Argument(_AttributeBound):
         wrap = functools.wraps(self._func)
         self._partial = wrap(functools.partial(
             self._func,
-            self.owner,
+            cmd,
         ))
 
         return self._partial
@@ -290,9 +294,85 @@ class ArgumentAction(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
+class Group(_AttributeBound):
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            name=kwargs.get("name", None),
+        )
+
+        self._func = None
+        self._args = args
+        self._kwargs = kwargs
+
+        if args and callable(args[0]):
+            self._args = args[1:]
+            self.wrap(args[0])
+
+        self._arguments = []
+
+    @property
+    def __call__(self):
+        if self.owner is not None:
+            return None
+        else:
+            return self.wrap
+
+    def wrap(self, func):
+        if isinstance(func, Argument):
+            self.add(func)
+
+        if self._func is None:
+            if callable(func):
+                self._func = func
+                self.name = func.__name__
+
+        elif func != self._func:
+            raise ValueError(func)
+
+        return self
+
+    @property
+    def owner(self):
+        return super().owner
+
+    @owner.setter
+    def owner(self, owner):
+        if not isinstance(owner, Command):
+            return
+
+        # https://bugs.python.org/issue14965
+        # "super().owner = owner" doesn't work here
+        super(Group, self.__class__).owner.__set__(self, owner)
+
+        args = list(self._args)
+        kwargs = dict(self._kwargs)
+
+        title = kwargs.setdefault("title", self.name.title())
+
+        if self._func is not None:
+            docstring = inspect.getdoc(self._func)
+            paragraph = docstring.split("\n\n")[0].replace("\n", " ")
+            description = kwargs.setdefault("description", paragraph)
+        else:
+            description = kwargs.setdefault("description", None)
+
+        self.parser = owner.parser.add_argument_group(*args, **kwargs)
+
+        for arg in self._arguments:
+            arg.owner = self
+
+    def add(self, arg):
+        self._arguments.append(arg)
+        return arg
+
+
 class Command:
     def __init__(self, *args, **kwargs):
         self.parser = argparse.ArgumentParser(*args, **kwargs)
+
+        for attr, value in vars(self.__class__).items():
+            if isinstance(value, Group):
+                arg = getattr(self, attr)
 
         for attr, value in vars(self.__class__).items():
             if isinstance(value, Argument):
