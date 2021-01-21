@@ -231,6 +231,8 @@ class ArgumentAction(argparse.Action):
                 .format(type(argument))
             )
         self.argument = argument
+
+        # callable(arg) returns True even when arg.__call__ is None
         func = self.argument.__call__
 
         if func is not None:
