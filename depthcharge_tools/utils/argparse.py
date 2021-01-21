@@ -56,47 +56,89 @@ class _AttributeBound(_Named):
             raise AttributeError("Can't change owner once set")
 
 
-class Argument(_AttributeBound):
-    _unset = object()
-
+class _Wrapper:
     def __init__(self, *args, **kwargs):
-        super().__init__(
-            name=kwargs.get("name", None),
-        )
+        super().__init__(*args, **kwargs)
+        self.__wrapped__ = None
 
-        self._func = None
-        self._args = args
-        self._kwargs = kwargs
+    def wrap(self, wrapped):
+        if self.__wrapped__ is None:
+            self.__wrapped__ = wrapped
+        elif wrapped != self.__wrapped__:
+            raise ValueError("Can't wrap multiple things")
+
+        return self
+
+
+class _MethodWrapper(_Wrapper, _AttributeBound):
+    def __init__(self, *args, **kwargs):
+        self.__call = None
 
         if args and callable(args[0]):
-            self._args = args[1:]
-            self.wrap(args[0])
+            wrapped = args[0]
+            args = args[1:]
+        else:
+            wrapped = None
 
-        self.action = None
-        self._partial = None
-        self._inputs = Argument._unset
-        self._value = Argument._unset
+        super().__init__(*args, **kwargs)
+
+        if wrapped is not None:
+            self.wrap(wrapped)
+
+    def wrap(self, wrapped):
+        if not callable(wrapped):
+            raise TypeError("Can't wrap non-callable objects")
+
+        super().wrap(wrapped)
+        self.name = wrapped.__name__
+
+        return self
 
     @property
     def __call__(self):
-        if self.owner is not None:
-            return self.func
-        else:
+        if self.owner is None:
             return self.wrap
+
+        if self.__wrapped__ is None:
+            return None
+
+        if self.__call is not None:
+            return self.__call
+
+        wrap = functools.wraps(self.__wrapped__)
+        self.__call = wrap(functools.partial(
+            self.__wrapped__,
+            self.owner,
+        ))
+
+        return self.__call
+
+    @__call__.setter
+    def __call__(self, call):
+        self.__call = call
+
+
+class Argument(_MethodWrapper):
+    _unset = object()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._args = args
+        self._kwargs = kwargs
+
+        if args and args[0] == self.__wrapped__:
+            self._args = args[1:]
+
+        self.action = None
+        self._inputs = Argument._unset
+        self._value = Argument._unset
 
     def wrap(self, func):
         if isinstance(func, Argument):
             raise NotImplementedError
 
-        if self._func is None:
-            if callable(func):
-                self._func = func
-                self.name = func.__name__
-
-        elif func != self._func:
-            raise ValueError(func)
-
-        return self
+        return super().wrap(func)
 
     def __get__(self, instance, owner):
         arg = super().__get__(instance, owner)
@@ -142,30 +184,16 @@ class Argument(_AttributeBound):
 
         self.action = owner.parser.add_argument(*args, **kwargs)
 
-    @property
-    def func(self):
-        if self._partial is not None:
-            return self._partial
+        if self.__wrapped__:
+            cmd = owner
+            while not isinstance(cmd, Command):
+                cmd = cmd.owner
 
-        cmd = self
-        while not isinstance(cmd, Command):
-            cmd = cmd.owner
-
-        if cmd is None:
-            raise AttributeError(
-                "Can't build partial function from unbound Argument",
-            )
-
-        if self._func is None:
-            return None
-
-        wrap = functools.wraps(self._func)
-        self._partial = wrap(functools.partial(
-            self._func,
-            cmd,
-        ))
-
-        return self._partial
+            wrap = functools.wraps(self.__wrapped__)
+            self.__call__ = wrap(functools.partial(
+                self.__wrapped__,
+                cmd,
+            ))
 
     @property
     def inputs(self):
@@ -179,11 +207,11 @@ class Argument(_AttributeBound):
         if self._value is not Argument._unset:
             return self._value
 
-        func = self.func
+        func = self.__call__
         if func is None:
             value = self.inputs
         else:
-            value = self.func(*self.inputs)
+            value = self(*self.inputs)
 
         self._value = value
         return value
@@ -198,7 +226,7 @@ class ArgumentAction(argparse.Action):
                 .format(type(argument))
             )
         self.argument = argument
-        func = self.argument.func
+        func = self.argument.__call__
 
         if func is not None:
             params = inspect.signature(func, follow_wrapped=False).parameters
@@ -294,13 +322,10 @@ class ArgumentAction(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
-class Group(_AttributeBound):
+class Group(_MethodWrapper):
     def __init__(self, *args, **kwargs):
-        super().__init__(
-            name=kwargs.get("name", None),
-        )
+        super().__init__(*args, **kwargs)
 
-        self._func = None
         self._args = args
         self._kwargs = kwargs
 
@@ -310,26 +335,12 @@ class Group(_AttributeBound):
 
         self._arguments = []
 
-    @property
-    def __call__(self):
-        if self.owner is not None:
-            return None
-        else:
-            return self.wrap
-
     def wrap(self, func):
         if isinstance(func, Argument):
             self.add(func)
+            return self
 
-        if self._func is None:
-            if callable(func):
-                self._func = func
-                self.name = func.__name__
-
-        elif func != self._func:
-            raise ValueError(func)
-
-        return self
+        return super().wrap(func)
 
     @property
     def owner(self):
@@ -349,8 +360,8 @@ class Group(_AttributeBound):
 
         title = kwargs.setdefault("title", self.name.title())
 
-        if self._func is not None:
-            docstring = inspect.getdoc(self._func)
+        if self.__wrapped__ is not None:
+            docstring = inspect.getdoc(self.__wrapped__)
             paragraph = docstring.split("\n\n")[0].replace("\n", " ")
             description = kwargs.setdefault("description", paragraph)
         else:
