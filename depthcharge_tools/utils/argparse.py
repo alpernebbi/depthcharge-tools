@@ -90,6 +90,7 @@ class _MethodWrapper(_Wrapper, _AttributeBound):
             raise TypeError("Can't wrap non-callable objects")
 
         super().wrap(wrapped)
+        functools.update_wrapper(self, wrapped)
         self.name = wrapped.__name__
 
         return self
@@ -110,6 +111,10 @@ class _MethodWrapper(_Wrapper, _AttributeBound):
             self.__wrapped__,
             self.owner,
         ))
+        self.__signature__ = inspect.signature(
+            self.__call,
+            follow_wrapped=False,
+        )
 
         return self.__call
 
@@ -229,7 +234,10 @@ class ArgumentAction(argparse.Action):
         func = self.argument.__call__
 
         if func is not None:
-            params = inspect.signature(func, follow_wrapped=False).parameters
+            params = inspect.signature(
+                self.argument,
+                follow_wrapped=False,
+            ).parameters
         else:
             params = {}
 
@@ -261,7 +269,7 @@ class ArgumentAction(argparse.Action):
         type_ = None
         choices = None
         required = False
-        help_ = inspect.getdoc(func)
+        help_ = inspect.getdoc(argument)
         metavar = tuple(str.upper(s) for s in params.keys())
 
         # attr = Argument()
@@ -360,12 +368,9 @@ class Group(_MethodWrapper):
 
         title = kwargs.setdefault("title", self.name.title())
 
-        if self.__wrapped__ is not None:
-            docstring = inspect.getdoc(self.__wrapped__)
-            paragraph = docstring.split("\n\n")[0].replace("\n", " ")
-            description = kwargs.setdefault("description", paragraph)
-        else:
-            description = kwargs.setdefault("description", None)
+        docstring = inspect.getdoc(self)
+        paragraph = docstring.split("\n\n")[0].replace("\n", " ")
+        description = kwargs.setdefault("description", paragraph)
 
         self.parser = owner.parser.add_argument_group(*args, **kwargs)
 
