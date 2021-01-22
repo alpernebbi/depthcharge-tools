@@ -96,8 +96,8 @@ class _AttributeBound(_Named):
     def bind(self, owner):
         if self.__owner is None:
             self.__owner = owner
-        elif self.__owner != owner:
-            raise ValueError("Can't bind to multiple owners")
+        # elif self.__owner != owner:
+        #     raise ValueError("Can't bind to multiple owners")
 
     @property
     def owner(self):
@@ -455,9 +455,14 @@ class Group(_MethodWrapper):
         return arg
 
 
-class Command:
+class Command(_AttributeBound):
     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._args = args
+        self._kwargs = kwargs
+
         self.parser = argparse.ArgumentParser(*args, **kwargs)
+        self.subparsers = None
 
         for attr, value in vars(self.__class__).items():
             if isinstance(value, Group):
@@ -466,6 +471,34 @@ class Command:
         for attr, value in vars(self.__class__).items():
             if isinstance(value, Argument):
                 arg = getattr(self, attr)
+
+        for attr, value in vars(self.__class__).items():
+            if isinstance(value, Command):
+                if self.subparsers is None:
+                    self.subparsers = self.parser.add_subparsers()
+                arg = getattr(self, attr)
+
+    def bind(self, owner):
+        if not isinstance(owner, Command):
+            return
+
+        super().bind(owner)
+
+        self.parser = owner.subparsers.add_parser(
+            self.name,
+            *self._args,
+            **self._kwargs,
+        )
+
+        for attr, value in vars(self.__class__).items():
+            if isinstance(value, Group):
+                arg = getattr(self, attr)
+                arg.owner = self
+
+        for attr, value in vars(self.__class__).items():
+            if isinstance(value, Argument):
+                arg = getattr(self, attr)
+                arg.owner = self
 
 
 class OldCommand:
