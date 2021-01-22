@@ -176,7 +176,8 @@ class _MethodWrapper(_Wrapper, _AttributeBound):
 
 
 class Argument(_MethodWrapper):
-    _unset = object()
+    class _unset:
+        pass
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
