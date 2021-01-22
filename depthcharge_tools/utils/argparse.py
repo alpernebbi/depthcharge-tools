@@ -463,21 +463,41 @@ class Command(_AttributeBound):
         self._kwargs = kwargs
 
         self.parser = argparse.ArgumentParser(*args, **kwargs)
-        self.subparsers = None
+
+        groups = {}
+        arguments = {}
+        subcommands = {}
 
         for attr, value in vars(self.__class__).items():
             if isinstance(value, Group):
-                arg = getattr(self, attr)
+                groups[attr] = value
 
-        for attr, value in vars(self.__class__).items():
-            if isinstance(value, Argument):
-                arg = getattr(self, attr)
+            elif isinstance(value, Argument):
+                arguments[attr] = value
 
-        for attr, value in vars(self.__class__).items():
-            if isinstance(value, Command):
-                if self.subparsers is None:
-                    self.subparsers = self.parser.add_subparsers()
-                arg = getattr(self, attr)
+            elif isinstance(value, Command):
+                subcommands[attr] = value
+
+        for group_name in groups:
+            group = getattr(self, group_name)
+            groups[group_name] = group
+
+        for arg_name in arguments:
+            arg = getattr(self, arg_name)
+            arguments[arg_name] = arg
+
+        if subcommands:
+            self.subparsers = self.parser.add_subparsers()
+        else:
+            self.subparsers = None
+
+        for cmd_name in subcommands:
+            cmd = getattr(self, cmd_name)
+            subcommands[cmd_name] = cmd
+
+        self._arguments = arguments
+        self._groups = groups
+        self._subcommands = subcommands
 
     def bind(self, owner):
         if not isinstance(owner, Command):
@@ -491,15 +511,13 @@ class Command(_AttributeBound):
             **self._kwargs,
         )
 
-        for attr, value in vars(self.__class__).items():
-            if isinstance(value, Group):
-                arg = getattr(self, attr)
-                arg.owner = self
+        for group_name in self._groups:
+            group = getattr(self, group_name)
+            group.bind(self)
 
-        for attr, value in vars(self.__class__).items():
-            if isinstance(value, Argument):
-                arg = getattr(self, attr)
-                arg.owner = self
+        for arg_name in self._arguments:
+            arg = getattr(self, arg_name)
+            arg.bind(self)
 
 
 class OldCommand:
