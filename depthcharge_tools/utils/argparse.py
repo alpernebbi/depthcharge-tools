@@ -96,8 +96,8 @@ class _AttributeBound(_Named):
     def bind(self, owner):
         if self.__owner is None:
             self.__owner = owner
-        # elif self.__owner != owner:
-        #     raise ValueError("Can't bind to multiple owners")
+        elif self.__owner != owner:
+            raise ValueError("Can't bind to multiple owners")
 
     @property
     def owner(self):
@@ -191,6 +191,16 @@ class Argument(_MethodWrapper):
         self.action = None
         self._inputs = Argument._unset
         self._value = Argument._unset
+
+    def __copy__(self):
+        if self.__wrapped__ is not None:
+            args = (self.__wrapped__, *self._args)
+            kwargs = self._kwargs
+        else:
+            args = self._args
+            kwargs = self._kwargs
+
+        return type(self)(*args, **kwargs)
 
     def wrap(self, wrapped):
         if isinstance(wrapped, Argument):
@@ -418,6 +428,21 @@ class Group(_MethodWrapper):
 
         self._arguments = []
 
+    def __copy__(self):
+        if self.__wrapped__ is not None:
+            args = (self.__wrapped__, *self._args)
+            kwargs = self._kwargs
+        else:
+            args = self._args
+            kwargs = self._kwargs
+
+        group = type(self)(*args, **kwargs)
+
+        for arg in self._arguments:
+            group.add(copy.copy(arg))
+
+        return group
+
     def wrap(self, func):
         if isinstance(func, Argument):
             self.add(func)
@@ -449,7 +474,8 @@ class Group(_MethodWrapper):
         self.parser = owner.parser.add_argument_group(*args, **kwargs)
 
         for arg in self._arguments:
-            arg.owner = self
+            arg.bind(self)
+            owner.__dict__.setdefault(arg.name, arg)
 
     def add(self, arg):
         self._arguments.append(arg)
@@ -498,6 +524,12 @@ class Command(_AttributeBound):
         self._arguments = arguments
         self._groups = groups
         self._subcommands = subcommands
+
+    def __copy__(self):
+        cmd = type(self)(*self._args, **self._kwargs)
+        cmd.name = self.name
+
+        return cmd
 
     def bind(self, owner):
         if not isinstance(owner, Command):
