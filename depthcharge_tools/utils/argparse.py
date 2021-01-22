@@ -551,6 +551,13 @@ class Command(_AttributeBound):
             arg = getattr(self, arg_name)
             arg.bind(self)
 
+        if self._subcommands:
+            self.subparsers = self.parser.add_subparsers()
+
+        for cmd_name in self._subcommands:
+            cmd = getattr(self, cmd_name)
+            cmd.bind(self)
+
 
 class OldCommand:
     def __init__(self, name=None, parent=None):
