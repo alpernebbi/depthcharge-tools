@@ -83,6 +83,9 @@ class _AttributeBound(_Named):
         if self.__owner is not None:
             return self
 
+        if instance is None:
+            return self
+
         if self.name not in instance.__dict__:
             bound = copy.copy(self)
             bound.owner = instance
