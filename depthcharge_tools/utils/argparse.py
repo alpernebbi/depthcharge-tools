@@ -525,6 +525,8 @@ class Command(_AttributeBound):
         self._groups = groups
         self._subcommands = subcommands
 
+        self.parser.set_defaults(__command=self)
+
     def __copy__(self):
         cmd = type(self)(*self._args, **self._kwargs)
         cmd.name = self.name
@@ -557,6 +559,8 @@ class Command(_AttributeBound):
         for cmd_name in self._subcommands:
             cmd = getattr(self, cmd_name)
             cmd.bind(self)
+
+        self.parser.set_defaults(__command=self)
 
 
 class OldCommand:
