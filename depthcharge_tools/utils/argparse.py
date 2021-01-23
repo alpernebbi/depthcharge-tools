@@ -482,6 +482,81 @@ class Group(_MethodWrapper):
         return arg
 
 
+class Subcommands(_MethodWrapper):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._args = args
+        self._kwargs = kwargs
+
+        if args and callable(args[0]):
+            self._args = args[1:]
+            self.wrap(args[0])
+
+        self._commands = []
+
+    def __copy__(self):
+        if self.__wrapped__ is not None:
+            args = (self.__wrapped__, *self._args)
+            kwargs = self._kwargs
+        else:
+            args = self._args
+            kwargs = self._kwargs
+
+        subcommands = type(self)(*args, **kwargs)
+
+        for cmd in self._commands:
+            subcommands.add(copy.copy(cmd))
+
+        return subcommands
+
+    def wrap(self, func):
+        if isinstance(func, Command):
+            self.add(func)
+            return self
+
+        return super().wrap(func)
+
+    def bind(self, owner):
+        if not isinstance(owner, Command):
+            return
+
+        super().bind(owner)
+
+        args = list(self._args)
+        kwargs = dict(self._kwargs)
+
+        doc = inspect.getdoc(self)
+        if doc:
+            blocks = doc.split("\n\n")
+            title = blocks[0].replace("\n", " ")
+            desc = "\n\n".join(blocks[1:])
+        else:
+            title = self.name
+            desc = None
+
+        title = kwargs.setdefault("title", title)
+        desc = kwargs.setdefault("description", desc)
+        dest = kwargs.setdefault("dest", self.name)
+
+        self.parser = owner.parser.add_subparsers(*args, **kwargs)
+
+        for cmd in self._commands:
+            cmd.bind(self)
+            owner.__dict__.setdefault(cmd.name, cmd)
+
+        if self.__wrapped__:
+            wrap = functools.wraps(self.__wrapped__)
+            self.__call__ = wrap(functools.partial(
+                self.__wrapped__,
+                owner,
+            ))
+
+    def add(self, cmd):
+        self._commands.append(cmd)
+        return cmd
+
+
 class Command(_AttributeBound):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -493,6 +568,7 @@ class Command(_AttributeBound):
         groups = {}
         arguments = {}
         subcommands = {}
+        subparsers = None
 
         for attr, value in vars(self.__class__).items():
             if isinstance(value, Group):
@@ -504,6 +580,13 @@ class Command(_AttributeBound):
             elif isinstance(value, Command):
                 subcommands[attr] = value
 
+            elif isinstance(value, Subcommands):
+                if subparsers is not None:
+                    raise AttributeError(
+                        "Command can't have multiple Subcommands objects"
+                    )
+                subparsers = (attr, value)
+
         for group_name in groups:
             group = getattr(self, group_name)
             groups[group_name] = group
@@ -512,7 +595,10 @@ class Command(_AttributeBound):
             arg = getattr(self, arg_name)
             arguments[arg_name] = arg
 
-        if subcommands:
+        if subparsers is not None:
+            subparsers = (subparsers[0], getattr(self, subparsers[0]))
+            self.subparsers = subparsers[1].parser
+        elif subcommands:
             self.subparsers = self.parser.add_subparsers()
         else:
             self.subparsers = None
@@ -523,6 +609,7 @@ class Command(_AttributeBound):
 
         self._arguments = arguments
         self._groups = groups
+        self._subparsers = subparsers
         self._subcommands = subcommands
 
         self.parser.set_defaults(__command=self)
@@ -582,8 +669,16 @@ class Command(_AttributeBound):
             arg = getattr(self, arg_name)
             arg.bind(self)
 
-        if self._subcommands:
+        if self._subparsers is not None:
+            obj = getattr(self, self._subparsers[0])
+            obj.bind(self)
+            self.subparsers = obj.parser
+
+        elif self._subcommands:
             self.subparsers = self.parser.add_subparsers()
+
+        else:
+            self.subparsers = None
 
         for cmd_name in self._subcommands:
             cmd = getattr(self, cmd_name)
