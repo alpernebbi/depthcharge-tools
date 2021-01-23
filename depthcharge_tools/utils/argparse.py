@@ -354,7 +354,10 @@ class ArgumentAction(argparse.Action):
         type_ = None
         choices = None
         required = False
-        help_ = inspect.getdoc(argument)
+
+        doc = inspect.getdoc(argument)
+        help_ = doc.split("\n\n")[0] if doc else None
+
         metavar = tuple(str.upper(s) for s in params.keys())
 
         # attr = Argument()
