@@ -533,6 +533,35 @@ class Command(_AttributeBound):
 
         return cmd
 
+    def __getattr__(self, name):
+        if "__" in name:
+            return getattr(super(), name)
+
+        owner = getattr(self, "owner", None)
+        if owner is None or hasattr(super(), name):
+            return super().__getattribute__(name)
+
+        return getattr(owner, name)
+
+    def __setattr__(self, name, value):
+        if "__" in name:
+            return super().__setattr__(name, value)
+
+        owner = getattr(self, "owner", None)
+        if owner is None or not hasattr(owner, name):
+            return super().__setattr__(name, value)
+
+        owner_value = getattr(owner, name)
+        if hasattr(super(), name):
+            self_value = getattr(super(), name)
+            if self_value is owner_value:
+                return setattr(owner, name, value)
+
+        elif isinstance(owner_value, Argument):
+            return setattr(owner, name, value)
+
+        return super().__setattr__(name, value)
+
     def bind(self, owner):
         if not isinstance(owner, Command):
             return
