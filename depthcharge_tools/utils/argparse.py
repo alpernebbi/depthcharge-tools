@@ -563,6 +563,33 @@ class Command(_AttributeBound):
         self._args = args
         self._kwargs = kwargs
 
+        args = list(args)
+        kwargs = dict(kwargs)
+
+        doc = inspect.getdoc(self)
+        if doc:
+            blocks = doc.split("\n\n")
+
+            for i, block in enumerate(blocks):
+                if block.strip("- ") == "":
+                    desc = "\n\n".join(blocks[:i])
+                    epilog = "\n\n".join(blocks[i+1:])
+                    break
+            else:
+                desc = doc
+                epilog = None
+
+        else:
+            desc = None
+            epilog = None
+
+        desc = kwargs.setdefault("description", desc)
+        epilog = kwargs.setdefault("epilog", epilog)
+        formatter = kwargs.setdefault(
+            "formatter_class",
+            argparse.RawDescriptionHelpFormatter,
+        )
+
         self.parser = argparse.ArgumentParser(*args, **kwargs)
 
         groups = {}
@@ -655,11 +682,39 @@ class Command(_AttributeBound):
 
         super().bind(owner)
 
-        self.parser = owner.subparsers.add_parser(
-            self.name,
-            *self._args,
-            **self._kwargs,
+        args = list(self._args)
+        kwargs = dict(self._kwargs)
+
+        args = (self.name, *args)
+
+        doc = inspect.getdoc(self)
+        if doc:
+            blocks = doc.split("\n\n")
+
+            for i, block in enumerate(blocks):
+                if block.strip("- ") == "":
+                    desc = "\n\n".join(blocks[:i])
+                    epilog = "\n\n".join(blocks[i+1:])
+                    break
+            else:
+                desc = doc
+                epilog = None
+
+        else:
+            desc = None
+            epilog = None
+
+        desc = kwargs.get("description", desc)
+        if desc is not None:
+            kwargs.setdefault("help", desc)
+
+        epilog = kwargs.setdefault("description", epilog)
+        formatter = kwargs.setdefault(
+            "formatter_class",
+            argparse.RawDescriptionHelpFormatter,
         )
+
+        self.parser = owner.subparsers.add_parser(*args, **kwargs)
 
         for group_name in self._groups:
             group = getattr(self, group_name)
