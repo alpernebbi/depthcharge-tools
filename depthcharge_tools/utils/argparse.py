@@ -55,23 +55,12 @@ def filter_action_kwargs(action, kwargs):
 
 
 class _Named:
-    def __init__(self, *args, name=None, **kwargs):
+    def __init__(self, *args, __name__=None, **kwargs):
         super().__init__()
-        self.__name__ = name
-
-    @property
-    def name(self):
-        return self.__name__
-
-    @name.setter
-    def name(self, name):
-        if self.__name__ is None:
-            self.__name__ = name
-        elif self.__name__ != name:
-            raise AttributeError("Can't change name once set")
+        self.__name__ = __name__
 
     def __set_name__(self, owner, name):
-        self.name = name
+        self.__name__ = name
 
 
 class _AttributeBound(_Named):
@@ -86,12 +75,12 @@ class _AttributeBound(_Named):
         if instance is None:
             return self
 
-        if self.name not in instance.__dict__:
+        if self.__name__ not in instance.__dict__:
             bound = copy.copy(self)
             bound.owner = instance
-            instance.__dict__[self.name] = bound
+            instance.__dict__[self.__name__] = bound
 
-        return instance.__dict__[self.name]
+        return instance.__dict__[self.__name__]
 
     def bind(self, owner):
         if self.__owner is None:
@@ -143,7 +132,7 @@ class _MethodWrapper(_Wrapper, _AttributeBound):
 
         super().wrap(wrapped)
         functools.update_wrapper(self, wrapped)
-        self.name = wrapped.__name__
+        self.__name__ = wrapped.__name__
 
         return self
 
@@ -207,13 +196,13 @@ class Argument(_MethodWrapper):
             group = Group()
 
             group.add(wrapped)
-            if group.name is None:
-                group.name = wrapped.name
+            if group.__name__ is None:
+                group.__name__ = wrapped.__name__
             group.__doc__ = wrapped.__doc__
             wrapped.__doc__ = None
 
-            if self.name is None:
-                self.name = wrapped.name
+            if self.__name__ is None:
+                self.__name__ = wrapped.__name__
             self.wrap(wrapped.__wrapped__)
             self.__doc__ = None
             group.add(self)
@@ -223,8 +212,8 @@ class Argument(_MethodWrapper):
         if isinstance(wrapped, Group):
             group = wrapped
 
-            if self.name is None:
-                self.name = group.name
+            if self.__name__ is None:
+                self.__name__ = group.__name__
             self.wrap(group._arguments[-1].__wrapped__)
             self.__doc__ = None
             group.add(self)
@@ -258,12 +247,11 @@ class Argument(_MethodWrapper):
 
         super().bind(owner)
 
-        name = self.name
         args = list(self._args)
         kwargs = dict(self._kwargs)
 
         action = kwargs.setdefault("action", ArgumentAction)
-        dest = kwargs.setdefault("dest", self.name)
+        dest = kwargs.setdefault("dest", self.__name__)
 
         if isinstance(action, type) and issubclass(action, argparse.Action):
             kwargs.setdefault("argument", self)
@@ -468,7 +456,7 @@ class Group(_MethodWrapper):
             title = blocks[0].replace("\n", " ")
             desc = "\n\n".join(blocks[1:])
         else:
-            title = self.name
+            title = self.__name__
             desc = None
 
         title = kwargs.setdefault("title", title)
@@ -478,7 +466,7 @@ class Group(_MethodWrapper):
 
         for arg in self._arguments:
             arg.bind(self)
-            owner.__dict__.setdefault(arg.name, arg)
+            owner.__dict__.setdefault(arg.__name__, arg)
 
     def add(self, arg):
         self._arguments.append(arg)
@@ -535,18 +523,18 @@ class Subcommands(_MethodWrapper):
             title = blocks[0].replace("\n", " ")
             desc = "\n\n".join(blocks[1:])
         else:
-            title = self.name
+            title = self.__name__
             desc = None
 
         title = kwargs.setdefault("title", title)
         desc = kwargs.setdefault("description", desc)
-        dest = kwargs.setdefault("dest", self.name)
+        dest = kwargs.setdefault("dest", self.__name__)
 
         self.parser = owner.parser.add_subparsers(*args, **kwargs)
 
         for cmd in self._commands:
             cmd.bind(self)
-            owner.__dict__.setdefault(cmd.name, cmd)
+            owner.__dict__.setdefault(cmd.__name__, cmd)
 
         if self.__wrapped__:
             wrap = functools.wraps(self.__wrapped__)
@@ -668,7 +656,7 @@ class Command(_AttributeBound):
 
     def __copy__(self):
         cmd = type(self)(*self._args, **self._kwargs)
-        cmd.name = self.name
+        cmd.__name__ = self.__name__
 
         return cmd
 
@@ -710,7 +698,7 @@ class Command(_AttributeBound):
         args = list(self._args)
         kwargs = dict(self._kwargs)
 
-        args = (self.name, *args)
+        args = (self.__name__, *args)
 
         doc = inspect.getdoc(self)
         if doc:
