@@ -66,10 +66,10 @@ class _Named:
 class _AttributeBound(_Named):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.__owner = None
+        self.__self__ = None
 
     def __get__(self, instance, owner):
-        if self.__owner is not None:
+        if self.__self__ is not None:
             return self
 
         if instance is None:
@@ -77,24 +77,13 @@ class _AttributeBound(_Named):
 
         if self.__name__ not in instance.__dict__:
             bound = copy.copy(self)
-            bound.owner = instance
+            bound.bind(instance)
             instance.__dict__[self.__name__] = bound
 
         return instance.__dict__[self.__name__]
 
     def bind(self, owner):
-        if self.__owner is None:
-            self.__owner = owner
-        elif self.__owner != owner:
-            raise ValueError("Can't bind to multiple owners")
-
-    @property
-    def owner(self):
-        return self.__owner
-
-    @owner.setter
-    def owner(self, owner):
-        self.bind(owner)
+        self.__self__ = owner
 
 
 class _Wrapper:
@@ -138,7 +127,7 @@ class _MethodWrapper(_Wrapper, _AttributeBound):
 
     @property
     def __call__(self):
-        if self.owner is None:
+        if self.__self__ is None:
             return self.wrap
 
         if self.__wrapped__ is None:
@@ -150,7 +139,7 @@ class _MethodWrapper(_Wrapper, _AttributeBound):
         wrap = functools.wraps(self.__wrapped__)
         self.__call = wrap(functools.partial(
             self.__wrapped__,
-            self.owner,
+            self.__self__,
         ))
         self.__signature__ = inspect.signature(
             self.__call,
@@ -263,7 +252,7 @@ class Argument(_MethodWrapper):
         if self.__wrapped__:
             cmd = owner
             while not isinstance(cmd, Command):
-                cmd = cmd.owner
+                cmd = cmd.__self__
 
             wrap = functools.wraps(self.__wrapped__)
             self.__call__ = wrap(functools.partial(
@@ -664,7 +653,7 @@ class Command(_AttributeBound):
         if "__" in name:
             return getattr(super(), name)
 
-        owner = getattr(self, "owner", None)
+        owner = getattr(self, "__self__", None)
         if owner is None or hasattr(super(), name):
             return super().__getattribute__(name)
 
@@ -674,7 +663,7 @@ class Command(_AttributeBound):
         if "__" in name:
             return super().__setattr__(name, value)
 
-        owner = getattr(self, "owner", None)
+        owner = getattr(self, "__self__", None)
         if owner is None or not hasattr(owner, name):
             return super().__setattr__(name, value)
 
