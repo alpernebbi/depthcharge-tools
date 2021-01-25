@@ -537,29 +537,22 @@ class Subcommands(_MethodWrapper):
         return cmd
 
 
-class Command(_AttributeBound):
-    def __new__(cls, *args, **kwargs):
-        obj = super().__new__(cls)
+class CommandMeta(type):
+    def __new__(mcls, name, bases, attrs):
+        call = attrs.get("__call__", None)
 
-        if not hasattr(obj, "__call__"):
-            return obj
+        if call is not None:
+            def __call__(self, **kwargs):
+                tmp = copy.copy(self)
+                for kwarg, value in kwargs.items():
+                    setattr(tmp, kwarg, value)
+                return call(tmp)
+            attrs["__call__"] = __call__
 
-        call = getattr(obj, "__call__")
-        cls_call = getattr(cls, "__call__")
+        return super().__new__(mcls, name, bases, attrs)
 
-        @functools.wraps(call)
-        def __call__(**kwargs):
-            for kwarg, value in kwargs.items():
-                setattr(obj, kwarg, value)
-            return cls_call(obj)
 
-        setattr(obj, "__call__", __call__)
-
-        __signature__ = inspect.signature(__call__, follow_wrapped=False)
-        setattr(obj, "__signature__", __signature__)
-
-        return obj
-
+class Command(_AttributeBound, metaclass=CommandMeta):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._args = args
