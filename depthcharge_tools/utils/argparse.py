@@ -235,19 +235,7 @@ class Argument(_MethodWrapper):
             return
 
         super().bind(owner)
-
-        args = list(self._args)
-        kwargs = dict(self._kwargs)
-
-        action = kwargs.setdefault("action", ArgumentAction)
-        dest = kwargs.setdefault("dest", self.__name__)
-
-        if isinstance(action, type) and issubclass(action, argparse.Action):
-            kwargs.setdefault("argument", self)
-        else:
-            kwargs = filter_action_kwargs(action, kwargs)
-
-        self.action = owner.parser.add_argument(*args, **kwargs)
+        self.build(owner.parser)
 
         if self.__wrapped__:
             cmd = owner
@@ -259,6 +247,20 @@ class Argument(_MethodWrapper):
                 self.__wrapped__,
                 cmd,
             ))
+
+    def build(self, parent):
+        args = list(self._args)
+        kwargs = dict(self._kwargs)
+
+        action = kwargs.setdefault("action", ArgumentAction)
+        dest = kwargs.setdefault("dest", self.__name__)
+
+        if isinstance(action, type) and issubclass(action, argparse.Action):
+            kwargs.setdefault("argument", self)
+        else:
+            kwargs = filter_action_kwargs(action, kwargs)
+
+        self.action = parent.add_argument(*args, **kwargs)
 
     @property
     def inputs(self):
@@ -436,6 +438,10 @@ class Group(_MethodWrapper):
 
         super().bind(owner)
 
+        for arg in self._arguments
+            owner.__dict__.setdefault(arg.__name__, arg)
+
+    def build(self, parent):
         args = list(self._args)
         kwargs = dict(self._kwargs)
 
@@ -451,11 +457,10 @@ class Group(_MethodWrapper):
         title = kwargs.setdefault("title", title)
         desc = kwargs.setdefault("description", desc)
 
-        self.parser = owner.parser.add_argument_group(*args, **kwargs)
+        self.parser = parent.add_argument_group(*args, **kwargs)
 
         for arg in self._arguments:
-            arg.bind(self)
-            owner.__dict__.setdefault(arg.__name__, arg)
+            arg.build(self.parser)
 
     def add(self, arg):
         self._arguments.append(arg)
@@ -502,7 +507,19 @@ class Subcommands(_MethodWrapper):
             return
 
         super().bind(owner)
+        self.build(owner.parser)
 
+        for cmd in self._commands:
+            owner.__dict__.setdefault(cmd.__name__, cmd)
+
+        if self.__wrapped__:
+            wrap = functools.wraps(self.__wrapped__)
+            self.__call__ = wrap(functools.partial(
+                self.__wrapped__,
+                owner,
+            ))
+
+    def build(self, parent):
         args = list(self._args)
         kwargs = dict(self._kwargs)
 
@@ -519,18 +536,10 @@ class Subcommands(_MethodWrapper):
         desc = kwargs.setdefault("description", desc)
         dest = kwargs.setdefault("dest", self.__name__)
 
-        self.parser = owner.parser.add_subparsers(*args, **kwargs)
+        self.parser = parent.add_subparsers(*args, **kwargs)
 
         for cmd in self._commands:
-            cmd.bind(self)
-            owner.__dict__.setdefault(cmd.__name__, cmd)
-
-        if self.__wrapped__:
-            wrap = functools.wraps(self.__wrapped__)
-            self.__call__ = wrap(functools.partial(
-                self.__wrapped__,
-                owner,
-            ))
+            cmd.build(self.parser)
 
     def add(self, cmd):
         self._commands.append(cmd)
@@ -558,35 +567,6 @@ class Command(_AttributeBound, metaclass=CommandMeta):
         self._args = args
         self._kwargs = kwargs
 
-        args = list(args)
-        kwargs = dict(kwargs)
-
-        doc = inspect.getdoc(self)
-        if doc:
-            blocks = doc.split("\n\n")
-
-            for i, block in enumerate(blocks):
-                if block.strip("- ") == "":
-                    desc = "\n\n".join(blocks[:i])
-                    epilog = "\n\n".join(blocks[i+1:])
-                    break
-            else:
-                desc = doc
-                epilog = None
-
-        else:
-            desc = None
-            epilog = None
-
-        desc = kwargs.setdefault("description", desc)
-        epilog = kwargs.setdefault("epilog", epilog)
-        formatter = kwargs.setdefault(
-            "formatter_class",
-            argparse.RawDescriptionHelpFormatter,
-        )
-
-        self.parser = argparse.ArgumentParser(*args, **kwargs)
-
         groups = {}
         arguments = {}
         subcommands = {}
@@ -609,32 +589,12 @@ class Command(_AttributeBound, metaclass=CommandMeta):
                     )
                 subparsers = (attr, value)
 
-        for group_name in groups:
-            group = getattr(self, group_name)
-            groups[group_name] = group
-
-        for arg_name in arguments:
-            arg = getattr(self, arg_name)
-            arguments[arg_name] = arg
-
-        if subparsers is not None:
-            subparsers = (subparsers[0], getattr(self, subparsers[0]))
-            self.subparsers = subparsers[1].parser
-        elif subcommands:
-            self.subparsers = self.parser.add_subparsers()
-        else:
-            self.subparsers = None
-
-        for cmd_name in subcommands:
-            cmd = getattr(self, cmd_name)
-            subcommands[cmd_name] = cmd
-
         self._arguments = arguments
         self._groups = groups
         self._subparsers = subparsers
         self._subcommands = subcommands
 
-        self.parser.set_defaults(__command=self)
+        self.build()
 
     def __copy__(self):
         cmd = type(self)(*self._args, **self._kwargs)
@@ -676,11 +636,11 @@ class Command(_AttributeBound, metaclass=CommandMeta):
             return
 
         super().bind(owner)
+        self.build(owner.subparsers)
 
+    def build(self, parent=None):
         args = list(self._args)
         kwargs = dict(self._kwargs)
-
-        args = (self.__name__, *args)
 
         doc = inspect.getdoc(self)
         if doc:
@@ -699,29 +659,43 @@ class Command(_AttributeBound, metaclass=CommandMeta):
             desc = None
             epilog = None
 
-        desc = kwargs.get("description", desc)
-        if desc is not None:
-            kwargs.setdefault("help", desc)
-
-        epilog = kwargs.setdefault("description", epilog)
+        desc = kwargs.setdefault("description", desc)
+        epilog = kwargs.setdefault("epilog", epilog)
         formatter = kwargs.setdefault(
             "formatter_class",
             argparse.RawDescriptionHelpFormatter,
         )
 
-        self.parser = owner.subparsers.add_parser(*args, **kwargs)
+        if parent is None:
+            self.parser = argparse.ArgumentParser(*args, **kwargs)
+
+        else:
+            args = (self.__name__, *args)
+            desc = kwargs.pop("description")
+            help_ = kwargs.setdefault("help", desc)
+            self.parser = parent.add_parser(*args, **kwargs)
 
         for group_name in self._groups:
             group = getattr(self, group_name)
-            group.bind(self)
+            self._groups[group_name] = group
+
+            if parent is not None:
+                group.build(self.parser)
 
         for arg_name in self._arguments:
             arg = getattr(self, arg_name)
-            arg.bind(self)
+            self._arguments[arg_name] = arg
+
+            if parent is not None:
+                arg.build(self.parser)
 
         if self._subparsers is not None:
             obj = getattr(self, self._subparsers[0])
-            obj.bind(self)
+            self._subparsers = (self._subparsers[0], obj)
+
+            if parent is not None:
+                obj.build(self.parser)
+
             self.subparsers = obj.parser
 
         elif self._subcommands:
@@ -732,7 +706,10 @@ class Command(_AttributeBound, metaclass=CommandMeta):
 
         for cmd_name in self._subcommands:
             cmd = getattr(self, cmd_name)
-            cmd.bind(self)
+            self._subcommands[cmd_name] = cmd
+
+            if parent is not None:
+                cmd.build(self.subparsers)
 
         self.parser.set_defaults(__command=self)
 
