@@ -77,13 +77,10 @@ class _AttributeBound(_Named):
 
         if self.__name__ not in instance.__dict__:
             bound = copy.copy(self)
-            bound.bind(instance)
+            bound.__self__ = instance
             instance.__dict__[self.__name__] = bound
 
         return instance.__dict__[self.__name__]
-
-    def bind(self, owner):
-        self.__self__ = owner
 
 
 class _Wrapper:
@@ -166,6 +163,7 @@ class Argument(_MethodWrapper):
         if args and args[0] == self.__wrapped__:
             self._args = args[1:]
 
+        self.group = None
         self.action = None
         self._inputs = Argument._unset
         self._value = Argument._unset
@@ -229,24 +227,6 @@ class Argument(_MethodWrapper):
         else:
             arg._inputs = Argument._unset
             arg._value = value
-
-    def bind(self, owner):
-        if not isinstance(owner, (Command, Group)):
-            return
-
-        super().bind(owner)
-        self.build(owner.parser)
-
-        if self.__wrapped__:
-            cmd = owner
-            while not isinstance(cmd, Command):
-                cmd = cmd.__self__
-
-            wrap = functools.wraps(self.__wrapped__)
-            self.__call__ = wrap(functools.partial(
-                self.__wrapped__,
-                cmd,
-            ))
 
     def build(self, parent):
         args = list(self._args)
@@ -432,15 +412,6 @@ class Group(_MethodWrapper):
 
         return super().wrap(func)
 
-    def bind(self, owner):
-        if not isinstance(owner, Command):
-            return
-
-        super().bind(owner)
-
-        for arg in self._arguments
-            owner.__dict__.setdefault(arg.__name__, arg)
-
     def build(self, parent):
         args = list(self._args)
         kwargs = dict(self._kwargs)
@@ -460,6 +431,9 @@ class Group(_MethodWrapper):
         self.parser = parent.add_argument_group(*args, **kwargs)
 
         for arg in self._arguments:
+            arg.__self__ = self.__self__
+            arg.group = self
+            self.__self__.__dict__.setdefault(arg.__name__, arg)
             arg.build(self.parser)
 
     def add(self, arg):
@@ -501,23 +475,6 @@ class Subcommands(_MethodWrapper):
             return self
 
         return super().wrap(func)
-
-    def bind(self, owner):
-        if not isinstance(owner, Command):
-            return
-
-        super().bind(owner)
-        self.build(owner.parser)
-
-        for cmd in self._commands:
-            owner.__dict__.setdefault(cmd.__name__, cmd)
-
-        if self.__wrapped__:
-            wrap = functools.wraps(self.__wrapped__)
-            self.__call__ = wrap(functools.partial(
-                self.__wrapped__,
-                owner,
-            ))
 
     def build(self, parent):
         args = list(self._args)
@@ -602,42 +559,6 @@ class Command(_AttributeBound, metaclass=CommandMeta):
 
         return cmd
 
-    def __getattr__(self, name):
-        if "__" in name:
-            return getattr(super(), name)
-
-        owner = getattr(self, "__self__", None)
-        if owner is None or hasattr(super(), name):
-            return super().__getattribute__(name)
-
-        return getattr(owner, name)
-
-    def __setattr__(self, name, value):
-        if "__" in name:
-            return super().__setattr__(name, value)
-
-        owner = getattr(self, "__self__", None)
-        if owner is None or not hasattr(owner, name):
-            return super().__setattr__(name, value)
-
-        owner_value = getattr(owner, name)
-        if hasattr(super(), name):
-            self_value = getattr(super(), name)
-            if self_value is owner_value:
-                return setattr(owner, name, value)
-
-        elif isinstance(owner_value, Argument):
-            return setattr(owner, name, value)
-
-        return super().__setattr__(name, value)
-
-    def bind(self, owner):
-        if not isinstance(owner, Command):
-            return
-
-        super().bind(owner)
-        self.build(owner.subparsers)
-
     def build(self, parent=None):
         args = list(self._args)
         kwargs = dict(self._kwargs)
@@ -678,24 +599,21 @@ class Command(_AttributeBound, metaclass=CommandMeta):
         for group_name in self._groups:
             group = getattr(self, group_name)
             self._groups[group_name] = group
-
-            if parent is not None:
-                group.build(self.parser)
+            group.__self__ = self
+            group.build(self.parser)
 
         for arg_name in self._arguments:
             arg = getattr(self, arg_name)
             self._arguments[arg_name] = arg
-
-            if parent is not None:
+            arg.__self__ = self
+            if arg.group is None:
                 arg.build(self.parser)
 
         if self._subparsers is not None:
             obj = getattr(self, self._subparsers[0])
             self._subparsers = (self._subparsers[0], obj)
-
-            if parent is not None:
-                obj.build(self.parser)
-
+            obj.__self__ = self
+            obj.build(self.parser)
             self.subparsers = obj.parser
 
         elif self._subcommands:
@@ -707,9 +625,8 @@ class Command(_AttributeBound, metaclass=CommandMeta):
         for cmd_name in self._subcommands:
             cmd = getattr(self, cmd_name)
             self._subcommands[cmd_name] = cmd
-
-            if parent is not None:
-                cmd.build(self.subparsers)
+            cmd.__self__ = self
+            cmd.build(self.subparsers)
 
         self.parser.set_defaults(__command=self)
 
