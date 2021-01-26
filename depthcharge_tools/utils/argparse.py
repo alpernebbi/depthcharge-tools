@@ -54,19 +54,32 @@ def filter_action_kwargs(action, kwargs):
     }
 
 
-class _Named:
-    def __init__(self, *args, __name__=None, **kwargs):
-        super().__init__()
-        self.__name__ = __name__
-
-    def __set_name__(self, owner, name):
-        self.__name__ = name
-
-
-class _AttributeBound(_Named):
+class _MethodDecorator:
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__()
+        self.__name__ = None
         self.__self__ = None
+        self.__func__ = None
+
+        if args and callable(args[0]):
+            self.wrap(args[0])
+            args = args[1:]
+
+        self._args = args
+        self._kwargs = kwargs
+
+    def __copy__(self):
+        if self.__func__ is not None:
+            args = (self.__func__, *self._args)
+            kwargs = self._kwargs
+        else:
+            args = self._args
+            kwargs = self._kwargs
+
+        obj = type(self)(*args, **kwargs)
+        obj.__name__ = self.__name__
+
+        return obj
 
     def __get__(self, instance, owner):
         if self.__self__ is not None:
@@ -82,101 +95,43 @@ class _AttributeBound(_Named):
 
         return instance.__dict__[self.__name__]
 
-
-class _Wrapper:
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.__wrapped__ = None
-
-    def wrap(self, wrapped):
-        if self.__wrapped__ is None:
-            self.__wrapped__ = wrapped
-        elif wrapped != self.__wrapped__:
-            raise ValueError("Can't wrap multiple things")
-
-        return self
-
-
-class _MethodWrapper(_Wrapper, _AttributeBound):
-    def __init__(self, *args, **kwargs):
-        self.__call = None
-
-        if args and callable(args[0]):
-            wrapped = args[0]
-            args = args[1:]
-        else:
-            wrapped = None
-
-        super().__init__(*args, **kwargs)
-
-        if wrapped is not None:
-            self.wrap(wrapped)
-
-    def wrap(self, wrapped):
-        if not callable(wrapped):
-            raise TypeError("Can't wrap non-callable objects")
-
-        super().wrap(wrapped)
-        functools.update_wrapper(self, wrapped)
-        self.__name__ = wrapped.__name__
-
-        return self
+    def __set_name__(self, owner, name):
+        self.__name__ = name
 
     @property
     def __call__(self):
         if self.__self__ is None:
             return self.wrap
 
-        if self.__wrapped__ is None:
+        if self.__func__ is None:
             return None
 
-        if self.__call is not None:
-            return self.__call
+        call = self.__func__.__get__(self, type(self))
+        self.__signature__ = inspect.signature(call)
 
-        wrap = functools.wraps(self.__wrapped__)
-        self.__call = wrap(functools.partial(
-            self.__wrapped__,
-            self.__self__,
-        ))
-        self.__signature__ = inspect.signature(
-            self.__call,
-            follow_wrapped=False,
-        )
+        return call
 
-        return self.__call
+    def wrap(self, func):
+        if not callable(func):
+            raise TypeError("Can't wrap non-callable objects")
 
-    @__call__.setter
-    def __call__(self, call):
-        self.__call = call
+        self.__func__ = func
+        functools.update_wrapper(self, func)
+        self.__name__ = func.__name__
+
+        return self
 
 
-class Argument(_MethodWrapper):
+class Argument(_MethodDecorator):
     class _unset:
         pass
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self._args = args
-        self._kwargs = kwargs
-
-        if args and args[0] == self.__wrapped__:
-            self._args = args[1:]
-
         self.group = None
         self.action = None
         self._inputs = Argument._unset
         self._value = Argument._unset
-
-    def __copy__(self):
-        if self.__wrapped__ is not None:
-            args = (self.__wrapped__, *self._args)
-            kwargs = self._kwargs
-        else:
-            args = self._args
-            kwargs = self._kwargs
-
-        return type(self)(*args, **kwargs)
 
     def wrap(self, wrapped):
         if isinstance(wrapped, Argument):
@@ -377,28 +332,13 @@ class ArgumentAction(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
-class Group(_MethodWrapper):
+class Group(_MethodDecorator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self._args = args
-        self._kwargs = kwargs
-
-        if args and callable(args[0]):
-            self._args = args[1:]
-            self.wrap(args[0])
-
         self._arguments = []
 
     def __copy__(self):
-        if self.__wrapped__ is not None:
-            args = (self.__wrapped__, *self._args)
-            kwargs = self._kwargs
-        else:
-            args = self._args
-            kwargs = self._kwargs
-
-        group = type(self)(*args, **kwargs)
+        group = super().__copy__()
 
         for arg in self._arguments:
             group.add(copy.copy(arg))
@@ -441,28 +381,13 @@ class Group(_MethodWrapper):
         return arg
 
 
-class Subcommands(_MethodWrapper):
+class Subcommands(_MethodDecorator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self._args = args
-        self._kwargs = kwargs
-
-        if args and callable(args[0]):
-            self._args = args[1:]
-            self.wrap(args[0])
-
         self._commands = []
 
     def __copy__(self):
-        if self.__wrapped__ is not None:
-            args = (self.__wrapped__, *self._args)
-            kwargs = self._kwargs
-        else:
-            args = self._args
-            kwargs = self._kwargs
-
-        subcommands = type(self)(*args, **kwargs)
+        subcommands = super().__copy__()
 
         for cmd in self._commands:
             subcommands.add(copy.copy(cmd))
@@ -518,9 +443,9 @@ class CommandMeta(type):
         return super().__new__(mcls, name, bases, attrs)
 
 
-class Command(_AttributeBound, metaclass=CommandMeta):
+class Command(metaclass=CommandMeta):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__()
         self._args = args
         self._kwargs = kwargs
 
