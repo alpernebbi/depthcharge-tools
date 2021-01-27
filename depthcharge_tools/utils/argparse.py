@@ -380,23 +380,29 @@ class Group(_MethodDecorator):
 
         return super().wrap(func)
 
-    def build(self, parent):
-        args = list(self._args)
-        kwargs = dict(self._kwargs)
+    @property
+    def __auto_kwargs(self):
+        kwargs = {}
 
         doc = inspect.getdoc(self)
         if doc:
             blocks = doc.split("\n\n")
-            title = blocks[0].replace("\n", " ")
-            desc = "\n\n".join(blocks[1:])
+            kwargs["title"] = blocks[0].replace("\n", " ")
+            kwargs["description"] = "\n\n".join(blocks[1:])
         else:
-            title = self.__name__
-            desc = None
+            kwargs["title"] = self.__name__
 
-        title = kwargs.setdefault("title", title)
-        desc = kwargs.setdefault("description", desc)
+        return kwargs
 
-        parser = parent.add_argument_group(*args, **kwargs)
+    @property
+    def __kwargs(self):
+        kwargs = self.__auto_kwargs
+        kwargs.update(self._kwargs)
+
+        return kwargs
+
+    def build(self, parent):
+        parser = parent.add_argument_group(*self._args, **self.__kwargs)
 
         for arg in self._arguments:
             arg.__self__ = self.__self__
@@ -408,6 +414,31 @@ class Group(_MethodDecorator):
         self._arguments.append(arg)
         arg.group = self
         return arg
+
+    def __property_from_kwargs(name):
+        @property
+        def prop(self):
+            try:
+                return self.__kwargs[name]
+            except KeyError:
+                raise AttributeError(
+                    "Group '{}' does not pass '{}' to add_argument_group"
+                    .format(self.__name__, name)
+                ) from None
+
+        @prop.setter
+        def prop(self, value):
+            self._kwargs[name] = value
+
+        @prop.deleter
+        def prop(self):
+            del self._kwargs[name]
+
+        return prop
+
+    title = __property_from_kwargs("title")
+    description = __property_from_kwargs("description")
+    del __property_from_kwargs
 
 
 class Subparsers(_MethodDecorator):
@@ -430,24 +461,31 @@ class Subparsers(_MethodDecorator):
 
         return super().wrap(func)
 
-    def build(self, parent):
-        args = list(self._args)
-        kwargs = dict(self._kwargs)
+    @property
+    def __auto_kwargs(self):
+        kwargs = {}
 
         doc = inspect.getdoc(self)
         if doc:
             blocks = doc.split("\n\n")
-            title = blocks[0].replace("\n", " ")
-            desc = "\n\n".join(blocks[1:])
+            kwargs["title"] = blocks[0].replace("\n", " ")
+            kwargs["description"] = "\n\n".join(blocks[1:])
         else:
-            title = self.__name__
-            desc = None
+            kwargs["title"] = self.__name__
 
-        title = kwargs.setdefault("title", title)
-        desc = kwargs.setdefault("description", desc)
-        dest = kwargs.setdefault("dest", self.__name__)
+        kwargs["dest"] = self.__name__
 
-        subparsers = parent.add_subparsers(*args, **kwargs)
+        return kwargs
+
+    @property
+    def __kwargs(self):
+        kwargs = self.__auto_kwargs
+        kwargs.update(self._kwargs)
+
+        return kwargs
+
+    def build(self, parent):
+        subparsers = parent.add_subparsers(*self._args, **self.__kwargs)
 
         for cmd in self._commands:
             cmd.build(subparsers)
@@ -457,6 +495,32 @@ class Subparsers(_MethodDecorator):
     def add(self, cmd):
         self._commands.append(cmd)
         return cmd
+
+    def __property_from_kwargs(name):
+        @property
+        def prop(self):
+            try:
+                return self.__kwargs[name]
+            except KeyError:
+                raise AttributeError(
+                    "Subparsers '{}' does not pass '{}' to add_subparsers"
+                    .format(self.__name__, name)
+                ) from None
+
+        @prop.setter
+        def prop(self, value):
+            self._kwargs[name] = value
+
+        @prop.deleter
+        def prop(self):
+            del self._kwargs[name]
+
+        return prop
+
+    title = __property_from_kwargs("title")
+    description = __property_from_kwargs("description")
+    dest = __property_from_kwargs("dest")
+    del __property_from_kwargs
 
 
 class CommandMeta(type):
