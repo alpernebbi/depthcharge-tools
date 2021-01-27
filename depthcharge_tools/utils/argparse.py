@@ -8,7 +8,7 @@ import logging
 import sys
 
 
-def filter_action_kwargs(action, kwargs):
+def filter_action_kwargs(kwargs):
     """
     Filter out the kwargs which argparse actions don't recognize.
 
@@ -16,10 +16,12 @@ def filter_action_kwargs(action, kwargs):
     filter them out. Also unset any values that are Argument._unset.
     """
 
+    action = kwargs.get("action", "store")
     allowed = {
         "action", "dest", "nargs", "const", "default", "type",
         "choices", "required", "help", "metavar",
     }
+
     if action == "store":
         pass
 
@@ -46,6 +48,9 @@ def filter_action_kwargs(action, kwargs):
 
     elif action == "version":
         allowed = {"action", "version", "dest", "default", "help"}
+
+    else:
+        allowed = kwargs.keys()
 
     return {
         key: value
@@ -130,7 +135,6 @@ class Argument(_MethodDecorator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.group = None
-        self.action = None
         self._inputs = Argument._unset
         self._value = Argument._unset
 
@@ -184,60 +188,14 @@ class Argument(_MethodDecorator):
             arg._inputs = Argument._unset
             arg._value = value
 
-    def build(self, parent):
-        args = list(self._args)
-        kwargs = dict(self._kwargs)
-
-        action = kwargs.setdefault("action", ArgumentAction)
-        dest = kwargs.setdefault("dest", self.__name__)
-
-        if isinstance(action, type) and issubclass(action, argparse.Action):
-            kwargs.setdefault("argument", self)
-        else:
-            kwargs = filter_action_kwargs(action, kwargs)
-
-        return parent.add_argument(*args, **kwargs)
-
     @property
-    def inputs(self):
-        if self._inputs is Argument._unset:
-            raise AttributeError("inputs")
+    def __auto_kwargs(self):
+        kwargs = {}
 
-        return self._inputs
-
-    @property
-    def value(self):
-        if self._value is not Argument._unset:
-            return self._value
-
-        func = self.__call__
-        if func is None:
-            value = self.inputs
-        else:
-            value = self(*self.inputs)
-
-        self._value = value
-        return value
-
-
-class ArgumentAction(argparse.Action):
-    def __init__(self, option_strings, dest, argument=None, **kwargs):
-        if not isinstance(argument, Argument):
-            raise TypeError(
-                "ArgumentAction argument 'argument' must be "
-                "an Argument object, not '{}'"
-                .format(type(argument))
-            )
-        self.argument = argument
-
-        # callable(arg) returns True even when arg.__call__ is None
-        func = self.argument.__call__
-
-        if func is not None:
-            params = inspect.signature(
-                self.argument,
-                follow_wrapped=False,
-            ).parameters
+        if self.__func__ is not None:
+            # Bind to anything to skip the "self" argument
+            func = self.__func__.__get__(object(), object)
+            params = inspect.signature(func).parameters
         else:
             params = {}
 
@@ -264,70 +222,139 @@ class ArgumentAction(argparse.Action):
             else:
                 nargs_max += 1
 
-        const = None
-        default = None
-        type_ = None
-        choices = None
-        required = False
+        option_strings = self._args
+        kwargs["dest"] = self.__name__
+        kwargs["action"] = ArgumentAction
+        kwargs["argument"] = self
 
-        doc = inspect.getdoc(argument)
-        help_ = doc.split("\n\n")[0] if doc else None
-
-        metavar = tuple(str.upper(s) for s in params.keys())
+        doc = inspect.getdoc(self)
+        if doc is not None:
+            kwargs["help"] = doc.split("\n\n")[0]
 
         # attr = Argument()
-        if func is None and not option_strings:
-            nargs = 1
-            metavar = None
+        if self.__func__ is None and not option_strings:
+            kwargs["nargs"] = 1
 
         # attr = Argument("--arg")
-        elif func is None:
-            nargs = "?"
-            metavar = None
+        elif self.__func__ is None:
+            kwargs["nargs"] = "?"
 
         # func(a, *b)
         elif (f_args or f_kwargs) and nargs_min > 0:
-            nargs = "+"
-            metavar = (f_args or f_kwargs).name.upper()
+            kwargs["nargs"] = "+"
+            kwargs["metavar"] = (f_args or f_kwargs).name.upper()
 
         # func(*a)
         elif (f_args or f_kwargs) and nargs_min == 0:
-            nargs = "*"
-            metavar = (f_args or f_kwargs).name.upper()
+            kwargs["nargs"] = "*"
+            kwargs["metavar"] = (f_args or f_kwargs).name.upper()
 
         # func()
         elif (nargs_min, nargs_max) == (0, 0):
-            nargs = 0
-            metavar = None
+            kwargs["nargs"] = 0
 
         # func(a=None)
         elif (nargs_min, nargs_max) == (0, 1):
-            nargs = "?"
-            metavar = metavar[0]
+            kwargs["nargs"] = "?"
+            kwargs["metavar"] = next(iter(params.keys())).upper()
 
         # func(a, b=None)
         elif nargs_min != nargs_max:
-            nargs = "+"
-            metavar = metavar[0]
+            kwargs["nargs"] = "+"
+            kwargs["metavar"] = next(iter(params.keys())).upper()
 
         # func(a, b)
         else:
-            nargs = nargs_min
-            if not option_strings:
-                metavar = None
+            kwargs["nargs"] = nargs_min
+            if option_strings:
+                kwargs["metavar"] = tuple(
+                    str.upper(s) for s in params.keys()
+                )
 
-        super().__init__(
-            option_strings,
-            dest,
-            nargs=kwargs.get("nargs", nargs),
-            const=kwargs.get("const", const),
-            default=kwargs.get("default", default),
-            type=kwargs.get("type", type_),
-            choices=kwargs.get("choices", choices),
-            required=kwargs.get("required", required),
-            help=kwargs.get("help", help_),
-            metavar=kwargs.get("metavar", metavar),
-        )
+        return kwargs
+
+    @property
+    def __kwargs(self):
+        kwargs = self.__auto_kwargs
+        kwargs.update(self._kwargs)
+
+        return kwargs
+
+    def build(self, parent):
+        option_strings = self._args
+        kwargs = filter_action_kwargs(self.__kwargs)
+
+        return parent.add_argument(*option_strings, **kwargs)
+
+    @property
+    def inputs(self):
+        if self._inputs is Argument._unset:
+            raise AttributeError("inputs")
+
+        return self._inputs
+
+    @property
+    def value(self):
+        if self._value is not Argument._unset:
+            return self._value
+
+        func = self.__call__
+        if func is None:
+            value = self.inputs
+        else:
+            value = self(*self.inputs)
+
+        self._value = value
+        return value
+
+    def __property_from_kwargs(name):
+        @property
+        def prop(self):
+            try:
+                return self.__kwargs[name]
+            except KeyError:
+                raise AttributeError(
+                    "Argument '{}' does not pass '{}' to add_argument"
+                    .format(self.__name__, name)
+                ) from None
+
+        @prop.setter
+        def prop(self, value):
+            self._kwargs[name] = value
+
+        @prop.deleter
+        def prop(self):
+            del self._kwargs[name]
+
+        return prop
+
+    @property
+    def name_or_flags(self):
+        return self._args or (self.__name__,)
+
+    action = __property_from_kwargs("action")
+    nargs = __property_from_kwargs("nargs")
+    default = __property_from_kwargs("default")
+    type = __property_from_kwargs("type")
+    choices = __property_from_kwargs("choices")
+    required = __property_from_kwargs("required")
+    help = __property_from_kwargs("help")
+    metavar = __property_from_kwargs("metavar")
+    dest = __property_from_kwargs("dest")
+    del __property_from_kwargs
+
+
+class ArgumentAction(argparse.Action):
+    def __init__(self, option_strings, dest, argument=None, **kwargs):
+        if not isinstance(argument, Argument):
+            raise TypeError(
+                "ArgumentAction argument 'argument' must be "
+                "an Argument object, not '{}'"
+                .format(type(argument))
+            )
+        self.argument = argument
+
+        super().__init__(option_strings, dest, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string=None):
         setattr(namespace, self.dest, values)
