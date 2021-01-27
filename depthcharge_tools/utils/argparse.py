@@ -445,7 +445,7 @@ class CommandMeta(type):
             attrs["__call__"] = __call__
 
         cls = super().__new__(mcls, name, bases, attrs)
-        cls.__kwargs = kwargs
+        cls.__custom_kwargs = kwargs
         return cls
 
     def items(cls):
@@ -500,42 +500,46 @@ class CommandMeta(type):
         return add_subcommand
 
     @property
-    def parser(cls):
-        return cls.build()
-
-    def build(cls, parent=None):
-        kwargs = dict(cls.__kwargs)
+    def __auto_kwargs(cls):
+        kwargs = {}
 
         doc = inspect.getdoc(cls)
-        if doc:
+        if doc is not None:
             blocks = doc.split("\n\n")
 
             for i, block in enumerate(blocks):
                 if block.strip("- ") == "":
-                    desc = "\n\n".join(blocks[:i])
-                    epilog = "\n\n".join(blocks[i+1:])
+                    kwargs["help"] = blocks[0]
+                    kwargs["description"] = "\n\n".join(blocks[:i])
+                    kwargs["epilog"] = "\n\n".join(blocks[i+1:])
                     break
             else:
-                desc = doc
-                epilog = None
+                kwargs["help"] = blocks[0]
+                kwargs["description"] = doc
 
-        else:
-            desc = None
-            epilog = None
+        kwargs["formatter_class"] = argparse.RawDescriptionHelpFormatter
 
-        desc = kwargs.setdefault("description", desc)
-        epilog = kwargs.setdefault("epilog", epilog)
-        formatter = kwargs.setdefault(
-            "formatter_class",
-            argparse.RawDescriptionHelpFormatter,
-        )
+        return kwargs
+
+    @property
+    def __kwargs(cls):
+        kwargs = cls.__auto_kwargs
+        kwargs.update(cls.__custom_kwargs)
+
+        return kwargs
+
+    @property
+    def parser(cls):
+        return cls.build()
+
+    def build(cls, parent=None):
+        kwargs = cls.__kwargs
 
         if parent is None:
+            kwargs.pop("help")
             parser = argparse.ArgumentParser(**kwargs)
 
         else:
-            desc = kwargs.pop("description")
-            help_ = kwargs.setdefault("help", desc)
             parser = parent.add_parser(cls.__name__, **kwargs)
 
         subparsers = None
@@ -565,6 +569,57 @@ class CommandMeta(type):
         parser.set_defaults(__command=cls)
 
         return parser
+
+    def __property_from_kwargs(name):
+        @property
+        def prop(cls):
+            if name in cls.__dict__:
+                return cls.__dict__[name]
+
+            try:
+                return cls.__kwargs[name]
+            except KeyError:
+                raise AttributeError(
+                    "Command '{}' does not pass '{}' to ArgumentParser"
+                    .format(cls.__name__, name)
+                ) from None
+
+        @prop.setter
+        def prop(cls, value):
+            if name in cls.__dict__:
+                prop = getattr(type(cls), name)
+                delattr(type(cls), name)
+                super().__setattr__(name, value)
+                setattr(type(cls), name, prop)
+            else:
+                cls.__custom_kwargs[name] = value
+
+        @prop.deleter
+        def prop(cls):
+            if name in cls.__dict__:
+                prop = getattr(type(cls), name)
+                delattr(type(cls), name)
+                super().__delattr__(name)
+                setattr(type(cls), name, prop)
+            else:
+                del cls.__custom_kwargs[name]
+
+        return prop
+
+    prog = __property_from_kwargs("prog")
+    usage = __property_from_kwargs("usage")
+    description = __property_from_kwargs("description")
+    epilog = __property_from_kwargs("epilog")
+    parents = __property_from_kwargs("parents")
+    formatter_class = __property_from_kwargs("formatter_class")
+    prefix_chars = __property_from_kwargs("prefix_chars")
+    fromfile_prefix_chars = __property_from_kwargs("fromfile_prefix_chars")
+    argument_default = __property_from_kwargs("argument_default")
+    conflict_handler = __property_from_kwargs("conflict_handler")
+    add_help = __property_from_kwargs("add_help")
+    allow_abbrev = __property_from_kwargs("allow_abbrev")
+    help = __property_from_kwargs("help")
+    del __property_from_kwargs
 
 
 class Command(metaclass=CommandMeta):
