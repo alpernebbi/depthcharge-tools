@@ -59,6 +59,17 @@ def filter_action_kwargs(kwargs):
     }
 
 
+class FunctionBindAction(argparse.Action):
+    def __init__(self, option_strings, dest, func, **kwargs):
+        self.signature = inspect.signature(func)
+
+        super().__init__(option_strings, dest, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        bound = self.signature.bind(*values)
+        setattr(namespace, self.dest, bound)
+
+
 class _MethodDecorator:
     def __init__(self, *args, **kwargs):
         super().__init__()
@@ -196,6 +207,10 @@ class Argument(_MethodDecorator):
             # Bind to anything to skip the "self" argument
             func = self.__func__.__get__(object(), object)
             params = inspect.signature(func).parameters
+
+            kwargs["action"] = FunctionBindAction
+            kwargs["func"] = func
+
         else:
             params = {}
 
@@ -224,8 +239,6 @@ class Argument(_MethodDecorator):
 
         option_strings = self._args
         kwargs["dest"] = self.__name__
-        kwargs["action"] = ArgumentAction
-        kwargs["argument"] = self
 
         doc = inspect.getdoc(self)
         if doc is not None:
@@ -342,22 +355,6 @@ class Argument(_MethodDecorator):
     metavar = __property_from_kwargs("metavar")
     dest = __property_from_kwargs("dest")
     del __property_from_kwargs
-
-
-class ArgumentAction(argparse.Action):
-    def __init__(self, option_strings, dest, argument=None, **kwargs):
-        if not isinstance(argument, Argument):
-            raise TypeError(
-                "ArgumentAction argument 'argument' must be "
-                "an Argument object, not '{}'"
-                .format(type(argument))
-            )
-        self.argument = argument
-
-        super().__init__(option_strings, dest, **kwargs)
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        setattr(namespace, self.dest, values)
 
 
 class Group(_MethodDecorator):
