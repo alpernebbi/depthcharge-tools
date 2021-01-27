@@ -383,7 +383,7 @@ class Group(_MethodDecorator):
         return arg
 
 
-class Subcommands(_MethodDecorator):
+class Subparsers(_MethodDecorator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._commands = []
@@ -454,7 +454,7 @@ class CommandMeta(type):
             return (
                 isinstance(value, Group),
                 isinstance(value, Argument),
-                isinstance(value, Subcommands),
+                isinstance(value, Subparsers),
                 isinstance(value, Command),
             )
         pairs = (
@@ -473,6 +473,12 @@ class CommandMeta(type):
         yield from (
             (k, v) for k, v in cls.items()
             if isinstance(v, Argument)
+        )
+
+    def subparsers(cls):
+        yield from (
+            (k, v) for k, v in cls.items()
+            if isinstance(v, Subparsers)
         )
 
     def subcommands(cls):
@@ -544,7 +550,7 @@ class CommandMeta(type):
                 if arg.group is None:
                     arg.build(parser)
 
-            elif isinstance(value, Subcommands):
+            elif isinstance(value, Subparsers):
                 obj = getattr(cls, attr)
                 subparsers = obj.build(parser)
 
