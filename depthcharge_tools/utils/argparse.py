@@ -86,6 +86,7 @@ class _MethodDecorator:
             return self
 
         if instance is None:
+            self.__self__ = owner
             return self
 
         if self.__name__ not in instance.__dict__:
@@ -195,7 +196,7 @@ class Argument(_MethodDecorator):
         else:
             kwargs = filter_action_kwargs(action, kwargs)
 
-        self.action = parent.add_argument(*args, **kwargs)
+        return parent.add_argument(*args, **kwargs)
 
     @property
     def inputs(self):
@@ -368,16 +369,17 @@ class Group(_MethodDecorator):
         title = kwargs.setdefault("title", title)
         desc = kwargs.setdefault("description", desc)
 
-        self.parser = parent.add_argument_group(*args, **kwargs)
+        parser = parent.add_argument_group(*args, **kwargs)
 
         for arg in self._arguments:
             arg.__self__ = self.__self__
-            arg.group = self
-            self.__self__.__dict__.setdefault(arg.__name__, arg)
-            arg.build(self.parser)
+            arg.build(parser)
+
+        return parser
 
     def add(self, arg):
         self._arguments.append(arg)
+        arg.group = self
         return arg
 
 
@@ -418,10 +420,12 @@ class Subcommands(_MethodDecorator):
         desc = kwargs.setdefault("description", desc)
         dest = kwargs.setdefault("dest", self.__name__)
 
-        self.parser = parent.add_subparsers(*args, **kwargs)
+        subparsers = parent.add_subparsers(*args, **kwargs)
 
         for cmd in self._commands:
-            cmd.build(self.parser)
+            cmd.build(subparsers)
+
+        return subparsers
 
     def add(self, cmd):
         self._commands.append(cmd)
@@ -429,7 +433,7 @@ class Subcommands(_MethodDecorator):
 
 
 class CommandMeta(type):
-    def __new__(mcls, name, bases, attrs):
+    def __new__(mcls, name, bases, attrs, **kwargs):
         call = attrs.get("__call__", None)
 
         if call is not None:
@@ -440,55 +444,63 @@ class CommandMeta(type):
                 return call(tmp)
             attrs["__call__"] = __call__
 
-        return super().__new__(mcls, name, bases, attrs)
+        cls = super().__new__(mcls, name, bases, attrs)
+        cls.__kwargs = kwargs
+        return cls
 
+    def items(cls):
+        def order(tup):
+            attr, value = tup
+            return (
+                isinstance(value, Group),
+                isinstance(value, Argument),
+                isinstance(value, Subcommands),
+                isinstance(value, Command),
+            )
+        pairs = (
+            (k, v) for k, v in vars(cls).items()
+            if not k.startswith("_")
+        )
+        return sorted(pairs, key=order, reverse=True)
 
-class Command(metaclass=CommandMeta):
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-        self._args = args
-        self._kwargs = kwargs
+    def groups(cls):
+        yield from (
+            (k, v) for k, v in cls.items()
+            if isinstance(v, Group)
+        )
 
-        groups = {}
-        arguments = {}
-        subcommands = {}
-        subparsers = None
+    def arguments(cls):
+        yield from (
+            (k, v) for k, v in cls.items()
+            if isinstance(v, Argument)
+        )
 
-        for attr, value in vars(self.__class__).items():
-            if isinstance(value, Group):
-                groups[attr] = value
+    def subcommands(cls):
+        yield from (
+            (k, v) for k, v in cls.items()
+            if isinstance(v, Command)
+        )
 
-            elif isinstance(value, Argument):
-                arguments[attr] = value
+    def subcommand(cls, arg):
+        if isinstance(arg, type) and issubclass(arg, Command):
+            setattr(cls, arg.__name__, arg)
+            return arg
 
-            elif isinstance(value, Command):
-                subcommands[attr] = value
+        def add_subcommand(cmd):
+            setattr(cls, arg, cmd)
+            cmd.__name__ = arg
+            return cmd
 
-            elif isinstance(value, Subcommands):
-                if subparsers is not None:
-                    raise AttributeError(
-                        "Command can't have multiple Subcommands objects"
-                    )
-                subparsers = (attr, value)
+        return add_subcommand
 
-        self._arguments = arguments
-        self._groups = groups
-        self._subparsers = subparsers
-        self._subcommands = subcommands
+    @property
+    def parser(cls):
+        return cls.build()
 
-        self.build()
+    def build(cls, parent=None):
+        kwargs = dict(cls.__kwargs)
 
-    def __copy__(self):
-        cmd = type(self)(*self._args, **self._kwargs)
-        cmd.__name__ = self.__name__
-
-        return cmd
-
-    def build(self, parent=None):
-        args = list(self._args)
-        kwargs = dict(self._kwargs)
-
-        doc = inspect.getdoc(self)
+        doc = inspect.getdoc(cls)
         if doc:
             blocks = doc.split("\n\n")
 
@@ -513,47 +525,54 @@ class Command(metaclass=CommandMeta):
         )
 
         if parent is None:
-            self.parser = argparse.ArgumentParser(*args, **kwargs)
+            parser = argparse.ArgumentParser(**kwargs)
 
         else:
-            args = (self.__name__, *args)
             desc = kwargs.pop("description")
             help_ = kwargs.setdefault("help", desc)
-            self.parser = parent.add_parser(*args, **kwargs)
+            parser = parent.add_parser(cls.__name__, **kwargs)
 
-        for group_name in self._groups:
-            group = getattr(self, group_name)
-            self._groups[group_name] = group
-            group.__self__ = self
-            group.build(self.parser)
+        subparsers = None
 
-        for arg_name in self._arguments:
-            arg = getattr(self, arg_name)
-            self._arguments[arg_name] = arg
-            arg.__self__ = self
-            if arg.group is None:
-                arg.build(self.parser)
+        for attr, value in cls.items():
+            if isinstance(value, Group):
+                group = getattr(cls, attr)
+                group.build(parser)
 
-        if self._subparsers is not None:
-            obj = getattr(self, self._subparsers[0])
-            self._subparsers = (self._subparsers[0], obj)
-            obj.__self__ = self
-            obj.build(self.parser)
-            self.subparsers = obj.parser
+            elif isinstance(value, Argument):
+                arg = getattr(cls, attr)
+                if arg.group is None:
+                    arg.build(parser)
 
-        elif self._subcommands:
-            self.subparsers = self.parser.add_subparsers()
+            elif isinstance(value, Subcommands):
+                obj = getattr(cls, attr)
+                subparsers = obj.build(parser)
 
-        else:
-            self.subparsers = None
+            elif isinstance(value, type) and issubclass(value, Command):
+                cmd = getattr(cls, attr)
+                cmd.__self__ = cls
 
-        for cmd_name in self._subcommands:
-            cmd = getattr(self, cmd_name)
-            self._subcommands[cmd_name] = cmd
-            cmd.__self__ = self
-            cmd.build(self.subparsers)
+                if subparsers is None:
+                    subparsers = parser.add_subparsers()
+                cmd.build(subparsers)
 
-        self.parser.set_defaults(__command=self)
+        parser.set_defaults(__command=cls)
+
+        return parser
+
+
+class Command(metaclass=CommandMeta):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self._args = args
+        self._kwargs = kwargs
+
+    def __copy__(self):
+        cmd = type(self)(*self._args, **self._kwargs)
+        cmd.__name__ = self.__name__
+
+        return cmd
+
 
 
 class OldCommand:
