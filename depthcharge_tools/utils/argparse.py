@@ -84,19 +84,6 @@ class _MethodDecorator:
         self._args = args
         self._kwargs = kwargs
 
-    def __copy__(self):
-        if self.__func__ is not None:
-            args = (self.__func__, *self._args)
-            kwargs = self._kwargs
-        else:
-            args = self._args
-            kwargs = self._kwargs
-
-        obj = type(self)(*args, **kwargs)
-        obj.__name__ = self.__name__
-
-        return obj
-
     def __get__(self, instance, owner):
         if self.__self__ is not None:
             return self
@@ -175,11 +162,6 @@ class Argument(_MethodDecorator):
             return group
 
         return super().wrap(wrapped)
-
-    def __copy__(self):
-        arg = super().__copy__()
-        arg.group = self.group
-        return arg
 
     def __get__(self, instance, owner):
         arg = super().__get__(instance, owner)
@@ -346,14 +328,6 @@ class Group(_MethodDecorator):
         super().__init__(*args, **kwargs)
         self._arguments = []
 
-    def __copy__(self):
-        group = super().__copy__()
-
-        for arg in self._arguments:
-            group.add(copy.copy(arg))
-
-        return group
-
     def wrap(self, func):
         if isinstance(func, Argument):
             self.add(func)
@@ -445,14 +419,6 @@ class Subparsers(_MethodDecorator):
         super().__init__(*args, **kwargs)
         self._commands = []
 
-    def __copy__(self):
-        subcommands = super().__copy__()
-
-        for cmd in self._commands:
-            subcommands.add(copy.copy(cmd))
-
-        return subcommands
-
     def wrap(self, func):
         if isinstance(func, Command):
             self.add(func)
@@ -528,10 +494,9 @@ class CommandMeta(type):
 
         if call is not None:
             def __call__(self, **kwargs):
-                tmp = copy.copy(self)
                 for kwarg, value in kwargs.items():
-                    setattr(tmp, kwarg, value)
-                return call(tmp)
+                    setattr(self, kwarg, value)
+                return call(self)
             attrs["__call__"] = __call__
 
         cls = super().__new__(mcls, name, bases, attrs)
@@ -713,17 +678,7 @@ class CommandMeta(type):
 
 
 class Command(metaclass=CommandMeta):
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-        self._args = args
-        self._kwargs = kwargs
-
-    def __copy__(self):
-        cmd = type(self)(*self._args, **self._kwargs)
-        cmd.__name__ = self.__name__
-
-        return cmd
-
+    pass
 
 
 class OldCommand:
