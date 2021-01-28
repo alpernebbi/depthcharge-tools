@@ -591,7 +591,7 @@ class CommandMeta(type):
         kwargs = cls.__kwargs
 
         if parent is None:
-            kwargs.pop("help")
+            kwargs.pop("help", None)
             parser = argparse.ArgumentParser(**kwargs)
 
         else:
