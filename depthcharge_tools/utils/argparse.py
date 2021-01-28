@@ -152,28 +152,25 @@ class Argument(_MethodDecorator):
         if isinstance(wrapped, Argument):
             group = Group()
 
+            self.wrap(wrapped.__func__)
+            group.wrap(wrapped.__func__)
             group.add(wrapped)
-            if group.__name__ is None:
-                group.__name__ = wrapped.__name__
-            group.__doc__ = wrapped.__doc__
-            wrapped.__doc__ = None
-
-            if self.__name__ is None:
-                self.__name__ = wrapped.__name__
-            self.wrap(wrapped.__wrapped__)
-            self.__doc__ = None
             group.add(self)
+
+            # Don't duplicate help message
+            wrapped.__doc__ = None
+            self.__doc__ = None
 
             return group
 
         if isinstance(wrapped, Group):
             group = wrapped
 
-            if self.__name__ is None:
-                self.__name__ = group.__name__
-            self.wrap(group._arguments[-1].__wrapped__)
-            self.__doc__ = None
+            self.wrap(group.__func__)
             group.add(self)
+
+            # Don't duplicate help message
+            self.__doc__ = None
 
             return group
 
@@ -358,6 +355,24 @@ class Group(_MethodDecorator):
             return self
 
         return super().wrap(func)
+
+    def __get__(self, instance, owner):
+        grp = super().__get__(instance, owner)
+
+        if isinstance(grp, inspect.BoundArguments):
+            inputs = instance.__dict__.pop(self.__name__)
+            func = super().__get__(instance, owner)
+
+            if callable(func):
+                outputs = func(*inputs.args, **inputs.kwargs)
+                instance.__dict__[self.__name__] = outputs
+                return outputs
+
+            else:
+                instance.__dict__[self.__name__] = inputs
+                return inputs
+
+        return grp
 
     @property
     def __auto_kwargs(self):
