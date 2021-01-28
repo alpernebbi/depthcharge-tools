@@ -102,8 +102,9 @@ class _MethodDecorator:
             return self
 
         if instance is None:
-            self.__self__ = owner
-            return self
+            bound = copy.copy(self)
+            bound.__self__ = owner
+            return bound
 
         if self.__name__ not in instance.__dict__:
             bound = copy.copy(self)
@@ -179,6 +180,11 @@ class Argument(_MethodDecorator):
             return group
 
         return super().wrap(wrapped)
+
+    def __copy__(self):
+        arg = super().__copy__()
+        arg.group = self.group
+        return arg
 
     def __get__(self, instance, owner):
         arg = super().__get__(instance, owner)
