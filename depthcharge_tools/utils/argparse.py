@@ -13,7 +13,7 @@ def filter_action_kwargs(kwargs):
     Filter out the kwargs which argparse actions don't recognize.
 
     ArgumentParser.add_argument() raises an error on unknown kwargs,
-    filter them out. Also unset any values that are Argument._unset.
+    filter them out. Also unset any values that are None.
     """
 
     action = kwargs.get("action", "store")
@@ -55,7 +55,7 @@ def filter_action_kwargs(kwargs):
     return {
         key: value
         for key, value in kwargs.items()
-        if key in allowed and not value is Argument._unset
+        if key in allowed
     }
 
 
@@ -107,11 +107,14 @@ class _MethodDecorator:
             return bound
 
         if self.__name__ not in instance.__dict__:
-            bound = copy.copy(self)
-            bound.__self__ = instance
-            instance.__dict__[self.__name__] = bound
+            if self.__func__ is not None:
+                return self.__func__.__get__(instance, owner)
+            return None
 
         return instance.__dict__[self.__name__]
+
+    def __set__(self, instance, value):
+        instance.__dict__[self.__name__] = value
 
     def __set_name__(self, owner, name):
         self.__name__ = name
@@ -141,14 +144,9 @@ class _MethodDecorator:
 
 
 class Argument(_MethodDecorator):
-    class _unset:
-        pass
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.group = None
-        self._inputs = Argument._unset
-        self._value = Argument._unset
 
     def wrap(self, wrapped):
         if isinstance(wrapped, Argument):
@@ -189,21 +187,20 @@ class Argument(_MethodDecorator):
     def __get__(self, instance, owner):
         arg = super().__get__(instance, owner)
 
-        if arg._inputs is not Argument._unset:
-            return arg.value
-        elif arg._value is not Argument._unset:
-            return arg.value
-        else:
-            return arg
+        if isinstance(arg, inspect.BoundArguments):
+            inputs = instance.__dict__.pop(self.__name__)
+            func = super().__get__(instance, owner)
 
-    def __set__(self, instance, value):
-        arg = super().__get__(instance, type(instance))
+            if callable(func):
+                outputs = func(*inputs.args, **inputs.kwargs)
+                instance.__dict__[self.__name__] = outputs
+                return outputs
 
-        if arg._value is Argument._unset:
-            arg._inputs = value
-        else:
-            arg._inputs = Argument._unset
-            arg._value = value
+            else:
+                instance.__dict__[self.__name__] = inputs
+                return inputs
+
+        return arg
 
     @property
     def __auto_kwargs(self):
@@ -304,27 +301,6 @@ class Argument(_MethodDecorator):
         kwargs = filter_action_kwargs(self.__kwargs)
 
         return parent.add_argument(*option_strings, **kwargs)
-
-    @property
-    def inputs(self):
-        if self._inputs is Argument._unset:
-            raise AttributeError("inputs")
-
-        return self._inputs
-
-    @property
-    def value(self):
-        if self._value is not Argument._unset:
-            return self._value
-
-        func = self.__call__
-        if func is None:
-            value = self.inputs
-        else:
-            value = self(*self.inputs)
-
-        self._value = value
-        return value
 
     def __property_from_kwargs(name):
         @property
