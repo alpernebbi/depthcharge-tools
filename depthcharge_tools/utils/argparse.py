@@ -271,6 +271,11 @@ class Argument(_MethodDecorator):
             kwargs["nargs"] = "?"
             kwargs["metavar"] = next(iter(params.keys())).upper()
 
+        # func(a=None, b=None)
+        elif nargs_min == 0:
+            kwargs["nargs"] = "*"
+            kwargs["metavar"] = next(iter(params.keys())).upper()
+
         # func(a, b=None)
         elif nargs_min != nargs_max:
             kwargs["nargs"] = "+"
