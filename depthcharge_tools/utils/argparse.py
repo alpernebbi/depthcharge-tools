@@ -420,7 +420,7 @@ class Subparsers(_MethodDecorator):
         self._commands = []
 
     def wrap(self, func):
-        if isinstance(func, Command):
+        if isinstance(func, CommandMeta):
             self.add(func)
             return self
 
@@ -510,7 +510,7 @@ class CommandMeta(type):
                 isinstance(value, Group),
                 isinstance(value, Argument),
                 isinstance(value, Subparsers),
-                isinstance(value, Command),
+                isinstance(value, CommandMeta),
             )
         pairs = (
             (k, v) for k, v in vars(cls).items()
@@ -539,11 +539,11 @@ class CommandMeta(type):
     def subcommands(cls):
         yield from (
             (k, v) for k, v in cls.items()
-            if isinstance(v, Command)
+            if isinstance(v, CommandMeta)
         )
 
     def subcommand(cls, arg):
-        if isinstance(arg, type) and issubclass(arg, Command):
+        if isinstance(arg, CommandMeta):
             setattr(cls, arg.__name__, arg)
             return arg
 
@@ -613,7 +613,7 @@ class CommandMeta(type):
                 obj = getattr(cls, attr)
                 subparsers = obj.build(parser)
 
-            elif isinstance(value, type) and issubclass(value, Command):
+            elif isinstance(value, CommandMeta):
                 cmd = getattr(cls, attr)
                 cmd.__self__ = cls
 
