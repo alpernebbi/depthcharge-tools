@@ -586,6 +586,33 @@ class CommandMeta(type):
         instance = super().__call__()
         return instance(*args, **kwargs)
 
+    def main(cls, *argv):
+        if len(argv) == 0:
+            prog, *argv = sys.argv
+
+        parser = cls.parser
+        args = parser.parse_args(argv)
+        command = getattr(args, "__command")
+        kwargs = {
+            k: v for k, v in vars(args).items()
+            if k != "__command" and v is not None
+        }
+
+        try:
+            output = command(**kwargs)
+            if output is not None:
+                print(output)
+
+        except ValueError as err:
+            parser.error(err.args[0])
+
+        except TypeError as err:
+            parser.error(err.args[0])
+
+        except OSError as err:
+            logging.getLogger(self.__module__).error(err)
+            sys.exit(err.errno)
+
     def items(cls):
         def order(tup):
             attr, value = tup
