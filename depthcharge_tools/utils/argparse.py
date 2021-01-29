@@ -378,7 +378,7 @@ class Group(_MethodDecorator):
         parser = parent.add_argument_group(*self._args, **self.__kwargs)
 
         for arg in self._arguments:
-            arg.__self__ = self.__self__
+            arg.__get__(self.__self__, type(self.__self__))
             arg.build(parser)
 
         return parser
