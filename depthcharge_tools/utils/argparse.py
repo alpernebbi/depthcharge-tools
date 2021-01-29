@@ -582,6 +582,10 @@ class CommandMeta(type):
         cls.__custom_kwargs = kwargs
         return cls
 
+    def __call__(cls, *args, **kwargs):
+        instance = super().__call__()
+        return instance(*args, **kwargs)
+
     def items(cls):
         def order(tup):
             attr, value = tup
