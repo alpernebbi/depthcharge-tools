@@ -8,7 +8,7 @@ import logging
 import sys
 
 
-def filter_action_kwargs(kwargs):
+def filter_action_kwargs(kwargs, action="store"):
     """
     Filter out the kwargs which argparse actions don't recognize.
 
@@ -16,7 +16,7 @@ def filter_action_kwargs(kwargs):
     filter them out. Also unset any values that are None.
     """
 
-    action = kwargs.get("action", "store")
+    action = kwargs.get("action", action)
     allowed = {
         "action", "dest", "nargs", "const", "default", "type",
         "choices", "required", "help", "metavar",
@@ -49,14 +49,22 @@ def filter_action_kwargs(kwargs):
     elif action == "version":
         allowed = {"action", "version", "dest", "default", "help"}
 
+    elif action is FunctionBindAction:
+        allowed |= {"func", "append", "count"}
+
     else:
         allowed = kwargs.keys()
 
-    return {
-        key: value
-        for key, value in kwargs.items()
-        if key in allowed
-    }
+    action_kwargs = {}
+    other_kwargs = {}
+
+    for key, value in kwargs.items():
+        if key in allowed:
+            action_kwargs[key] = value
+        else:
+            other_kwargs[key] = value
+
+    return action_kwargs, other_kwargs
 
 
 class FunctionBindAction(argparse.Action):
@@ -87,7 +95,7 @@ class FunctionBindAction(argparse.Action):
                 .format(type(self))
             )
 
-        super_kwargs = filter_action_kwargs(kwargs)
+        super_kwargs, _ = filter_action_kwargs(kwargs)
         super().__init__(option_strings, dest, **super_kwargs)
 
 
@@ -325,7 +333,7 @@ class Argument(_MethodDecorator):
 
     def build(self, parent):
         option_strings = self._args
-        kwargs = filter_action_kwargs(self.__kwargs)
+        kwargs, _ = filter_action_kwargs(self.__kwargs)
 
         return parent.add_argument(*option_strings, **kwargs)
 
