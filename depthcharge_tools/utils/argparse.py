@@ -492,10 +492,51 @@ def command_call(call):
     def __call__(self, **kwargs):
         for kwarg, value in kwargs.items():
             func = getattr(self, kwarg)
-            if callable(func):
-                sig = inspect.signature(func)
+            if not callable(func):
+                setattr(self, kwarg, value)
+                continue
+
+            if isinstance(value, inspect.BoundArguments):
+                setattr(self, kwarg, value)
+                continue
+
+            sig = inspect.signature(func)
+            var_args = None
+            var_kwargs = None
+
+            for name, param in sig.parameters.items():
+                if param.kind == inspect.Parameter.VAR_POSITIONAL:
+                    var_args = param
+
+                elif param.kind == inspect.Parameter.VAR_KEYWORD:
+                    var_kwargs = param
+                    raise NotImplementedError
+
+                elif param.kind == inspect.Parameter.KEYWORD_ONLY:
+                    raise NotImplementedError
+
+            # func(*a)
+            # func(a, *b)
+            if var_args:
                 value = sig.bind(*value)
+
+            # func()
+            elif len(sig.parameters) == 0:
+                value = sig.bind() if value else None
+
+            # func(a)
+            # func(a=None)
+            elif len(sig.parameters) == 1:
+                value = sig.bind(value)
+
+            # func(a, b)
+            # func(a, b=None)
+            # func(a=None, b=None)
+            else:
+                value = sig.bind(*value)
+
             setattr(self, kwarg, value)
+
         return call(self)
 
     functools.update_wrapper(__call__, call)
