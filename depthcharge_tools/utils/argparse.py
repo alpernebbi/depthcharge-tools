@@ -83,21 +83,20 @@ class FunctionBindAction(argparse.Action):
 
         if append and kwargs.get("nargs", "*") == 0:
             raise ValueError(
-                "'{}' action with append=True must be able to consume "
-                "command-line arguments (nargs must not be 0)"
-                .format(type(self))
+                "'{}' action '{}' with append=True must be able to "
+                "consume command-line arguments (nargs must not be 0)"
+                .format(type(self).__name__, dest)
             )
 
         if count and kwargs.get("nargs", 0) != 0:
             raise ValueError(
-                "'{}' action with count=True can't consume any "
+                "'{}' action '{}' with count=True can't consume any "
                 "command-line arguments (nargs must be 0)"
-                .format(type(self))
+                .format(type(self).__name__, dest)
             )
 
         super_kwargs, _ = filter_action_kwargs(kwargs)
         super().__init__(option_strings, dest, **super_kwargs)
-
 
     def __call__(self, parser, namespace, values, option_string=None):
         current = getattr(namespace, self.dest, None)
