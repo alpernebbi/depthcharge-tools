@@ -50,7 +50,7 @@ def filter_action_kwargs(kwargs, action="store"):
         allowed = {"action", "version", "dest", "default", "help"}
 
     elif action is FunctionBindAction:
-        allowed |= {"func", "append", "count"}
+        allowed |= {"func", "append", "count", "args", "kwargs"}
 
     else:
         allowed = kwargs.keys()
@@ -78,6 +78,8 @@ class FunctionBindAction(argparse.Action):
         **kwargs,
     ):
         self.signature = inspect.signature(func)
+        self.f_args = kwargs.pop("args", ())
+        self.f_kwargs = kwargs.pop("kwargs", {})
         self.append = append
         self.count = count
 
@@ -110,7 +112,11 @@ class FunctionBindAction(argparse.Action):
             bound = self.signature.bind(n + 1)
 
         else:
-            bound = self.signature.bind(*values)
+            bound = self.signature.bind(
+                *self.f_args,
+                *values,
+                **self.f_kwargs,
+            )
 
         setattr(namespace, self.dest, bound)
 
@@ -233,7 +239,21 @@ class Argument(_MethodDecorator):
         if self.__func__ is not None:
             # Bind to anything to skip the "self" argument
             func = self.__func__.__get__(object(), object)
-            params = inspect.signature(func).parameters
+
+            act_kwargs, f_kwargs = filter_action_kwargs(
+                self._kwargs,
+                action=FunctionBindAction,
+            )
+
+            if f_kwargs:
+                act_kwargs.setdefault("kwargs", {})
+                act_kwargs["kwargs"].update(f_kwargs)
+            f_args = act_kwargs.get("args", ())
+            f_kwargs = act_kwargs.get("kwargs", {})
+
+            partial = functools.partial(func, *f_args, **f_kwargs)
+            sig = inspect.signature(partial, follow_wrapped=False)
+            params = sig.parameters
 
             kwargs["action"] = FunctionBindAction
             kwargs["func"] = func
@@ -249,15 +269,18 @@ class Argument(_MethodDecorator):
         for name, param in params.items():
             if param.kind == inspect.Parameter.VAR_POSITIONAL:
                 var_args = param
+                continue
 
             elif param.kind == inspect.Parameter.VAR_KEYWORD:
                 var_kwargs = param
-                raise NotImplementedError
+                continue
 
             elif param.kind == inspect.Parameter.KEYWORD_ONLY:
-                raise NotImplementedError
+                # partial() objs accept kwargs that're already bound
+                if name in f_kwargs:
+                    continue
 
-            elif param.default == inspect.Parameter.empty:
+            if param.default == inspect.Parameter.empty:
                 nargs_min += 1
                 nargs_max += 1
 
@@ -323,16 +346,22 @@ class Argument(_MethodDecorator):
         kwargs = self.__auto_kwargs
         kwargs.update(self._kwargs)
 
-        act = kwargs.get("action", None)
-        if isinstance(act, type) and issubclass(act, FunctionBindAction):
-            if kwargs.get("count", False):
-                kwargs["nargs"] = 0
+        act_kwargs, f_kwargs = filter_action_kwargs(kwargs)
 
-        return kwargs
+        act = act_kwargs.get("action", None)
+        if isinstance(act, type) and issubclass(act, FunctionBindAction):
+            if act_kwargs.get("count", False):
+                act_kwargs["nargs"] = 0
+
+            if f_kwargs:
+                act_kwargs.setdefault("kwargs", {})
+                act_kwargs["kwargs"].update(f_kwargs)
+
+        return act_kwargs
 
     def build(self, parent):
         option_strings = self._args
-        kwargs, _ = filter_action_kwargs(self.__kwargs)
+        kwargs = self.__kwargs
 
         return parent.add_argument(*option_strings, **kwargs)
 
