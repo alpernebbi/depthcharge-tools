@@ -236,15 +236,15 @@ class Argument(_MethodDecorator):
 
         nargs_min = 0
         nargs_max = 0
-        f_args = None
-        f_kwargs = None
+        var_args = None
+        var_kwargs = None
 
         for name, param in params.items():
             if param.kind == inspect.Parameter.VAR_POSITIONAL:
-                f_args = param
+                var_args = param
 
             elif param.kind == inspect.Parameter.VAR_KEYWORD:
-                f_kwargs = param
+                var_kwargs = param
                 raise NotImplementedError
 
             elif param.kind == inspect.Parameter.KEYWORD_ONLY:
@@ -273,14 +273,14 @@ class Argument(_MethodDecorator):
             kwargs["nargs"] = "?"
 
         # func(a, *b)
-        elif (f_args or f_kwargs) and nargs_min > 0:
+        elif (var_args or var_kwargs) and nargs_min > 0:
             kwargs["nargs"] = "+"
-            kwargs["metavar"] = (f_args or f_kwargs).name.upper()
+            kwargs["metavar"] = (var_args or var_kwargs).name.upper()
 
         # func(*a)
-        elif (f_args or f_kwargs) and nargs_min == 0:
+        elif (var_args or var_kwargs) and nargs_min == 0:
             kwargs["nargs"] = "*"
-            kwargs["metavar"] = (f_args or f_kwargs).name.upper()
+            kwargs["metavar"] = (var_args or var_kwargs).name.upper()
 
         # func()
         elif (nargs_min, nargs_max) == (0, 0):
