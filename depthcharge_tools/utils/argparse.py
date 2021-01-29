@@ -488,16 +488,26 @@ class Subparsers(_MethodDecorator):
     del __property_from_kwargs
 
 
+def command_call(call):
+    def __call__(self, **kwargs):
+        for kwarg, value in kwargs.items():
+            func = getattr(self, kwarg)
+            if callable(func):
+                sig = inspect.signature(func)
+                value = sig.bind(*value)
+            setattr(self, kwarg, value)
+        return call(self)
+
+    functools.update_wrapper(__call__, call)
+    return __call__
+
+
 class CommandMeta(type):
     def __new__(mcls, name, bases, attrs, **kwargs):
         call = attrs.get("__call__", None)
 
         if call is not None:
-            def __call__(self, **kwargs):
-                for kwarg, value in kwargs.items():
-                    setattr(self, kwarg, value)
-                return call(self)
-            attrs["__call__"] = __call__
+            attrs["__call__"] = command_call(call)
 
         cls = super().__new__(mcls, name, bases, attrs)
         cls.__custom_kwargs = kwargs
