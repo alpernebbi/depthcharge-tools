@@ -60,14 +60,51 @@ def filter_action_kwargs(kwargs):
 
 
 class FunctionBindAction(argparse.Action):
-    def __init__(self, option_strings, dest, func, **kwargs):
+    def __init__(
+        self,
+        option_strings,
+        dest,
+        func,
+        append=False,
+        count=False,
+        **kwargs,
+    ):
         self.signature = inspect.signature(func)
+        self.append = append
+        self.count = count
+
+        if append and kwargs.get("nargs", "*") == 0:
+            raise ValueError(
+                "'{}' action with append=True must be able to consume "
+                "command-line arguments (nargs must not be 0)"
+                .format(type(self))
+            )
+
+        if count and kwargs.get("nargs", 0) != 0:
+            raise ValueError(
+                "'{}' action with count=True can't consume any "
+                "command-line arguments (nargs must be 0)"
+                .format(type(self))
+            )
 
         super_kwargs = filter_action_kwargs(kwargs)
         super().__init__(option_strings, dest, **super_kwargs)
 
+
     def __call__(self, parser, namespace, values, option_string=None):
-        bound = self.signature.bind(*values)
+        current = getattr(namespace, self.dest, None)
+
+        if self.append:
+            args = current.args if current else ()
+            bound = self.signature.bind_partial(*args, *values)
+
+        elif self.count:
+            n = int(current.args[0]) if current else 0
+            bound = self.signature.bind(n + 1)
+
+        else:
+            bound = self.signature.bind(*values)
+
         setattr(namespace, self.dest, bound)
 
 
@@ -279,6 +316,11 @@ class Argument(_MethodDecorator):
         kwargs = self.__auto_kwargs
         kwargs.update(self._kwargs)
 
+        act = kwargs.get("action", None)
+        if isinstance(act, type) and issubclass(act, FunctionBindAction):
+            if kwargs.get("count", False):
+                kwargs["nargs"] = 0
+
         return kwargs
 
     def build(self, parent):
@@ -321,6 +363,8 @@ class Argument(_MethodDecorator):
     help = __property_from_kwargs("help")
     metavar = __property_from_kwargs("metavar")
     dest = __property_from_kwargs("dest")
+    append = __property_from_kwargs("append")
+    count = __property_from_kwargs("count")
     del __property_from_kwargs
 
 
