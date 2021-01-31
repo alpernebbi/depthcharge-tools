@@ -706,7 +706,7 @@ class CommandMeta(type):
         command = getattr(args, "__command")
         kwargs = {
             k: v for k, v in vars(args).items()
-            if k != "__command" and v is not None
+            if k != "__command"
         }
 
         try:
@@ -793,6 +793,7 @@ class CommandMeta(type):
                 kwargs["help"] = blocks[0]
                 kwargs["description"] = doc
 
+        kwargs["argument_default"] = argparse.SUPPRESS
         kwargs["formatter_class"] = argparse.RawDescriptionHelpFormatter
 
         return kwargs
