@@ -116,6 +116,9 @@ class FunctionBindAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         current = getattr(namespace, self.dest, None)
 
+        if self.nargs in ("?", None):
+            values = [values]
+
         if self.append:
             args = current.args if current else ()
             bound = self.signature.bind_partial(*args, *values)
