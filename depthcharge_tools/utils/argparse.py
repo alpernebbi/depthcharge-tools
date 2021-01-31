@@ -97,6 +97,19 @@ class FunctionBindAction(argparse.Action):
                 .format(type(self).__name__, dest)
             )
 
+        if count and append:
+            raise ValueError(
+                "'{}' action '{}' arguments append=True and count=True "
+                "are incompatible."
+                .format(type(self).__name__, dest)
+            )
+
+        if (count or append) and (self.f_args or self.f_kwargs):
+            raise NotImplementedError(
+                "'{}' action '{}' with append=True or count=True "
+                "does not support prebinding arguments yet."
+            )
+
         super_kwargs, _ = filter_action_kwargs(kwargs)
         super().__init__(option_strings, dest, **super_kwargs)
 
