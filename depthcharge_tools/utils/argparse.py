@@ -278,6 +278,7 @@ class Argument(_MethodDecorator):
         nargs_max = 0
         var_args = None
         var_kwargs = None
+        first_arg = next(iter(params.keys())).upper() if params else None
 
         for name, param in params.items():
             if param.kind == inspect.Parameter.VAR_POSITIONAL:
@@ -332,25 +333,28 @@ class Argument(_MethodDecorator):
         # func(a=None)
         elif (nargs_min, nargs_max) == (0, 1):
             kwargs["nargs"] = "?"
-            kwargs["metavar"] = next(iter(params.keys())).upper()
+            kwargs["metavar"] = first_arg.upper()
 
         # func(a=None, b=None)
         elif nargs_min == 0:
             kwargs["nargs"] = "*"
-            kwargs["metavar"] = next(iter(params.keys())).upper()
+            kwargs["metavar"] = first_arg.upper()
 
         # func(a, b=None)
         elif nargs_min != nargs_max:
             kwargs["nargs"] = "+"
-            kwargs["metavar"] = next(iter(params.keys())).upper()
+            kwargs["metavar"] = first_arg.upper()
 
         # func(a, b)
         else:
             kwargs["nargs"] = nargs_min
+
             if option_strings:
                 kwargs["metavar"] = tuple(
                     str.upper(s) for s in params.keys()
                 )
+            else:
+                kwargs["metavar"] = first_arg.upper()
 
         return kwargs
 
