@@ -471,7 +471,8 @@ class Group(_MethodDecorator):
         if doc:
             blocks = doc.split("\n\n")
             kwargs["title"] = blocks[0].replace("\n", " ")
-            kwargs["description"] = "\n\n".join(blocks[1:])
+            if len(blocks) > 1:
+                kwargs["description"] = "\n\n".join(blocks[1:])
         else:
             kwargs["title"] = self.__name__
 
