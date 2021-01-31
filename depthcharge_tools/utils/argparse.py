@@ -322,12 +322,12 @@ class Argument(_MethodDecorator):
         # func(a, *b)
         elif (var_args or var_kwargs) and nargs_min > 0:
             kwargs["nargs"] = "+"
-            kwargs["metavar"] = (var_args or var_kwargs).name.upper()
+            kwargs["metavar"] = (var_args or var_kwargs).name
 
         # func(*a)
         elif (var_args or var_kwargs) and nargs_min == 0:
             kwargs["nargs"] = "*"
-            kwargs["metavar"] = (var_args or var_kwargs).name.upper()
+            kwargs["metavar"] = (var_args or var_kwargs).name
 
         # func()
         elif (nargs_min, nargs_max) == (0, 0):
@@ -336,28 +336,37 @@ class Argument(_MethodDecorator):
         # func(a=None)
         elif (nargs_min, nargs_max) == (0, 1):
             kwargs["nargs"] = "?"
-            kwargs["metavar"] = first_arg.upper()
+            kwargs["metavar"] = first_arg
 
         # func(a=None, b=None)
         elif nargs_min == 0:
             kwargs["nargs"] = "*"
-            kwargs["metavar"] = first_arg.upper()
+            kwargs["metavar"] = first_arg
 
         # func(a, b=None)
         elif nargs_min != nargs_max:
             kwargs["nargs"] = "+"
-            kwargs["metavar"] = first_arg.upper()
+            kwargs["metavar"] = first_arg
 
         # func(a, b)
         else:
             kwargs["nargs"] = nargs_min
 
             if option_strings:
-                kwargs["metavar"] = tuple(
-                    str.upper(s) for s in params.keys()
-                )
+                kwargs["metavar"] = tuple(params.keys())
             else:
-                kwargs["metavar"] = first_arg.upper()
+                kwargs["metavar"] = first_arg
+
+        def format_metavar(s):
+            return s.replace("-","_").strip(" -_").upper()
+
+        if "metavar" in kwargs:
+            metavar = kwargs["metavar"]
+            if isinstance(metavar, tuple):
+                metavar = tuple(format_metavar(m) for m in metavar)
+            else:
+                metavar = format_metavar(metavar)
+            kwargs["metavar"] = metavar
 
         return kwargs
 
