@@ -430,6 +430,7 @@ class Argument(_MethodDecorator):
     dest = __property_from_kwargs("dest")
     append = __property_from_kwargs("append")
     count = __property_from_kwargs("count")
+    version = __property_from_kwargs("version")
     del __property_from_kwargs
 
 
