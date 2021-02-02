@@ -2,82 +2,61 @@
 
 import argparse
 import logging
-import sys
-import types
 
 from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
-    Disk,
-    Partition,
-    LoggingLevelAction,
-)
-from depthcharge_tools.utils import OldCommand as Command
-from depthcharge_tools.depthchargectl import (
-    build,
-    check,
-    partitions,
-    rm,
-    set_good,
-    target,
-    write,
+    Command,
+    Argument,
+    Group,
+    Subparsers,
 )
 
 logger = logging.getLogger(__name__)
 
 
-class Depthchargectl(Command):
-    Build = build.DepthchargectlBuild
-    Check = check.DepthchargectlCheck
-    Partitions = partitions.DepthchargectlPartitions
-    Rm = rm.DepthchargectlRm
-    SetGood = set_good.DepthchargectlSetGood
-    Target = target.DepthchargectlTarget
-    Write = write.DepthchargectlWrite
+class depthchargectl(
+    Command,
+    prog="depthchargectl",
+    usage="%(prog)s [options] command ...",
+    add_help=False,
+):
+    """Manage Chrome OS kernel partitions."""
 
-    def __init__(self, name="depthchargectl", parent=None):
-        super().__init__(name, parent)
+    @Group
+    def global_options(self):
+        """Global options"""
+
+    @global_options.add
+    @Argument("-h", "--help", action="help")
+    def print_help(self):
+        """Show this help message."""
+        # type(self).parser.print_help()
+
+    @global_options.add
+    @Argument(
+        "--version",
+        action="version",
+        version="depthcharge-tools %(prog)s {}".format(__version__),
+    )
+    def version(self):
+        """Print program version."""
+        return type(self).version.version % {"prog": type(self).prog}
+
+    @global_options.add
+    @Argument("-v", "--verbose", count=True)
+    def verbosity(self, verbosity):
+        """Print more detailed output."""
+        level = logger.getEffectiveLevel()
+        level = level - int(verbosity) * 10
+        logger.setLevel(level)
+        return level
+
+    @Subparsers()
+    def command(self, cmd):
+        """Supported subcommands"""
 
     def __call__(self):
-        self.partitions()
-
-    def _init_parser(self):
-        return super()._init_parser(
-            description="Manage Chrome OS kernel partitions.",
-            usage="%(prog)s [options] command ...",
-            add_help=False,
-        )
-
-    def _init_globals(self, options):
-        options.add_argument(
-            "-h", "--help",
-            action='help',
-            help="Show this help message.",
-        )
-        options.add_argument(
-            "--version",
-            action='version',
-            version="depthcharge-tools %(prog)s {}".format(__version__),
-            help="Print program version.",
-        )
-        options.add_argument(
-            "-v", "--verbose",
-            dest=argparse.SUPPRESS,
-            action=LoggingLevelAction,
-            level="-10",
-            help="Print more detailed output.",
-        )
-
-    def _init_commands(self):
-        self.build = Depthchargectl.Build('build', self)
-        self.check = Depthchargectl.Check('check', self)
-        self.partitions = Depthchargectl.Partitions('partitions', self)
-        self.rm = Depthchargectl.Rm('rm', self)
-        self.set_good = Depthchargectl.SetGood('set-good', self)
-        self.target = Depthchargectl.Target('target', self)
-        self.write = Depthchargectl.Write('write', self)
-
-
-depthchargectl = Depthchargectl()
+        raise ValueError("No subcommand given")
 
 
 if __name__ == "__main__":
