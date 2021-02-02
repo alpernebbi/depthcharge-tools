@@ -654,18 +654,30 @@ def command_call(call):
                 continue
 
             for arg_name, arg in cmd.arguments():
-                self.__dict__.setdefault(arg_name, None)
+                try:
+                    func = arg.__func__.__get__(object(), object)
+                    sig = inspect.signature(func)
+                    self.__dict__.setdefault(arg_name, sig.bind())
+                except:
+                    self.__dict__.setdefault(arg_name, None)
 
             for grp_name, grp in cmd.groups():
                 for arg in grp._arguments:
-                    self.__dict__.setdefault(arg.dest, None)
+                    try:
+                        func = arg.__func__.__get__(object(), object)
+                        sig = inspect.signature(func)
+                        self.__dict__.setdefault(arg.dest, sig.bind())
+                    except:
+                        self.__dict__.setdefault(arg.dest, None)
 
                 if grp_name not in (arg.dest for arg in grp._arguments):
-                    # grp.__get__(self, type(self)) would mutate self
-                    func = grp.__func__.__get__(object(), object)
-                    sig = inspect.signature(func)
-                    if len(sig.parameters) == 0:
+                    try:
+                        # grp.__get__(self, type(self)) would mutate self
+                        func = grp.__func__.__get__(object(), object)
+                        sig = inspect.signature(func)
                         self.__dict__.setdefault(grp_name, sig.bind())
+                    except:
+                        self.__dict__.setdefault(grp_name, None)
 
         for cmd in type(self).__mro__:
             if not isinstance(cmd, CommandMeta):
