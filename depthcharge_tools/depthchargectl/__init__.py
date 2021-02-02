@@ -56,8 +56,14 @@ class depthchargectl(
         """Supported subcommands"""
 
     def __call__(self):
-        raise ValueError("No subcommand given")
+        if hasattr(type(self), "partitions"):
+            logger.info("No subcommand given, defaulting to partitions")
+            return type(self).partitions()
+        else:
+            raise ValueError("No subcommand given")
 
+
+from depthcharge_tools.depthchargectl.partitions import partitions
 
 if __name__ == "__main__":
     depthchargectl._main()
