@@ -13,116 +13,237 @@ from depthcharge_tools.utils import (
     Architecture,
     Path,
     TemporaryDirectory,
-    LoggingLevelAction,
-    MixedArgumentsAction,
+    Command,
+    Argument,
+    Group,
 )
-from depthcharge_tools.utils import OldCommand as Command
 
 logger = logging.getLogger(__name__)
 
 
-class Mkdepthcharge(Command):
-    def __init__(self, name="mkdepthcharge", parent=None):
-        super().__init__(name, parent)
+class mkdepthcharge(Command, prog="mkdepthcharge", add_help=False):
+    """Build boot images for the ChromeOS bootloader."""
 
-        self._fit_options = self._parser.add_argument_group(
-            title="FIT image options",
-        )
-        self._init_fit_options(self._fit_options)
+    @Group
+    def input_files(self):
+        """Input files"""
+        vmlinuz = None
+        initramfs = None
+        dtbs = []
 
-        self._vboot_options = self._parser.add_argument_group(
-            title="Depthcharge image options",
-        )
-        self._init_vboot_options(self._vboot_options)
+        for f in [self.vmlinuz, self.initramfs, *(self.dtbs or [])]:
+            if f is None:
+                pass
 
-    def __call__(
-        self,
-        arch=None,
-        bootloader=None,
-        cmdline=None,
-        compress=None,
-        devkeys=None,
-        dtbs=None,
-        image_format=None,
-        initramfs=None,
-        kern_guid=None,
-        keyblock=None,
-        name=None,
-        output=None,
-        signprivate=None,
-        vmlinuz=None,
-    ):
-        # Normalize input arguments
+            elif f.is_vmlinuz():
+                if vmlinuz is None:
+                    vmlinuz = f
+                else:
+                    raise TypeError("Can't build with multiple kernels")
+
+            elif f.is_initramfs():
+                if initramfs is None:
+                    initramfs = f
+                else:
+                    raise TypeError("Can't build with multiple initramfs")
+
+            elif f.is_dtb():
+                dtbs.append(f)
+
+            elif vmlinuz is None:
+                vmlinuz = f
+
+            elif initramfs is None:
+                initramfs = f
+
+            else:
+                dtbs.append(f)
+
+        self.vmlinuz = vmlinuz
+        self.initramfs = initramfs
+        self.dtbs = dtbs
+
         if vmlinuz is not None:
-            vmlinuz = Path(vmlinuz).resolve()
             logger.info("Using vmlinuz: '{}'.".format(vmlinuz))
         else:
             msg = "vmlinuz argument is required."
             raise ValueError(msg)
 
         if initramfs is not None:
-            initramfs = Path(initramfs).resolve()
             logger.info("Using initramfs: '{}'.".format(initramfs))
 
+        for dtb in dtbs:
+            logger.info("Using dtb: '{}'.".format(dtb))
+
+    @input_files.add
+    @Argument
+    def vmlinuz(self, vmlinuz):
+        """Kernel executable"""
+        if vmlinuz is not None:
+            vmlinuz = Path(vmlinuz).resolve()
+
+        return vmlinuz
+
+    @input_files.add
+    @Argument
+    def initramfs(self, initramfs=None):
+        """Ramdisk image"""
+        if initramfs is not None:
+            initramfs = Path(initramfs).resolve()
+
+        return initramfs
+
+    @input_files.add
+    @Argument(metavar="DTB")
+    def dtbs(self, *dtbs):
+        """Device-tree binary file"""
         if dtbs is not None:
             dtbs = [Path(dtb).resolve() for dtb in dtbs]
-            for dtb in dtbs:
-                logger.info("Using dtb: '{}'.".format(dtb))
         else:
             dtbs = []
 
-        if bootloader is not None:
-            bootloader = Path(bootloader).resolve()
+        return dtbs
 
-        if devkeys is not None:
-            devkeys = Path(devkeys).resolve()
+    @Group
+    def options(self):
+        """Options"""
+        # Check incompatible combinations
+        if self.image_format == "zimage":
+            if self.compress not in (None, "none"):
+                raise ValueError(
+                    "Compress argument not supported with zimage format."
+                )
+            if self.name is not None:
+                raise ValueError(
+                    "Name argument not supported with zimage format."
+                )
+            if self.initramfs is not None:
+                raise ValueError(
+                    "Initramfs image not supported with zimage format."
+                )
+            if self.dtbs:
+                raise ValueError(
+                    "Device tree files not supported with zimage format."
+                )
 
-        if signprivate is not None:
-            signprivate = Path(signprivate).resolve()
+    @options.add
+    @Argument("-h", "--help", action="help")
+    def print_help(self):
+        """Show this help message."""
+        # type(self).parser.print_help()
 
-        if keyblock is not None:
-            keyblock = Path(keyblock).resolve()
+    @options.add
+    @Argument(
+        "--version",
+        action="version",
+        version="depthcharge-tools %(prog)s {}".format(__version__),
+    )
+    def version(self):
+        """Print program version."""
+        return type(self).version.version % {"prog": type(self).prog}
+
+    @options.add
+    @Argument("-v", "--verbose", count=True)
+    def verbosity(self, verbosity):
+        """Print more detailed output."""
+        level = logger.getEffectiveLevel()
+        level = level - int(verbosity) * 10
+        logger.setLevel(level)
+        return level
+
+    @options.add
+    @Argument("-o", "--output", required=True)
+    def output(self, file_):
+        """Write resulting image to FILE."""
+
+        # Output path is obviously required
+        if file_ is None:
+            raise ValueError(
+                "Output argument is required."
+            )
+
+        return Path(file_).resolve()
+
+    @options.add
+    @Argument("-A", "--arch", nargs=1)
+    def arch(self, arch=None):
+        """Architecture to build for."""
 
         # We should be able to make an image for other architectures, but
         # the default should be this machine's.
         if arch is None:
             arch = Architecture(platform.machine())
             logger.info("Assuming CPU architecture '{}'.".format(arch))
-        else:
-            arch = Architecture(arch)
+        elif arch not in Architecture.all:
+            raise ValueError(
+                "Can't build images for unknown architecture '{}'"
+                .format(arch)
+            )
+
+        return Architecture(arch)
+
+    @options.add
+    @Argument("--format", nargs=1)
+    def image_format(self, format_=None):
+        """Kernel image format to use."""
 
         # Default to architecture-specific formats.
-        if image_format is None:
-            if arch in Architecture.arm:
-                image_format = "fit"
-            elif arch in Architecture.x86:
-                image_format = "zimage"
-            logger.info("Assuming image format '{}'.".format(image_format))
+        if format_ is None:
+            if self.arch in Architecture.arm:
+                format_ = "fit"
+            elif self.arch in Architecture.x86:
+                format_ = "zimage"
+            logger.info("Assuming image format '{}'.".format(format_))
 
-        if image_format == "fit":
-            # We need to pass "-C none" to mkimage or it assumes gzip.
-            if compress is None:
-                compress = "none"
+        if format_ not in ("fit", "zimage"):
+            raise ValueError(
+                "Can't build images for unknown image format '{}'"
+                .format(format_)
+            )
 
-            # If we don't pass "-n <name>" to mkimage, the kernel image
-            # description is left blank. Other images get "unavailable"
-            # as their description, so it looks better if we match that.
-            if name is None:
-                name = "unavailable"
+        return format_
 
-        # If the cmdline is empty vbutil_kernel returns an error. We can use
-        # "--" instead of putting a newline or a space into the cmdline.
-        if cmdline is None:
-            cmdline = "--"
-        elif isinstance(cmdline, list):
-            cmdline = " ".join(cmdline)
+    @Group
+    def fit_options(self):
+        """FIT image options"""
 
-        # The firmware replaces any '%U' in the kernel cmdline with the
-        # PARTUUID of the partition it booted from. Chrome OS uses
-        # kern_guid=%U in their cmdline and it's useful information, so
-        # prepend it to cmdline.
-        if (kern_guid is None) or kern_guid:
-            cmdline = " ".join(("kern_guid=%U", cmdline))
+    @fit_options.add
+    @Argument("-C", "--compress", nargs=1)
+    def compress(self, type_=None):
+        """Compress vmlinuz file before packing."""
+
+        # We need to pass "-C none" to mkimage or it assumes gzip.
+        if type_ is None and self.image_format == "fit":
+            type_ = "none"
+
+        if type_ not in (None, "none", "lz4", "lzma"):
+            raise ValueError(
+                "Compression type '{}' is not supported."
+                .format(type_)
+            )
+
+        return type_
+
+    @fit_options.add
+    @Argument("-n", "--name", nargs=1)
+    def name(self, desc=None):
+        """Description of vmlinuz to put in the FIT."""
+
+        # If we don't pass "-n <name>" to mkimage, the kernel image
+        # description is left blank. Other images get "unavailable"
+        # as their description, so it looks better if we match that.
+        if desc is None and self.image_format == "fit":
+            desc = "unavailable"
+
+        return desc
+
+    @Group
+    def vboot_options(self):
+        """Depthcharge image options"""
+
+        devkeys = self.devkeys
+        keyblock = self.keyblock
+        signprivate = self.signprivate
 
         # Default to distro-specific paths for necessary files.
         if keyblock is None and signprivate is None:
@@ -161,25 +282,79 @@ class Mkdepthcharge(Command):
             msg = "Couldn't find a usable signprivate file."
             raise ValueError(msg)
 
-        # Check incompatible combinations
-        if image_format == "zimage":
-            if compress is not None:
-                msg = "compress argument not supported with zimage format."
-                raise ValueError(msg)
-            if name is not None:
-                msg = "name argument not supported with zimage format."
-                raise ValueError(msg)
-            if initramfs is not None:
-                msg = "Initramfs image not supported with zimage format."
-                raise ValueError(msg)
-            if dtbs:
-                msg = "Device tree files not supported with zimage format."
-                raise ValueError(msg)
+        self.devkeys = devkeys
+        self.keyblock = keyblock
+        self.signprivate = signprivate
 
-        # Output path is obviously required
-        if output is None:
-            msg = "output argument is required."
-            raise ValueError(msg)
+    @vboot_options.add
+    @Argument("-c", "--cmdline", append=True, nargs="+")
+    def cmdline(self, *cmd):
+        """Command-line parameters for the kernel."""
+
+        # If the cmdline is empty vbutil_kernel returns an error. We can use
+        # "--" instead of putting a newline or a space into the cmdline.
+        if len(cmd) == 0:
+            cmdline = "--"
+        elif len(cmd) == 1 and isinstance(cmd[0], str):
+            cmdline = cmd[0]
+        elif isinstance(cmd, (list, tuple)):
+            cmdline = " ".join(cmd)
+
+        # The firmware replaces any '%U' in the kernel cmdline with the
+        # PARTUUID of the partition it booted from. Chrome OS uses
+        # kern_guid=%U in their cmdline and it's useful information, so
+        # prepend it to cmdline.
+        if (self.kern_guid is None) or self.kern_guid:
+            cmdline = " ".join(("kern_guid=%U", cmdline))
+
+        return cmdline
+
+    @vboot_options.add
+    @Argument("--no-kern-guid", kern_guid=False)
+    def kern_guid(self, kern_guid=True):
+        """Don't prepend kern_guid=%%U to the cmdline."""
+        return kern_guid
+
+    @vboot_options.add
+    @Argument("--bootloader", nargs=1)
+    def bootloader(self, file_=None):
+        """Bootloader stub binary to use."""
+        if file_ is not None:
+            file_ = Path(file_).resolve()
+
+        return file_
+
+    @vboot_options.add
+    @Argument("--devkeys")
+    def devkeys(self, dir_):
+        """Directory containing developer keys to use."""
+        if dir_ is not None:
+            dir_ = Path(dir_).resolve()
+
+        return dir_
+
+    @vboot_options.add
+    @Argument("--keyblock")
+    def keyblock(self, file_):
+        """The key block file (.keyblock)."""
+        if file_ is not None:
+            file_ = Path(file_).resolve()
+
+        return file_
+
+    @vboot_options.add
+    @Argument("--signprivate")
+    def signprivate(self, file_):
+        """Private key (.vbprivk) to sign the image."""
+        if file_ is not None:
+            file_ = Path(file_).resolve()
+
+        return file_
+
+    def __call__(self):
+        vmlinuz = self.vmlinuz
+        initramfs = self.initramfs
+        dtbs = self.dtbs
 
         with TemporaryDirectory(prefix="mkdepthcharge-") as tmpdir:
             logger.debug("Working in temp dir '{}'.".format(tmpdir))
@@ -206,31 +381,31 @@ class Mkdepthcharge(Command):
                 vmlinuz = vmlinuz.gunzip()
 
             # Depthcharge on arm64 with FIT supports these two compressions.
-            if compress == "lz4":
+            if self.compress == "lz4":
                 logger.info("Compressing kernel with lz4.")
                 vmlinuz = vmlinuz.lz4()
-            elif compress == "lzma":
+            elif self.compress == "lzma":
                 logger.info("Compressing kernel with lzma.")
                 vmlinuz = vmlinuz.lzma()
-            elif compress is not None and compress != "none":
+            elif self.compress not in (None, "none"):
                 fmt = "Compression type '{}' is not supported."
                 msg = fmt.format(compress)
                 raise ValueError(msg)
 
             # vbutil_kernel --config argument wants cmdline as a file.
             cmdline_file = tmpdir / "kernel.args"
-            cmdline_file.write_text(cmdline)
+            cmdline_file.write_text(self.cmdline)
 
             # vbutil_kernel --bootloader argument is mandatory, but it's
             # contents don't matter at least on arm systems.
-            if bootloader is not None:
+            if self.bootloader is not None:
                 bootloader = bootloader.copy_to(tmpdir)
             else:
                 bootloader = tmpdir / "bootloader.bin"
                 bootloader.write_bytes(bytes(512))
                 logger.info("Using dummy file for bootloader.")
 
-            if image_format == "fit":
+            if self.image_format == "fit":
                 fit_image = tmpdir / "depthcharge.fit"
 
                 initramfs_args = []
@@ -244,10 +419,10 @@ class Mkdepthcharge(Command):
                 logger.info("Packing files as FIT image:")
                 proc = mkimage(
                     "-f", "auto",
-                    "-A", arch.mkimage,
+                    "-A", self.arch.mkimage,
                     "-O", "linux",
-                    "-C", compress,
-                    "-n", name,
+                    "-C", self.compress,
+                    "-n", self.name,
                     *initramfs_args,
                     *dtb_args,
                     "-d", vmlinuz,
@@ -258,168 +433,33 @@ class Mkdepthcharge(Command):
                 logger.info("Using FIT image as vboot kernel.")
                 vmlinuz_vboot = fit_image
 
-            elif image_format == "zimage":
+            elif self.image_format == "zimage":
                 logger.info("Using vmlinuz file as vboot kernel.")
                 vmlinuz_vboot = vmlinuz
 
             logger.info("Packing files as depthcharge image.")
             proc = vbutil_kernel(
                 "--version", "1",
-                "--arch", arch.vboot,
+                "--arch", self.arch.vboot,
                 "--vmlinuz", vmlinuz_vboot,
                 "--config", cmdline_file,
                 "--bootloader", bootloader,
-                "--keyblock", keyblock,
-                "--signprivate", signprivate,
-                "--pack", output,
+                "--keyblock", self.keyblock,
+                "--signprivate", self.signprivate,
+                "--pack", self.output,
             )
             logger.info(proc.stdout)
 
             logger.info("Verifying built depthcharge image:")
-            proc = vbutil_kernel("--verify", output)
+            proc = vbutil_kernel("--verify", self.output)
             logger.info(proc.stdout)
 
-    def _init_parser(self):
-        return super()._init_parser(
-            description="Build boot images for the ChromeOS bootloader.",
-            usage="%(prog)s [options] -o FILE [--] vmlinuz [initramfs] [dtb ...]",
-            add_help=False,
-        )
-
-    def _init_arguments(self, arguments):
-        class InputFileAction(MixedArgumentsAction):
-            pass
-
-        arguments.add_argument(
-            "vmlinuz",
-            action=InputFileAction,
-            select=Path.is_vmlinuz,
-            type=Path,
-            help="Kernel executable",
-        )
-        arguments.add_argument(
-            "initramfs",
-            nargs="?",
-            action=InputFileAction,
-            select=Path.is_initramfs,
-            type=Path,
-            help="Ramdisk image",
-        )
-        arguments.add_argument(
-            "dtbs",
-            metavar="dtb",
-            nargs="*",
-            default=[],
-            action=InputFileAction,
-            select=Path.is_dtb,
-            type=Path,
-            help="Device-tree binary file",
-        )
-
-    def _init_options(self, options):
-        options.add_argument(
-            "-h", "--help",
-            action='help',
-            help="Show this help message.",
-        )
-        options.add_argument(
-            "--version",
-            action='version',
-            version="depthcharge-tools %(prog)s {}".format(__version__),
-            help="Print program version.",
-        )
-        options.add_argument(
-            "-v", "--verbose",
-            dest=argparse.SUPPRESS,
-            action=LoggingLevelAction,
-            level="-10",
-            help="Print more detailed output.",
-        )
-        options.add_argument(
-            "-o", "--output",
-            metavar="FILE",
-            action='store',
-            required=True,
-            type=Path,
-            help="Write resulting image to FILE.",
-        )
-        options.add_argument(
-            "-A", "--arch",
-            metavar="ARCH",
-            action='store',
-            choices=Architecture.all,
-            type=Architecture,
-            help="Architecture to build for.",
-        )
-        options.add_argument(
-            "--format",
-            dest="image_format",
-            metavar="FORMAT",
-            action='store',
-            choices=["fit", "zimage"],
-            help="Kernel image format to use.",
-        )
-
-    def _init_fit_options(self, fit_options):
-        fit_options.add_argument(
-            "-C", "--compress",
-            metavar="TYPE",
-            action='store',
-            choices=["none", "lz4", "lzma"],
-            help="Compress vmlinuz file before packing.",
-        )
-        fit_options.add_argument(
-            "-n", "--name",
-            metavar="DESC",
-            action='store',
-            help="Description of vmlinuz to put in the FIT.",
-        )
-
-    def _init_vboot_options(self, vboot_options):
-        vboot_options.add_argument(
-            "-c", "--cmdline",
-            metavar="CMD",
-            action='append',
-            help="Command-line parameters for the kernel.",
-        )
-        vboot_options.add_argument(
-            "--no-kern-guid",
-            dest='kern_guid',
-            action='store_false',
-            help="Don't prepend kern_guid=%%U to the cmdline.",
-        )
-        vboot_options.add_argument(
-            "--bootloader",
-            metavar="FILE",
-            action='store',
-            type=Path,
-            help="Bootloader stub binary to use.",
-        )
-        vboot_options.add_argument(
-            "--devkeys",
-            metavar="DIR",
-            action='store',
-            type=Path,
-            help="Directory containing developer keys to use.",
-        )
-        vboot_options.add_argument(
-            "--keyblock",
-            metavar="FILE",
-            action='store',
-            type=Path,
-            help="The key block file (.keyblock).",
-        )
-        vboot_options.add_argument(
-            "--signprivate",
-            metavar="FILE",
-            action='store',
-            type=Path,
-            help="Private key (.vbprivk) to sign the image.",
-        )
+        return self.output
 
 
-mkdepthcharge = Mkdepthcharge()
-
+mkdepthcharge.usage = (
+    "%(prog)s [options] -o FILE [--] VMLINUZ [INITRAMFS] [DTB ...]"
+)
 
 if __name__ == "__main__":
-    mkdepthcharge._main()
+    mkdepthcharge.main()

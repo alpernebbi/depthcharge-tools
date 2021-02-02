@@ -27,7 +27,7 @@ setuptools.setup(
     ],
     entry_points={
         'console_scripts': [
-            'mkdepthcharge=depthcharge_tools.mkdepthcharge:mkdepthcharge._main',
+            'mkdepthcharge=depthcharge_tools.mkdepthcharge:mkdepthcharge.main',
             'depthchargectl=depthcharge_tools.depthchargectl:depthchargectl._main',
         ],
     },
