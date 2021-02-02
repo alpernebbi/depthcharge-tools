@@ -649,7 +649,7 @@ def command_call(call):
 
             setattr(self, kwarg, value)
 
-        for cmd in type(self).__mro__:
+        for cmd in reversed(type(self).__mro__):
             if not isinstance(cmd, CommandMeta):
                 continue
 
@@ -679,7 +679,7 @@ def command_call(call):
                     except:
                         self.__dict__.setdefault(grp_name, None)
 
-        for cmd in type(self).__mro__:
+        for cmd in reversed(type(self).__mro__):
             if not isinstance(cmd, CommandMeta):
                 continue
 
