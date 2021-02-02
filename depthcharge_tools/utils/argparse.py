@@ -629,7 +629,7 @@ def command_call(call):
 
             # func(*a)
             # func(a, *b)
-            if var_args:
+            if var_args and isinstance(value, (list, set, tuple)):
                 value = sig.bind(*value)
 
             # func()
