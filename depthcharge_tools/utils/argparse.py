@@ -820,9 +820,9 @@ class CommandMeta(type):
 
     @property
     def parser(cls):
-        return cls.build()
+        return cls.__build()
 
-    def build(cls, parent=None):
+    def __build(cls, parent=None):
         kwargs = cls.__kwargs
 
         if parent is None:
@@ -854,11 +854,13 @@ class CommandMeta(type):
 
                 if subparsers is None:
                     subparsers = parser.add_subparsers()
-                cmd.build(subparsers)
+                cmd.__build(subparsers)
 
         parser.set_defaults(__command=cls)
 
         return parser
+
+    build = __build
 
     def __property_from_kwargs(name):
         @property
