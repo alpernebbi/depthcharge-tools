@@ -10,22 +10,38 @@ from depthcharge_tools.utils import (
     Disk,
     Kernel,
     Path,
+    Command,
+    Argument,
+    Group,
 )
-from depthcharge_tools.utils import OldCommand as Command
+
+from depthcharge_tools.depthchargectl import depthchargectl
 
 logger = logging.getLogger(__name__)
 
 
-class DepthchargectlRm(Command):
-    def __init__(self, name="depthchargectl rm", parent=None):
-        super().__init__(name, parent)
+@depthchargectl.subcommand("rm")
+class rm(
+    depthchargectl,
+    prog="depthchargectl rm",
+    usage="%(prog)s [options] (KERNEL_VERSION | IMAGE)",
+    add_help=False,
+):
+    """Remove images and disable partitions containing them."""
 
-    def __call__(
-        self,
-        image,
-        force=False,
-    ):
-        kernels = Kernel.all()
+    @Group
+    def positionals(self):
+        """Positional arguments"""
+
+        if self.image is not None and self.kernel_version is not None:
+            raise ValueError(
+                "Image and kernel_version arguments are mutually exclusive."
+            )
+
+        if self.image is not None:
+            image = self.image
+        else:
+            image = self.kernel_version
 
         if isinstance(image, str):
             # This can be run after the kernel is uninstalled, where the
@@ -38,20 +54,48 @@ class DepthchargectlRm(Command):
                     "Disabling partitions for kernel version '{}'."
                     .format(image)
                 )
-                image = img
+                self.image = img
+                self.kernel_version = image
 
             else:
-                image = Path(image).resolve()
+                self.image = Path(image).resolve()
+                self.kernel_version = None
                 logger.info(
                     "Disabling partitions for depthcharge image '{}'."
                     .format(image)
                 )
 
         if not image.is_file():
-            raise ValueError(
+            raise TypeError(
                 "Image to remove '{}' is not a file."
                 .format(image)
             )
+
+    @positionals.add
+    @Argument(dest=argparse.SUPPRESS, nargs=argparse.SUPPRESS)
+    def kernel_version(self, kernel_version):
+        """Installed kernel version to disable."""
+        return kernel_version
+
+    @positionals.add
+    @Argument
+    def image(self, image):
+        """Depthcharge image to disable."""
+        return image
+
+    @Group
+    def options(self):
+        """Options"""
+
+    @options.add
+    @Argument("-f", "--force", force=True)
+    def force(self, force=False):
+        """Allow removing the currently booted partition."""
+        return force
+
+    def __call__(self):
+        image = self.image
+        kernels = Kernel.all()
 
         # When called with --vblockonly vbutil_kernel creates a file of
         # size 64KiB == 0x10000.
@@ -79,7 +123,7 @@ class DepthchargectlRm(Command):
 
         current = Disk.by_kern_guid()
         for part in badparts:
-            if part.path == current and not force:
+            if part.path == current and not self.force:
                 raise ValueError(
                     "Refusing to disable currently booted partition."
                 )
@@ -109,28 +153,5 @@ class DepthchargectlRm(Command):
         if badparts:
             return badparts
 
-    def _init_parser(self):
-        return super()._init_parser(
-            description="Remove images and disable partitions containing them.",
-            usage="%(prog)s [options] (kernel-version | image)",
-            add_help=False,
-        )
+    global_options = depthchargectl.global_options
 
-    def _init_arguments(self, arguments):
-        arguments.add_argument(
-            dest=argparse.SUPPRESS,
-            metavar="kernel-version",
-            nargs=argparse.SUPPRESS,
-            help="Installed kernel version to disable.",
-        )
-        arguments.add_argument(
-            "image",
-            help="Depthcharge image to disable.",
-        )
-
-    def _init_options(self, options):
-        options.add_argument(
-            "-f", "--force",
-            action='store_true',
-            help="Allow removing the currently booted partition.",
-        )

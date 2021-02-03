@@ -66,6 +66,7 @@ class depthchargectl(
 from depthcharge_tools.depthchargectl.build import build
 from depthcharge_tools.depthchargectl.check import check
 from depthcharge_tools.depthchargectl.partitions import partitions
+from depthcharge_tools.depthchargectl.rm import rm
 
 if __name__ == "__main__":
     depthchargectl._main()
