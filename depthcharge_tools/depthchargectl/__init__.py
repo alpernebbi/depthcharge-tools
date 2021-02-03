@@ -46,6 +46,7 @@ class depthchargectl(
     @Argument("-v", "--verbose", count=True)
     def verbosity(self, verbosity):
         """Print more detailed output."""
+        logger = logging.getLogger()
         level = logger.getEffectiveLevel()
         level = level - int(verbosity) * 10
         logger.setLevel(level)
