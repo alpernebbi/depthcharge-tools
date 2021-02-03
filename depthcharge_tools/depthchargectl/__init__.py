@@ -68,6 +68,7 @@ from depthcharge_tools.depthchargectl.check import check
 from depthcharge_tools.depthchargectl.partitions import partitions
 from depthcharge_tools.depthchargectl.rm import rm
 from depthcharge_tools.depthchargectl.set_good import set_good
+from depthcharge_tools.depthchargectl.target import target
 
 if __name__ == "__main__":
     depthchargectl._main()

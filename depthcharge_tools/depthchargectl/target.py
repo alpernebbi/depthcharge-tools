@@ -9,22 +9,33 @@ from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     Disk,
     Partition,
+    Command,
+    Argument,
+    Group,
 )
-from depthcharge_tools.utils import OldCommand as Command
+
+
+from depthcharge_tools.depthchargectl import depthchargectl
 
 logger = logging.getLogger(__name__)
 
 
-class DepthchargectlTarget(Command):
-    def __init__(self, name="depthchargectl target", parent=None):
-        super().__init__(name, parent)
+@depthchargectl.subcommand("target")
+class target(
+    depthchargectl,
+    prog="depthchargectl target",
+    usage="%(prog)s [options] [PARTITION | DISK ...]",
+    add_help=False,
+):
+    """Choose or validate a ChromeOS Kernel partition to use."""
 
-    def __call__(
-        self,
-        disks=None,
-        min_size=None,
-        allow_current=False,
-    ):
+    @Group
+    def positionals(self):
+        """Positional arguments"""
+
+        disks = list(self.disks)
+        partitions = list(self.partitions)
+
         # Disks containing /boot and / should be available during boot,
         # so we target only them by default.
         if not disks:
@@ -37,7 +48,6 @@ class DepthchargectlTarget(Command):
 
         # The inputs can be a mixed list of partitions and disks,
         # separate the two.
-        partitions = []
         for d in list(disks):
             try:
                 partitions.append(Partition(d))
@@ -53,13 +63,56 @@ class DepthchargectlTarget(Command):
                 logger.info("Using '{}' as a disk.".format(d))
                 partitions.extend(d.partitions())
 
+        self.disks = disks
+        self.partitions = partitions
+
+    @positionals.add
+    @Argument(metavar="PARTITION", nargs=argparse.SUPPRESS)
+    def partitions(self, *partitions):
+        """Chrome OS kernel partition to validate."""
+        return partitions
+
+    @positionals.add
+    @Argument(metavar="DISK")
+    def disks(self, *disks):
+        """Disks to search for an appropriate Chrome OS kernel partition."""
+        return disks
+
+    @Group
+    def options(self):
+        """Options"""
+
+    @options.add
+    @Argument("-s", "--min-size")
+    def min_size(self, bytes_):
+        """Target partitions larger than this size."""
+        if bytes_ is None:
+            return None
+        elif isinstance(bytes_, int):
+            return bytes_
+        elif bytes_.startswith("0x"):
+            return int(bytes_, 16)
+        elif bytes_.startswith("0o"):
+            return int(bytes_, 8)
+        elif bytes_.startswith("0b"):
+            return int(bytes_, 2)
+        else:
+            return int(min_size)
+
+    @options.add
+    @Argument("--allow-current", allow=True)
+    def allow_current(self, allow=False):
+        """Allow targeting the currently booted partition."""
+        return allow
+
+    def __call__(self):
         # We will need to check partitions against this if allow_current
         # is false.
         current = Disk.by_kern_guid()
 
         # Given a single partition, check if the partition is valid.
-        if len(partitions) == 1 and len(disks) == 0:
-            part = partitions[0]
+        if len(self.partitions) == 1 and len(self.disks) == 0:
+            part = self.partitions[0]
 
             logger.info("Checking if target partition is writable.")
             if part.path is not None and not part.path.is_block_device():
@@ -101,7 +154,7 @@ class DepthchargectlTarget(Command):
             logger.info(
                 "Checking if targeted partition is currently booted one."
             )
-            if not allow_current and part.path == current:
+            if not self.allow_current and part.path == current:
                 raise OSError(
                     6,
                     "Partition '{}' is the currently booted parttiion."
@@ -112,23 +165,23 @@ class DepthchargectlTarget(Command):
                 "Checking if targeted partition is bigger than given "
                 "minimum size."
             )
-            if min_size is not None and part.size < int(min_size):
+            if self.min_size is not None and part.size < self.min_size:
                 raise OSError(
                     7,
                     "Partition '{}' smaller than '{}' bytes."
-                    .format(part, min_size),
+                    .format(part, self.min_size),
                 )
 
         good_partitions = []
-        for p in partitions:
-            if min_size is not None and p.size < int(min_size):
+        for p in self.partitions:
+            if self.min_size is not None and p.size < self.min_size:
                 logger.info(
                     "Skipping partition '{}' as too small."
                     .format(p)
                 )
                 continue
 
-            if not allow_current and p.path == current:
+            if not self.allow_current and p.path == current:
                 logger.info(
                     "Skipping currently booted partition '{}'."
                     .format(p)
@@ -153,35 +206,6 @@ class DepthchargectlTarget(Command):
                 "for given input arguments."
             )
 
-    def _init_parser(self):
-        return super()._init_parser(
-            description="Choose or validate a ChromeOS Kernel partition to use.",
-            usage="%(prog)s [options] [partition | disk ...]",
-            add_help=False,
-        )
+    global_options = depthchargectl.global_options
 
-    def _init_arguments(self, arguments):
-        arguments.add_argument(
-            "partition",
-            nargs=argparse.SUPPRESS,
-            default=argparse.SUPPRESS,
-            help="Chrome OS kernel partition to validate.",
-        )
-        arguments.add_argument(
-            "disks",
-            nargs="*",
-            help="Disks to search for an appropriate Chrome OS kernel partition.",
-        )
 
-    def _init_options(self, options):
-        options.add_argument(
-            "-s", "--min-size",
-            metavar="BYTES",
-            action='store',
-            help="Target partitions larger than this size.",
-        )
-        options.add_argument(
-            "--allow-current",
-            action='store_true',
-            help="Allow targeting the currently booted partition.",
-        )
