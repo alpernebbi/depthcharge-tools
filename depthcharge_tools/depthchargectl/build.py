@@ -19,26 +19,37 @@ from depthcharge_tools.utils import (
     Partition,
     Path,
     Kernel,
+    Command,
+    Argument,
+    Group,
     findmnt,
     sha256sum,
 )
-from depthcharge_tools.utils import OldCommand as Command
+
+from depthcharge_tools.depthchargectl import depthchargectl
 
 logger = logging.getLogger(__name__)
 
 
-class DepthchargectlBuild(Command):
-    def __init__(self, name="depthchargectl build", parent=None):
-        super().__init__(name, parent)
+@depthchargectl.subcommand("build")
+class build(
+    depthchargectl,
+    prog="depthchargectl build",
+    usage="%(prog)s [options] [KERNEL_VERSION]",
+    add_help=False,
+):
+    """Buld a depthcharge image for the running system."""
 
-    def __call__(
-        self,
-        kernel_version=None,
-        all=False,
-        force=False,
-        reproducible=False,
-    ):
-        if all:
+    @Group
+    def positionals(self):
+        """Positional arguments"""
+
+    @positionals.add
+    @Argument
+    def kernel_version(self, kernel_version=None):
+        """Installed kernel version to build an image for."""
+
+        if self.all_versions:
             kernels = Kernel.all()
 
         elif kernel_version is not None:
@@ -55,6 +66,31 @@ class DepthchargectlBuild(Command):
         else:
             kernels = [max(Kernel.all())]
 
+        return kernels
+
+    @Group
+    def options(self):
+        """Options"""
+
+    @options.add
+    @Argument("-a", "--all", all_versions=True)
+    def all_versions(self, all_versions=False):
+        """Build images for all available kernel versions."""
+        return all_versions
+
+    @options.add
+    @Argument("-f", "--force", force=True)
+    def force(self, force=False):
+        "Rebuild images even if existing ones are valid."
+        return force
+
+    @options.add
+    @Argument("--reproducible", reproducible=True)
+    def reproducible(self, reproducible=False):
+        """Try to build reproducible images."""
+        return reproducible
+
+    def __call__(self):
         config = Config(CONFIG, "depthchargectl/build")
         board = config.board
         if board is None:
@@ -72,7 +108,7 @@ class DepthchargectlBuild(Command):
                 .format(board)
             )
 
-        for k in kernels:
+        for k in self.kernel_version:
             logger.info(
                 "Building for kernel version '{}'.".format(k.release)
             )
@@ -211,7 +247,7 @@ class DepthchargectlBuild(Command):
             # Try to keep the output reproducible. Initramfs date is
             # bound to be later than vmlinuz date, so prefer that if
             # possible.
-            if reproducible and not "SOURCE_DATE_EPOCH" in os.environ:
+            if self.reproducible and not "SOURCE_DATE_EPOCH" in os.environ:
                 if k.initrd is not None:
                     date = int(k.initrd.stat().st_mtime)
                 else:
@@ -305,7 +341,7 @@ class DepthchargectlBuild(Command):
                     "Inputs are the same with those of existing image, "
                     "no need to rebuild the image."
                 )
-                if force:
+                if self.force:
                     logger.info("Rebuilding anyway.")
                 else:
                     return output
@@ -328,7 +364,7 @@ class DepthchargectlBuild(Command):
                 )
 
                 try:
-                    self._parent.check(outtmp)
+                    # depthchargectl.check(outtmp)
                     break
                 except OSError as err:
                     if err.errno != 3:
@@ -360,8 +396,8 @@ class DepthchargectlBuild(Command):
             # If we force-rebuilt the image, and we should've been
             # reproducible, check if it changed.
             if (
-                force
-                and reproducible
+                self.force
+                and self.reproducible
                 and output.exists()
                 and inputs.read_text() == intmps.read_text()
                 and output.read_bytes() != outtmp.read_bytes()
@@ -383,34 +419,5 @@ class DepthchargectlBuild(Command):
             )
             return output
 
-    def _init_parser(self):
-        return super()._init_parser(
-            description="Buld a depthcharge image for the running system.",
-            usage="%(prog)s [options] [kernel-version]",
-            add_help=False,
-        )
+    global_options = depthchargectl.global_options
 
-    def _init_arguments(self, arguments):
-        arguments.add_argument(
-            "kernel_version",
-            metavar="kernel-version",
-            nargs="?",
-            help="Installed kernel version to build an image for.",
-        )
-
-    def _init_options(self, options):
-        options.add_argument(
-            "-a", "--all",
-            action='store_true',
-            help="Build images for all available kernel versions.",
-        )
-        options.add_argument(
-            "-f", "--force",
-            action='store_true',
-            help="Rebuild images even if existing ones are valid.",
-        )
-        options.add_argument(
-            "--reproducible",
-            action='store_true',
-            help="Try to build reproducible images.",
-        )

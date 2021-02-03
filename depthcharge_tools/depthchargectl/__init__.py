@@ -63,6 +63,7 @@ class depthchargectl(
             raise ValueError("No subcommand given")
 
 
+from depthcharge_tools.depthchargectl.build import build
 from depthcharge_tools.depthchargectl.partitions import partitions
 
 if __name__ == "__main__":
