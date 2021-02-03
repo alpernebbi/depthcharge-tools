@@ -784,7 +784,7 @@ class CommandMeta(type):
             return arg
 
         def add_subcommand(cmd):
-            setattr(cls, arg, cmd)
+            setattr(cls, arg.replace("-", "_"), cmd)
             cmd.__name__ = arg
             return cmd
 
