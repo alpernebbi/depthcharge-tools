@@ -10,34 +10,41 @@ from depthcharge_tools.utils import (
     Kernel,
     Path,
     Disk,
+    Command,
+    Argument,
+    Group,
 )
-from depthcharge_tools.utils import OldCommand as Command
+
+
+from depthcharge_tools.depthchargectl import depthchargectl
 
 logger = logging.getLogger(__name__)
 
 
-class DepthchargectlWrite(Command):
-    def __init__(self, name="depthchargectl write", parent=None):
-        super().__init__(name, parent)
+@depthchargectl.subcommand("write")
+class write(
+    depthchargectl,
+    prog="depthchargectl write",
+    usage="%(prog)s [options] (kernel-image | image)",
+    add_help=False,
+):
+    """Write an image to a ChromeOS kernel partition."""
 
-    def __call__(
-        self,
-        image=None,
-        force=False,
-        target=None,
-        prioritize=True,
-        allow_current=False,
-    ):
+    @Group
+    def positionals(self):
+        """Positional arguments"""
+
+        if self.image is not None and self.kernel_version is not None:
+            return ValueError(
+                "Image and kernel_version arguments are mutually exclusive"
+            )
+
+        image = self.image or self.kernel_version
         kernels = Kernel.all()
 
-        # No image given, try creating one.
         if image is None:
-            version = max(kernels).release
-            logger.info(
-                "Using image for newest installed kernel version '{}'."
-                .format(version)
-            )
-            image = self._parent.build(version)
+            self.kernel_version = max(kernels)
+            self.image = None
 
         elif isinstance(image, str):
             for k in kernels:
@@ -46,15 +53,71 @@ class DepthchargectlWrite(Command):
                         "Using image for given kernel version '{}'."
                         .format(k.release)
                     )
-                    image = self._parent.build(k.release)
+                    self.kernel_version = k.release
+                    self.image = None
                     break
             else:
-                image = Path(image).resolve()
+                self.kernel_version = None
+                self.image = Path(image).resolve()
                 logger.info("Using given image '{}'.".format(image))
+
+    @positionals.add
+    @Argument(dest=argparse.SUPPRESS, nargs=argparse.SUPPRESS)
+    def kernel_version(self, kernel_version):
+        """Installed kernel version to write to disk."""
+        return kernel_version
+
+    @positionals.add
+    @Argument
+    def image(self, image=None):
+        """Depthcharge image to write to disk."""
+        return image
+
+    @Group
+    def options(self):
+        """Options"""
+
+    @options.add
+    @Argument("-f", "--force", force=True)
+    def force(self, force=False):
+        """Write image even if it cannot be verified."""
+        return force
+
+    @options.add
+    @Argument("-t", "--target", metavar="DISK|PART")
+    def target(self, target):
+        """Specify a disk or partition to write to."""
+        return target
+
+    @options.add
+    @Argument("--no-prioritize", prioritize=False)
+    def prioritize(self, prioritize=True):
+        """Don't set any flags on the partition."""
+        return prioritize
+
+    @options.add
+    @Argument("--allow-current", allow=True)
+    def allow_current(self, allow=False):
+        """Allow overwriting the currently booted partition."""
+        return allow
+
+    def __call__(self):
+        if self.image is not None:
+            image = self.image
+
+        else:
+            # No image given, try creating one.
+            logger.info(
+                "Using image for newest installed kernel version '{}'."
+                .format(self.kernel_version)
+            )
+            image = depthchargectl.build(
+                kernel_version=self.kernel_version,
+            )
 
         try:
             # This also checks if the machine is supported.
-            self._parent.check(image)
+            depthchargectl.check(image=image)
         except Exception as err:
             if force:
                 logger.warn(
@@ -74,10 +137,10 @@ class DepthchargectlWrite(Command):
         # choose must be bigger than the image we'll write to it.
         logger.info("Searching disks for a target partition.")
         try:
-            target = self._parent.target(
-                disks=[target] if target else None,
+            target = depthchargectl.target(
+                disks=[self.target] if self.target else (),
                 min_size=image.stat().st_size,
-                allow_current=allow_current,
+                allow_current=self.allow_current,
             )
         except:
             raise ValueError(
@@ -95,7 +158,7 @@ class DepthchargectlWrite(Command):
         # Check and warn if we targeted the currently booted partition,
         # as that usually means it's the only partition.
         current = Disk.by_kern_guid()
-        if allow_current and target.path == current:
+        if self.allow_current and target.path == current:
             logger.warn(
                 "Overwriting the currently booted partition '{}'. "
                 "This might make your system unbootable."
@@ -112,7 +175,7 @@ class DepthchargectlWrite(Command):
             .format(image, target)
         )
 
-        if prioritize:
+        if self.prioritize:
             logger.info(
                 "Setting '{}' as the highest-priority bootable part."
                 .format(target)
@@ -124,46 +187,5 @@ class DepthchargectlWrite(Command):
                 .format(target)
             )
 
-    def _init_parser(self):
-        return super()._init_parser(
-            description="Write an image to a ChromeOS kernel partition.",
-            usage="%(prog)s [options] (kernel-image | image)",
-            add_help=False,
-        )
+    global_options = depthchargectl.global_options
 
-    def _init_arguments(self, arguments):
-        arguments.add_argument(
-            dest=argparse.SUPPRESS,
-            metavar="kernel-version",
-            nargs=argparse.SUPPRESS,
-            help="Installed kernel version to write to disk.",
-        )
-        arguments.add_argument(
-            "image",
-            nargs="?",
-            help="Depthcharge image to write to disk.",
-        )
-
-    def _init_options(self, options):
-        options.add_argument(
-            "-f", "--force",
-            action='store_true',
-            help="Write image even if it cannot be verified.",
-        )
-        options.add_argument(
-            "-t", "--target",
-            metavar="DISK|PART",
-            action='store',
-            help="Specify a disk or partition to write to.",
-        )
-        options.add_argument(
-            "--no-prioritize",
-            dest="prioritize",
-            action='store_false',
-            help="Don't set any flags on the partition.",
-        )
-        options.add_argument(
-            "--allow-current",
-            action='store_true',
-            help="Allow overwriting the currently booted partition.",
-        )
