@@ -663,6 +663,8 @@ def command_call(call):
 
             for grp_name, grp in cmd.groups():
                 for arg in grp._arguments:
+                    if arg.dest == argparse.SUPPRESS:
+                        continue
                     try:
                         func = arg.__func__.__get__(object(), object)
                         sig = inspect.signature(func)
