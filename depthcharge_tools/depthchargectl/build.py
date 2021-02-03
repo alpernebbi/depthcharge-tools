@@ -364,7 +364,7 @@ class build(
                 )
 
                 try:
-                    # depthchargectl.check(outtmp)
+                    depthchargectl.check(image=outtmp)
                     break
                 except OSError as err:
                     if err.errno != 3:

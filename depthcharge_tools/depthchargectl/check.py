@@ -13,20 +13,39 @@ from depthcharge_tools.utils import (
     Config,
     Path,
     TemporaryDirectory,
+    Command,
+    Argument,
+    Group,
     mkimage,
     vbutil_kernel,
 )
-from depthcharge_tools.utils import OldCommand as Command
+
+from depthcharge_tools.depthchargectl import depthchargectl
 
 logger = logging.getLogger(__name__)
 
 
-class DepthchargectlCheck(Command):
-    def __init__(self, name="depthchargectl check", parent=None):
-        super().__init__(name, parent)
+@depthchargectl.subcommand("check")
+class check(
+    depthchargectl,
+    prog="depthchargectl check",
+    usage = "%(prog)s [options] IMAGE",
+    add_help=False,
+):
+    """Check if a depthcharge image can be booted."""
 
-    def __call__(self, image):
-        image = Path(image)
+    @Group
+    def positionals(self):
+        """Positional arguments"""
+
+    @positionals.add
+    @Argument
+    def image(self, image):
+        """Depthcharge image to check validity of."""
+        return Path(image)
+
+    def __call__(self):
+        image = self.image
 
         config = Config(CONFIG, "depthchargectl/check")
         board = config.board
@@ -113,15 +132,4 @@ class DepthchargectlCheck(Command):
                         "Packed vmlinuz image is not a FIT image.",
                     )
 
-    def _init_parser(self):
-        return super()._init_parser(
-            description="Check if a depthcharge image can be booted.",
-            usage="%(prog)s [options] image",
-            add_help=False,
-        )
-
-    def _init_arguments(self, arguments):
-        arguments.add_argument(
-            "image",
-            help="Depthcharge image to check validity of.",
-        )
+    global_options = depthchargectl.global_options
