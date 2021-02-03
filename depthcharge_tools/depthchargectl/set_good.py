@@ -7,15 +7,25 @@ from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     Disk,
     Partition,
+    Command,
+    Argument,
+    Group,
 )
-from depthcharge_tools.utils import OldCommand as Command
+
+
+from depthcharge_tools.depthchargectl import depthchargectl
 
 logger = logging.getLogger(__name__)
 
 
-class DepthchargectlSetGood(Command):
-    def __init__(self, name="depthchargectl set-good", parent=None):
-        super().__init__(name, parent)
+@depthchargectl.subcommand("set-good")
+class set_good(
+    depthchargectl,
+    prog="depthchargectl set-good",
+    usage="%(prog)s [options]",
+    add_help=False,
+):
+    """Set the current partition as successfully booted."""
 
     def __call__(self):
         try:
@@ -36,9 +46,4 @@ class DepthchargectlSetGood(Command):
             .format(part)
         )
 
-    def _init_parser(self):
-        return super()._init_parser(
-            description="Set the current partition as successfully booted.",
-            usage="%(prog)s [options]",
-            add_help=False,
-        )
+    global_options = depthchargectl.global_options
