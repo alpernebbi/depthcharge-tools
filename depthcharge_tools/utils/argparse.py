@@ -734,7 +734,7 @@ class CommandMeta(type):
             parser.error(err.args[0])
 
         except OSError as err:
-            logging.getLogger(self.__module__).error(err)
+            logging.getLogger(cls.__module__).error(err)
             sys.exit(err.errno)
 
     def items(cls):
