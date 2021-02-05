@@ -8,7 +8,7 @@ readme = (root / 'README.rst').read_text()
 
 setuptools.setup(
     name='depthcharge-tools',
-    version='0.5.0.dev1',
+    version='0.5.0.dev2',
     description='Tools to manage the Chrome OS bootloader',
     long_description=readme,
     long_description_content_type="text/x-rst",
