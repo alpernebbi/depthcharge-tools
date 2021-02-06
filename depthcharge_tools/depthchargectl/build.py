@@ -78,12 +78,6 @@ class build(
         """Build images for all available kernel versions."""
         return all_versions
 
-    @options.add
-    @Argument("--reproducible", reproducible=True)
-    def reproducible(self, reproducible=False):
-        """Try to build reproducible images."""
-        return reproducible
-
     def __call__(self):
         config = Config(CONFIG, "depthchargectl/build")
         board = config.board
@@ -241,7 +235,7 @@ class build(
             # Try to keep the output reproducible. Initramfs date is
             # bound to be later than vmlinuz date, so prefer that if
             # possible.
-            if self.reproducible and not "SOURCE_DATE_EPOCH" in os.environ:
+            if "SOURCE_DATE_EPOCH" not in os.environ:
                 if k.initrd is not None:
                     date = int(k.initrd.stat().st_mtime)
                 else:
