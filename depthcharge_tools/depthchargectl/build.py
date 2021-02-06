@@ -79,12 +79,6 @@ class build(
         return all_versions
 
     @options.add
-    @Argument("-f", "--force", force=True)
-    def force(self, force=False):
-        "Rebuild images even if existing ones are valid."
-        return force
-
-    @options.add
     @Argument("--reproducible", reproducible=True)
     def reproducible(self, reproducible=False):
         """Try to build reproducible images."""
@@ -270,83 +264,6 @@ class build(
             # images with an unbootable image.
             output = images / "{}.img".format(k.release)
             outtmp = images / "{}.img.tmp".format(k.release)
-            inputs = images / "{}.img.inputs".format(k.release)
-            intmps = images / "{}.img.tmp.inputs".format(k.release)
-
-            infiles = [
-                f for f in (
-                    k.kernel,
-                    k.initrd,
-                    *dtbs,
-                    keyblock,
-                    signpubkey,
-                    signprivate,
-                )
-                if f is not None
-            ]
-
-            # Keep information about input files and configuration.
-            report = textwrap.dedent("""\
-                # Software versions:
-                Depthchargectl-Version: {version}
-                Mkdepthcharge-Version: {version}
-
-                # Machine info:
-                Machine: {board.name}
-                DTB-Name: {board.dtb_name}
-                Max-Size: {board.image_max_size}
-                Kernel-Compression: {board_compress}
-                Image-Format: {board.image_format}
-
-                # Image configuration:
-                Kernel-Version: {kernel.release}
-                Kernel-Cmdline: {cmdline}
-                Kernel-Compression: {compress}
-                Kernel-Name: {kernel.description}
-                Source-Date-Epoch: {epoch}
-
-                # Image inputs:
-                Vmlinuz: {kernel.kernel}
-                Initramfs: {kernel.initrd}
-                {dtbs}
-
-                # Signing keys:
-                Vboot-Keyblock: {keyblock}
-                Vboot-Public-Key: {signpubkey}
-                Vboot-Private-Key: {signprivate}
-
-                # SHA256 checksums:
-                {sha256sums}
-            """).rstrip("\n").format(
-                version=__version__,
-                board=board,
-                kernel=k,
-                board_compress=" ".join(board.kernel_compression),
-                compress=" ".join(compress),
-                cmdline=" ".join(cmdline),
-                epoch=os.environ.get("SOURCE_DATE_EPOCH", "unset"),
-                dtbs=("\n".join("DTB: {}".format(d) for d in dtbs)),
-                keyblock=keyblock,
-                signpubkey=signpubkey,
-                signprivate=signprivate,
-                sha256sums=sha256sum(*infiles).stdout
-            )
-
-            if (
-                output.exists()
-                and inputs.exists()
-                and inputs.read_text() == report
-            ):
-                logger.info(
-                    "Inputs are the same with those of existing image, "
-                    "no need to rebuild the image."
-                )
-                if self.force:
-                    logger.info("Rebuilding anyway.")
-                else:
-                    return output
-
-            intmps.write_text(report)
 
             for c in compress:
                 logger.info("Trying with compression '{}'.".format(c))
@@ -393,25 +310,9 @@ class build(
                     "Failed to create a valid depthcharge image."
                 )
 
-            # If we force-rebuilt the image, and we should've been
-            # reproducible, check if it changed.
-            if (
-                self.force
-                and self.reproducible
-                and output.exists()
-                and inputs.read_text() == intmps.read_text()
-                and output.read_bytes() != outtmp.read_bytes()
-            ):
-                logger.warning(
-                    "Force-rebuilding image changed it in reproducible "
-                    "mode. This is most likely a bug."
-                )
-
             logger.info("Copying newly built image and info to output.")
-            intmps.copy_to(inputs)
             outtmp.copy_to(output)
             outtmp.unlink()
-            intmps.unlink()
 
             logger.info(
                 "Built image for kernel version '{}'."
