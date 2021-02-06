@@ -21,7 +21,12 @@ from depthcharge_tools.utils import (
 logger = logging.getLogger(__name__)
 
 
-class mkdepthcharge(Command, prog="mkdepthcharge", add_help=False):
+class mkdepthcharge(
+    Command,
+    prog="mkdepthcharge",
+    usage="%(prog)s [options] -o FILE [--] VMLINUZ [INITRAMFS] [DTB ...]",
+    add_help=False,
+):
     """Build boot images for the ChromeOS bootloader."""
 
     @Group
@@ -457,10 +462,6 @@ class mkdepthcharge(Command, prog="mkdepthcharge", add_help=False):
 
         return self.output
 
-
-mkdepthcharge.usage = (
-    "%(prog)s [options] -o FILE [--] VMLINUZ [INITRAMFS] [DTB ...]"
-)
 
 if __name__ == "__main__":
     mkdepthcharge.main()
