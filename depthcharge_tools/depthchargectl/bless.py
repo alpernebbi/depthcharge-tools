@@ -18,10 +18,10 @@ from depthcharge_tools.depthchargectl import depthchargectl
 logger = logging.getLogger(__name__)
 
 
-@depthchargectl.subcommand("set-good")
-class set_good(
+@depthchargectl.subcommand("bless")
+class bless(
     depthchargectl,
-    prog="depthchargectl set-good",
+    prog="depthchargectl bless",
     usage="%(prog)s [options]",
     add_help=False,
 ):
