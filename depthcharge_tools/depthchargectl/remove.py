@@ -90,7 +90,7 @@ class remove(
     @options.add
     @Argument("-f", "--force", force=True)
     def force(self, force=False):
-        """Allow removing the currently booted partition."""
+        """Allow disabling the currently booted partition."""
         return force
 
     def __call__(self):
