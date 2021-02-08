@@ -138,14 +138,8 @@ class remove(
                 "Image '{}' is in images dir, deleting."
                 .format(image)
             )
-
-            inputs = images / "{}.inputs".format(image.name)
             image.unlink()
             logger.info("Deleted image '{}'.".format(image))
-
-            if inputs.exists():
-                inputs.unlink()
-                logger.info("Deleted inputs file '{}'.".format(inputs))
 
         else:
             logger.info("Not deleting image file '{}'.")
