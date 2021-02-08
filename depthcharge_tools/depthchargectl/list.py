@@ -16,10 +16,10 @@ from depthcharge_tools.depthchargectl import depthchargectl
 logger = logging.getLogger(__name__)
 
 
-@depthchargectl.subcommand("partitions")
-class partitions(
+@depthchargectl.subcommand("list")
+class list_(
     depthchargectl,
-    prog="depthchargectl partititons",
+    prog="depthchargectl list",
     usage="%(prog)s [options] [DISK ...]",
     add_help=False,
 ):
