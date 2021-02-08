@@ -34,7 +34,7 @@ class depthchargectl(
 
     @global_options.add
     @Argument(
-        "--version",
+        "-V", "--version",
         action="version",
         version="depthcharge-tools %(prog)s {}".format(__version__),
     )
