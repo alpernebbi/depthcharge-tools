@@ -20,10 +20,10 @@ from depthcharge_tools.depthchargectl import depthchargectl
 logger = logging.getLogger(__name__)
 
 
-@depthchargectl.subcommand("rm")
-class rm(
+@depthchargectl.subcommand("remove")
+class remove(
     depthchargectl,
-    prog="depthchargectl rm",
+    prog="depthchargectl remove",
     usage="%(prog)s [options] (KERNEL_VERSION | IMAGE)",
     add_help=False,
 ):

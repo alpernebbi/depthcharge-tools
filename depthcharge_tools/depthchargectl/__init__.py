@@ -68,7 +68,7 @@ from depthcharge_tools.depthchargectl.bless import bless
 from depthcharge_tools.depthchargectl.build import build
 from depthcharge_tools.depthchargectl.check import check
 from depthcharge_tools.depthchargectl.list import list_
-from depthcharge_tools.depthchargectl.rm import rm
+from depthcharge_tools.depthchargectl.remove import remove
 from depthcharge_tools.depthchargectl.target import target
 from depthcharge_tools.depthchargectl.write import write
 
