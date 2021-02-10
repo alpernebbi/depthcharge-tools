@@ -8,7 +8,6 @@ import textwrap
 from depthcharge_tools import __version__
 from depthcharge_tools.mkdepthcharge import mkdepthcharge
 from depthcharge_tools.utils import (
-    board_name,
     root_requires_initramfs,
     vboot_keys,
     Config,
@@ -77,9 +76,7 @@ class build(
 
     def __call__(self):
         config = Config(self.config, "depthchargectl/build")
-        board = config.board
-        if board is None:
-            board = board_name()
+        board = self.board
 
         try:
             board = config[board]

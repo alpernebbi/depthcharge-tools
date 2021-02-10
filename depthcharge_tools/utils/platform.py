@@ -5,36 +5,8 @@ import platform
 import re
 import shlex
 
-from depthcharge_tools import CONFIG
 from depthcharge_tools.utils.pathlib import Path
 from depthcharge_tools.utils.subprocess import crossystem
-
-
-def board_name():
-    hwid = cros_hwid()
-
-    if hwid:
-        for name, section in CONFIG.items():
-            codename = section.get("codename")
-            if not codename:
-                continue
-
-            hwid_match = section.get("hwid-match")
-            if hwid_match and re.match(hwid_match, hwid):
-                return codename
-
-    compatibles = dt_compatibles()
-
-    def preference(config):
-        compat = config.get("dt-compatible")
-
-        try:
-            return compatibles.index(compat)
-        except ValueError:
-            return len(compatibles) + 1
-
-    best_match = min(CONFIG.values(), key=preference)
-    return best_match.get("codename")
 
 
 def dt_compatibles():

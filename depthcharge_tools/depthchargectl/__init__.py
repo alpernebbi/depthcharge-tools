@@ -4,6 +4,7 @@ import argparse
 import configparser
 import copy
 import logging
+import re
 
 from depthcharge_tools import __version__, CONFIG
 from depthcharge_tools.utils import (
@@ -11,6 +12,8 @@ from depthcharge_tools.utils import (
     Argument,
     Group,
     Subparsers,
+    cros_hwid,
+    dt_compatibles,
 )
 
 logger = logging.getLogger(__name__)
@@ -81,6 +84,52 @@ class depthchargectl(
                 )
 
         return parser
+
+    @Group
+    def board_options(self):
+        """Board options"""
+
+    @board_options.add
+    @Argument("--board", nargs=1)
+    def board(self, codename=None):
+        """Assume we're running on the specified board"""
+        if codename is None:
+            codename = self.config["depthcharge-tools"].get("board", None)
+
+        if codename is not None:
+            for name, section in self.config.items():
+                if codename == section.get("codename"):
+                    return codename
+
+            raise ValueError(
+                "Unknown board codename '{}'."
+                .format(codename)
+            )
+
+        hwid = cros_hwid()
+
+        if hwid:
+            for name, section in self.config.items():
+                codename = section.get("codename")
+                if not codename:
+                    continue
+
+                hwid_match = section.get("hwid-match")
+                if hwid_match and re.match(hwid_match, hwid):
+                    return codename
+
+        compatibles = dt_compatibles()
+
+        def preference(config):
+            compat = config.get("dt-compatible")
+
+            try:
+                return compatibles.index(compat)
+            except ValueError:
+                return len(compatibles) + 1
+
+        best_match = min(self.config.values(), key=preference)
+        return best_match.get("codename")
 
     @Subparsers()
     def command(self, cmd):
