@@ -5,10 +5,7 @@ import logging
 import os
 import textwrap
 
-from depthcharge_tools import (
-    __version__,
-    CONFIG,
-)
+from depthcharge_tools import __version__
 from depthcharge_tools.mkdepthcharge import mkdepthcharge
 from depthcharge_tools.utils import (
     board_name,
@@ -79,7 +76,7 @@ class build(
         return all_versions
 
     def __call__(self):
-        config = Config(CONFIG, "depthchargectl/build")
+        config = Config(self.config, "depthchargectl/build")
         board = config.board
         if board is None:
             board = board_name()

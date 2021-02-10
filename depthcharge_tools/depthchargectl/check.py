@@ -3,10 +3,7 @@
 import argparse
 import logging
 
-from depthcharge_tools import (
-    __version__,
-    CONFIG,
-)
+from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     board_name,
     vboot_keys,
@@ -47,7 +44,7 @@ class check(
     def __call__(self):
         image = self.image
 
-        config = Config(CONFIG, "depthchargectl/check")
+        config = Config(self.config, "depthchargectl/check")
         board = config.board
         if board is None:
             board = board_name()

@@ -1,9 +1,11 @@
 #! /usr/bin/env python3
 
 import argparse
+import configparser
+import copy
 import logging
 
-from depthcharge_tools import __version__
+from depthcharge_tools import __version__, CONFIG
 from depthcharge_tools.utils import (
     Command,
     Argument,
@@ -51,6 +53,34 @@ class depthchargectl(
         level = level - int(verbosity) * 10
         logger.setLevel(level)
         return level
+
+    @Group
+    def config_options(self):
+        """Config options"""
+
+    @config_options.add
+    @Argument("--config", nargs=1)
+    def config(self, file_=None):
+        """Override defaults with a custom configuration file"""
+        parser = copy.deepcopy(CONFIG)
+
+        if file_ is not None:
+            try:
+                read = parser.read([file_])
+
+            except configparser.ParsingError as err:
+                raise ValueError(
+                    "Config file '{}' could not be parsed."
+                    .format(err.filename)
+                )
+
+            if file_ not in read:
+                raise ValueError(
+                    "Config file '{}' could not be read."
+                    .format(file_)
+                )
+
+        return parser
 
     @Subparsers()
     def command(self, cmd):
