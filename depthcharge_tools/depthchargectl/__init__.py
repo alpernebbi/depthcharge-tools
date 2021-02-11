@@ -93,43 +93,78 @@ class depthchargectl(
     @Argument("--board", nargs=1)
     def board(self, codename=None):
         """Assume we're running on the specified board"""
+        boards = {
+            section.get("codename"): section
+            for name, section in self.config.items()
+            if "codename" in section
+        }
+
         if codename is None:
             codename = self.config["depthcharge-tools"].get("board", None)
 
-        if codename is not None:
-            for name, section in self.config.items():
-                if codename == section.get("codename"):
-                    return codename
+        if codename in boards:
+            return codename
 
+        elif codename is not None:
             raise ValueError(
                 "Unknown board codename '{}'."
                 .format(codename)
             )
 
         hwid = cros_hwid()
-
-        if hwid:
-            for name, section in self.config.items():
-                codename = section.get("codename")
-                if not codename:
-                    continue
-
+        def hwid_match(item):
+            codename, section = item
+            try:
                 hwid_match = section.get("hwid-match")
-                if hwid_match and re.match(hwid_match, hwid):
-                    return codename
+                return bool(re.match(hwid_match, hwid))
+            except:
+                return False
+
+        matches = tuple(filter(hwid_match, boards.items()))
+        if matches:
+            codename, section = matches[0]
+            name = section.get("name", "(unnamed)")
+            logger.info(
+                "Detected board '{}' ('{}') by HWID."
+                .format(name, codename)
+            )
+            return codename
+
+        else:
+            logger.warning(
+                "Couldn't detect board by HWID."
+            )
 
         compatibles = dt_compatibles()
+        def compat_preference(item):
+            if item is None:
+                return len(compatibles)
 
-        def preference(config):
-            compat = config.get("dt-compatible")
-
+            codename, section = item
             try:
+                compat = section.get("dt-compatible", None)
                 return compatibles.index(compat)
             except ValueError:
-                return len(compatibles) + 1
+                return float("inf")
 
-        best_match = min(self.config.values(), key=preference)
-        return best_match.get("codename")
+        match = min((None, *boards.items()), key=compat_preference)
+        if match is not None:
+            codename, section = match
+            name = section.get("name", "(unnamed)")
+            logger.info(
+                "Detected board '{}' ('{}') by device-tree compatibles."
+                .format(name, codename)
+            )
+            return codename
+
+        else:
+            logger.warning(
+                "Couldn't detect board by dt-compatibles."
+            )
+
+        raise ValueError(
+            "Could not detect which board this is running on."
+        )
 
     @Subparsers()
     def command(self, cmd):
