@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 @depthchargectl.subcommand("bless")
-class bless(
+class depthchargectl_bless(
     depthchargectl,
     prog="depthchargectl bless",
     usage="%(prog)s [options]",

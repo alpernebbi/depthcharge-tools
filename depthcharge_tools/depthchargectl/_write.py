@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 @depthchargectl.subcommand("write")
-class write(
+class depthchargectl_write(
     depthchargectl,
     prog="depthchargectl write",
     usage="%(prog)s [options] (kernel-image | image)",

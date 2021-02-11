@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 @depthchargectl.subcommand("list")
-class list_(
+class depthchargectl_list(
     depthchargectl,
     prog="depthchargectl list",
     usage="%(prog)s [options] [DISK ...]",

@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 @depthchargectl.subcommand("target")
-class target(
+class depthchargectl_target(
     depthchargectl,
     prog="depthchargectl target",
     usage="%(prog)s [options] [PARTITION | DISK ...]",

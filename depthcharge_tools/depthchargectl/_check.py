@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 @depthchargectl.subcommand("check")
-class check(
+class depthchargectl_check(
     depthchargectl,
     prog="depthchargectl check",
     usage = "%(prog)s [options] IMAGE",

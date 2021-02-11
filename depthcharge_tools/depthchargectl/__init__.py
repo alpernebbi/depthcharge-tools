@@ -178,13 +178,13 @@ class depthchargectl(
             raise ValueError("No subcommand given")
 
 
-from depthcharge_tools.depthchargectl.bless import bless
-from depthcharge_tools.depthchargectl.build import build
-from depthcharge_tools.depthchargectl.check import check
-from depthcharge_tools.depthchargectl.list import list_
-from depthcharge_tools.depthchargectl.remove import remove
-from depthcharge_tools.depthchargectl.target import target
-from depthcharge_tools.depthchargectl.write import write
+import depthcharge_tools.depthchargectl._bless
+import depthcharge_tools.depthchargectl._build
+import depthcharge_tools.depthchargectl._check
+import depthcharge_tools.depthchargectl._list
+import depthcharge_tools.depthchargectl._remove
+import depthcharge_tools.depthchargectl._target
+import depthcharge_tools.depthchargectl._write
 
 if __name__ == "__main__":
     depthchargectl._main()

@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 @depthchargectl.subcommand("build")
-class build(
+class depthchargectl_build(
     depthchargectl,
     prog="depthchargectl build",
     usage="%(prog)s [options] [KERNEL_VERSION]",

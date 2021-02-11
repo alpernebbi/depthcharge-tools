@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 @depthchargectl.subcommand("remove")
-class remove(
+class depthchargectl_remove(
     depthchargectl,
     prog="depthchargectl remove",
     usage="%(prog)s [options] (KERNEL_VERSION | IMAGE)",
