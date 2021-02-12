@@ -139,7 +139,7 @@ class mkdepthcharge(
 
     @options.add
     @Argument(
-        "--version",
+        "-V", "--version",
         action="version",
         version="depthcharge-tools %(prog)s {}".format(__version__),
     )
