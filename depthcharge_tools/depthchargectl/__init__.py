@@ -59,11 +59,7 @@ class depthchargectl(
         logger.setLevel(level)
         return level
 
-    @Group
-    def config_options(self):
-        """Config options"""
-
-    @config_options.add
+    @global_options.add
     @Argument("--config", nargs=1)
     def config(self, file_=None):
         """Override defaults with a custom configuration file"""
@@ -102,11 +98,7 @@ class depthchargectl(
 
         return parser
 
-    @Group
-    def board_options(self):
-        """Board options"""
-
-    @board_options.add
+    @global_options.add
     @Argument("--board", nargs=1)
     def board(self, codename=None):
         """Assume we're running on the specified board"""
