@@ -3,15 +3,17 @@
 import argparse
 import configparser
 import copy
+import glob
 import logging
 import re
 
-from depthcharge_tools import __version__, CONFIG
+from depthcharge_tools import __version__, config_ini, config_files
 from depthcharge_tools.utils import (
     Command,
     Argument,
     Group,
     Subparsers,
+    ConfigDict,
     cros_hwid,
     dt_compatibles,
 )
@@ -65,7 +67,22 @@ class depthchargectl(
     @Argument("--config", nargs=1)
     def config(self, file_=None):
         """Override defaults with a custom configuration file"""
-        parser = copy.deepcopy(CONFIG)
+        parser = configparser.ConfigParser(
+            default_section="depthcharge-tools",
+            dict_type=ConfigDict,
+        )
+
+        parser.read_string(config_ini, source="config.ini")
+
+        try:
+            for p in parser.read(config_files):
+                logger.debug("Read config file '{}'.".format(p))
+
+        except configparser.ParsingError as err:
+            logger.warning(
+                "Config file '{}' could not be parsed."
+                .format(err.filename)
+            )
 
         if file_ is not None:
             try:
