@@ -228,15 +228,6 @@ class depthchargectl(
         return self.board_section.getboolean("kernel-lzma", False)
 
     @property
-    def board_kernel_compression(self):
-        compress = ["none"]
-        if self.board_kernel_lz4:
-            compress += ["lz4"]
-        if self.board_kernel_lzma:
-            compress += ["lzma"]
-        return compress
-
-    @property
     def board_image_max_size(self):
         return self.board_section.getint("image-max-size")
 

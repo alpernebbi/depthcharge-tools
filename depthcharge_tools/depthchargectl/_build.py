@@ -78,12 +78,6 @@ class depthchargectl_build(
             return shlex.split(cmdline)
 
     @property
-    def kernel_compression(self):
-        compress = self.config_section.get("kernel-compression")
-        if compress is not None:
-            return compress.split(" ")
-
-    @property
     def ignore_initramfs(self):
         return self.config_section.getboolean("ignore-initramfs", False)
 
@@ -240,27 +234,16 @@ class depthchargectl_build(
     def compress(self):
         # Allowed compression levels. We will call mkdepthcharge by
         # hand multiple times for these.
-        compress = (
-            self.kernel_compression
-            or self.board_kernel_compression
-            or ["none"]
-        )
-        for c in compress:
-            if c != "none" and c not in self.board_kernel_compression:
-                raise ValueError(
-                    "Configured to use compression '{}', but this "
-                    "board does not support it."
-                    .format(c)
-                )
 
         # zimage doesn't support compression
         if self.board_image_format == "zimage":
-            if compress != ["none"]:
-                raise ValueError(
-                    "Image format '{}' doesn't support kernel "
-                    "compression formats '{}'."
-                    .format(self.board_image_format, compress)
-                )
+            return ["none"]
+
+        compress = ["none"]
+        if self.board_kernel_lz4:
+            compress += ["lz4"]
+        if self.board_kernel_lzma:
+            compress += ["lzma"]
 
         return compress
 
