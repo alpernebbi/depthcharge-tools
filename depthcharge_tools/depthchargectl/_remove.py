@@ -28,6 +28,9 @@ class depthchargectl_remove(
     add_help=False,
 ):
     """Remove images and disable partitions containing them."""
+    @property
+    def images_dir(self):
+        return Path("/boot/depthcharge-tools/images")
 
     @Group
     def positionals(self):
@@ -47,9 +50,8 @@ class depthchargectl_remove(
             # This can be run after the kernel is uninstalled, where the
             # version would no longer be valid, so don't check for that.
             # Instead just check if we have it as an image.
-            images = Path("/boot/depthcharge-tools/images")
-            img = (images / "{}.img".format(image)).resolve()
-            if img.parent == images and img.is_file():
+            img = (self.images_dir / "{}.img".format(image)).resolve()
+            if img.parent == self.images_dir and img.is_file():
                 logger.info(
                     "Disabling partitions for kernel version '{}'."
                     .format(image)
@@ -133,7 +135,7 @@ class depthchargectl_remove(
             part.attribute = 0x000
             logger.info("Deactivated '{}'.".format(part))
 
-        if image.parent == images:
+        if image.parent == self.images_dir:
             logger.info(
                 "Image '{}' is in images dir, deleting."
                 .format(image)
