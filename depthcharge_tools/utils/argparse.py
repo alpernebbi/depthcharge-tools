@@ -238,7 +238,12 @@ class Argument(_MethodDecorator):
             func = super().__get__(instance, owner)
 
             if callable(func):
-                outputs = func(*inputs.args, **inputs.kwargs)
+                try:
+                    outputs = func(*inputs.args, **inputs.kwargs)
+                except AttributeError as err:
+                    raise RuntimeError(
+                        "Argument method raised AttributeError"
+                    ) from err
                 instance.__dict__[self.__name__] = outputs
                 return outputs
 
@@ -454,7 +459,12 @@ class Group(_MethodDecorator):
             func = super().__get__(instance, owner)
 
             if callable(func):
-                outputs = func(*inputs.args, **inputs.kwargs)
+                try:
+                    outputs = func(*inputs.args, **inputs.kwargs)
+                except AttributeError as err:
+                    raise RuntimeError(
+                        "Group method raised AttributeError"
+                    ) from err
                 instance.__dict__[self.__name__] = outputs
                 return outputs
 
