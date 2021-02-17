@@ -29,6 +29,8 @@ class depthchargectl_target(
 ):
     """Choose or validate a ChromeOS Kernel partition to use."""
 
+    config_section = "depthchargectl/target"
+
     @Group
     def positionals(self):
         """Positional arguments"""

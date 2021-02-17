@@ -36,6 +36,8 @@ class depthchargectl_build(
 ):
     """Buld a depthcharge image for the running system."""
 
+    config_section = "depthchargectl/build"
+
     @Group
     def positionals(self):
         """Positional arguments"""
@@ -63,23 +65,14 @@ class depthchargectl_build(
         return kernel
 
     @property
-    def config_section(self):
-        parser = self.config
-        section_name = "depthchargectl/build"
-
-        if section_name not in parser.sections():
-            parser.add_section(section_name)
-        return self.config[section_name]
-
-    @property
     def kernel_cmdline(self):
-        cmdline = self.config_section.get("kernel-cmdline")
+        cmdline = self.config.get("kernel-cmdline")
         if cmdline is not None:
             return shlex.split(cmdline)
 
     @property
     def ignore_initramfs(self):
-        return self.config_section.getboolean("ignore-initramfs", False)
+        return self.config.getboolean("ignore-initramfs", False)
 
     @property
     def kernel_release(self):

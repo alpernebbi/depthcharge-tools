@@ -30,6 +30,8 @@ class depthchargectl_write(
 ):
     """Write an image to a ChromeOS kernel partition."""
 
+    config_section = "depthchargectl/write"
+
     @Group
     def positionals(self):
         """Positional arguments"""

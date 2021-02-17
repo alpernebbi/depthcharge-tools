@@ -28,6 +28,9 @@ class depthchargectl_remove(
     add_help=False,
 ):
     """Remove images and disable partitions containing them."""
+
+    config_section = "depthchargectl/remove"
+
     @property
     def images_dir(self):
         return Path("/boot/depthcharge-tools/images")

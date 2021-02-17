@@ -27,6 +27,8 @@ class depthchargectl_bless(
 ):
     """Set the current partition as successfully booted."""
 
+    config_section = "depthchargectl/bless"
+
     def __call__(self):
         try:
             part = Partition(Disk.by_kern_guid())

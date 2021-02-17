@@ -25,6 +25,8 @@ class depthchargectl_list(
 ):
     """List ChromeOS kernel partitions."""
 
+    config_section = "depthchargectl/list"
+
     @Group
     def positionals(self):
         """Positional arguments"""

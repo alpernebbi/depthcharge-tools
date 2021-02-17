@@ -29,6 +29,8 @@ class depthchargectl_check(
 ):
     """Check if a depthcharge image can be booted."""
 
+    config_section = "depthchargectl/check"
+
     @Group
     def positionals(self):
         """Positional arguments"""
@@ -38,15 +40,6 @@ class depthchargectl_check(
     def image(self, image):
         """Depthcharge image to check validity of."""
         return Path(image)
-
-    @property
-    def config_section(self):
-        parser = self.config
-        section_name = "depthchargectl/check"
-
-        if section_name not in parser.sections():
-            parser.add_section(section_name)
-        return self.config[section_name]
 
     def __call__(self):
         image = self.image

@@ -29,6 +29,8 @@ class depthchargectl(
 ):
     """Manage Chrome OS kernel partitions."""
 
+    config_section = "depthchargectl"
+
     @Group
     def global_options(self):
         """Global options"""
@@ -96,23 +98,22 @@ class depthchargectl(
                     .format(file_)
                 )
 
-        return parser
+        if self.config_section not in parser.sections():
+            parser.add_section(self.config_section)
 
-    @property
-    def config_section(self):
-        return self.config["depthchargectl"]
+        return parser[self.config_section]
 
     @property
     def vboot_keyblock(self):
-        return self.config_section.get("vboot-keyblock")
+        return self.config.get("vboot-keyblock")
 
     @property
     def vboot_public_key(self):
-        return self.config_section.get("vboot-public-key")
+        return self.config.get("vboot-public-key")
 
     @property
     def vboot_private_key(self):
-        return self.config_section.get("vboot-private-key")
+        return self.config.get("vboot-private-key")
 
     @global_options.add
     @Argument("--board", nargs=1)
@@ -120,15 +121,15 @@ class depthchargectl(
         """Assume we're running on the specified board"""
         boards = {
             section.get("codename"): section
-            for name, section in self.config.items()
+            for name, section in self.config.parser.items()
             if "codename" in section
         }
 
         if codename is None:
-            codename = self.config_section.get("board", None)
+            codename = self.config.get("board", None)
 
         if codename in boards:
-            return codename
+            return boards[codename]
 
         elif codename is not None:
             raise ValueError(
@@ -153,7 +154,7 @@ class depthchargectl(
                 "Detected board '{}' ('{}') by HWID."
                 .format(name, codename)
             )
-            return codename
+            return boards[codename]
 
         else:
             logger.warning(
@@ -180,7 +181,7 @@ class depthchargectl(
                 "Detected board '{}' ('{}') by device-tree compatibles."
                 .format(name, codename)
             )
-            return codename
+            return boards[codename]
 
         else:
             logger.warning(
@@ -192,48 +193,42 @@ class depthchargectl(
         )
 
     @property
-    def board_section(self):
-        for name, section in self.config.items():
-            if section.get("codename") == self.board:
-                return section
-
-    @property
     def board_name(self):
-        return self.board_section.get("name")
+        return self.board.get("name")
 
     @property
     def board_codename(self):
-        return self.board_section.get("codename")
+        return self.board.get("codename")
 
     @property
     def board_dtb_name(self):
-        return self.board_section.get("dtb-name")
+        return self.board.get("dtb-name")
 
     @property
     def board_dt_compatible(self):
-        return self.board_section.get("dt-compatible")
+        return self.board.get("dt-compatible")
 
     @property
     def board_hwid_match(self):
-        pattern = self.board_section.get("hwid-match")
+        pattern = self.board.get("hwid-match")
         if pattern:
             return re.compile(pattern)
 
     @property
     def board_kernel_lz4(self):
-        return self.board_section.getboolean("kernel-lz4", False)
+        return self.board.getboolean("kernel-lz4", False)
 
     @property
     def board_kernel_lzma(self):
-        return self.board_section.getboolean("kernel-lzma", False)
+        return self.board.getboolean("kernel-lzma", False)
 
     @property
     def board_image_max_size(self):
-        return self.board_section.getint("image-max-size")
+        return self.board.getint("image-max-size")
 
     @property
     def board_image_format(self):
-        return self.board_section.get("image-format")
+        return self.board.get("image-format")
 
     @Subparsers()
     def command(self, cmd):
