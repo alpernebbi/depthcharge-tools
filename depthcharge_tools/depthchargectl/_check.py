@@ -5,7 +5,6 @@ import logging
 
 from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
-    vboot_keys,
     Path,
     TemporaryDirectory,
     Command,
@@ -55,16 +54,6 @@ class depthchargectl_check(
                 .format(self.board)
             )
 
-        # Default to OS-distributed keys, override with custom
-        # values if given.
-        _, keyblock, signprivate, signpubkey = vboot_keys()
-        if self.vboot_keyblock is not None:
-            keyblock = self.vboot_keyblock
-        if self.vboot_private_key is not None:
-            signprivate = self.vboot_private_key
-        if self.vboot_public_key is not None:
-            signpubkey = self.vboot_public_key
-
         if not image.is_file():
             raise OSError(
                 2,
@@ -91,7 +80,7 @@ class depthchargectl_check(
         logger.info("Checking depthcharge image signatures.")
         if vbutil_kernel(
             "--verify", image,
-            "--signpubkey", signpubkey,
+            "--signpubkey", self.vboot-public-key,
             check=False,
         ).returncode != 0:
             raise OSError(

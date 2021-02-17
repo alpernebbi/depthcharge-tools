@@ -10,7 +10,6 @@ from depthcharge_tools import __version__
 from depthcharge_tools.mkdepthcharge import mkdepthcharge
 from depthcharge_tools.utils import (
     root_requires_initramfs,
-    vboot_keys,
     Disk,
     Partition,
     Path,
@@ -293,16 +292,6 @@ class depthchargectl_build(
             .format(self.kernel_release)
         )
 
-        # Default to OS-distributed keys, override with custom
-        # values if given.
-        _, keyblock, signprivate, signpubkey = vboot_keys()
-        if self.vboot_keyblock is not None:
-            keyblock = self.vboot_keyblock
-        if self.vboot_private_key is not None:
-            signprivate = self.vboot_private_key
-        if self.vboot_public_key is not None:
-            signpubkey = self.vboot_public_key
-
         # Build to a temporary file so we do not overwrite existing
         # images with an unbootable image.
         outtmp = self.images_dir / "{}.img.tmp".format(self.kernel_release)
@@ -315,10 +304,10 @@ class depthchargectl_build(
                 dtbs=self.dtbs,
                 image_format=self.board_image_format,
                 initramfs=self.initrd,
-                keyblock=keyblock,
+                keyblock=self.vboot_keyblock,
                 name=self.description,
                 output=outtmp,
-                signprivate=signprivate,
+                signprivate=self.vboot_private_key,
                 vmlinuz=self.kernel,
             )
 

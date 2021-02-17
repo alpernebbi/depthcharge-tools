@@ -14,6 +14,7 @@ from depthcharge_tools.utils import (
     Group,
     Subparsers,
     ConfigDict,
+    vboot_keys,
     cros_hwid,
     dt_compatibles,
 )
@@ -103,17 +104,21 @@ class depthchargectl(
 
         return parser[self.config_section]
 
+    # Default to OS-distributed keys, override with custom
+    # values if given.
+    _devkeys, _keyblock, _signprivate, _signpubkey = vboot_keys()
+
     @property
     def vboot_keyblock(self):
-        return self.config.get("vboot-keyblock")
+        return self.config.get("vboot-keyblock") or self._keyblock
 
     @property
     def vboot_public_key(self):
-        return self.config.get("vboot-public-key")
+        return self.config.get("vboot-public-key") or self._signpubkey
 
     @property
     def vboot_private_key(self):
-        return self.config.get("vboot-private-key")
+        return self.config.get("vboot-private-key") or self._signprivate
 
     @global_options.add
     @Argument("--board", nargs=1)
