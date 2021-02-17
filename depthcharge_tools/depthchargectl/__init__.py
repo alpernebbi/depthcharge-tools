@@ -215,12 +215,12 @@ class depthchargectl(
             return re.compile(pattern)
 
     @property
-    def board_kernel_lz4(self):
-        return self.board.getboolean("kernel-lz4", False)
+    def board_boots_lz4_kernel(self):
+        return self.board.getboolean("boots-lz4-kernel", False)
 
     @property
-    def board_kernel_lzma(self):
-        return self.board.getboolean("kernel-lzma", False)
+    def board_boots_lzma_kernel(self):
+        return self.board.getboolean("boots-lzma-kernel", False)
 
     @property
     def board_image_max_size(self):

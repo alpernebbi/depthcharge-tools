@@ -233,9 +233,9 @@ class depthchargectl_build(
             return ["none"]
 
         compress = ["none"]
-        if self.board_kernel_lz4:
+        if self.board_boots_lz4_kernel:
             compress += ["lz4"]
-        if self.board_kernel_lzma:
+        if self.board_boots_lzma_kernel:
             compress += ["lzma"]
 
         return compress
