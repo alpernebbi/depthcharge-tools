@@ -197,6 +197,53 @@ class depthchargectl(
             if section.get("codename") == self.board:
                 return section
 
+    @property
+    def board_name(self):
+        return self.board_section.get("name")
+
+    @property
+    def board_codename(self):
+        return self.board_section.get("codename")
+
+    @property
+    def board_dtb_name(self):
+        return self.board_section.get("dtb-name")
+
+    @property
+    def board_dt_compatible(self):
+        return self.board_section.get("dt-compatible")
+
+    @property
+    def board_hwid_match(self):
+        pattern = self.board_section.get("hwid-match")
+        if pattern:
+            return re.compile(pattern)
+
+    @property
+    def board_kernel_lz4(self):
+        return self.board_section.getboolean("kernel-lz4", False)
+
+    @property
+    def board_kernel_lzma(self):
+        return self.board_section.getboolean("kernel-lzma", False)
+
+    @property
+    def board_kernel_compression(self):
+        compress = ["none"]
+        if self.board_kernel_lz4:
+            compress += ["lz4"]
+        if self.board_kernel_lzma:
+            compress += ["lzma"]
+        return compress
+
+    @property
+    def board_image_max_size(self):
+        return self.board_section.getint("image-max-size")
+
+    @property
+    def board_image_format(self):
+        return self.board_section.get("image-format")
+
     @Subparsers()
     def command(self, cmd):
         """Supported subcommands"""

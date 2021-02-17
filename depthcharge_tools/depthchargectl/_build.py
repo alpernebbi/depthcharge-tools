@@ -11,7 +11,6 @@ from depthcharge_tools.mkdepthcharge import mkdepthcharge
 from depthcharge_tools.utils import (
     root_requires_initramfs,
     vboot_keys,
-    Board,
     Disk,
     Partition,
     Path,
@@ -102,10 +101,9 @@ class depthchargectl_build(
 
     def __call__(self):
         try:
-            board = Board(self.board_section)
             logger.info(
                 "Building images for board '{}' ('{}')."
-                .format(board.name, board.codename)
+                .format(self.board_name, self.board_codename)
             )
         except KeyError:
             raise ValueError(
@@ -133,8 +131,8 @@ class depthchargectl_build(
                 )
 
             # Device trees are optional based on board configuration.
-            if board.dtb_name is not None:
-                if board.image_format == "fit":
+            if self.board_dtb_name is not None:
+                if self.board_image_format == "fit":
                     if k.fdtdir is None:
                         raise ValueError(
                             "No dtb directory found for version '{}', "
@@ -143,20 +141,20 @@ class depthchargectl_build(
                         )
 
                     dtbs = sorted(k.fdtdir.glob(
-                        "**/{}".format(board.dtb_name)
+                        "**/{}".format(self.board_dtb_name)
                     ))
 
                     if not dtbs:
                         raise ValueError(
                             "No dtb file '{}' found in '{}'."
-                            .format(board.dtb_name, k.fdtdir)
+                            .format(self.board_dtb_name, k.fdtdir)
                         )
 
-                elif board.image_format == "zimage":
+                elif self.board_image_format == "zimage":
                     raise ValueError(
                         "Image format '{}' doesn't support dtb files "
                         "('{}') required by your board."
-                        .format(board.image_format, board.dtb_name)
+                        .format(self.board_image_format, self.board_dtb_name)
                     )
 
             # On at least Debian, the root the system should boot from
@@ -229,11 +227,11 @@ class depthchargectl_build(
             # hand multiple times for these.
             compress = (
                 self.kernel_compression
-                or board.kernel_compression
+                or self.board_kernel_compression
                 or ["none"]
             )
             for c in compress:
-                if c != "none" and c not in board.kernel_compression:
+                if c != "none" and c not in self.board_kernel_compression:
                     raise ValueError(
                         "Configured to use compression '{}', but this "
                         "board does not support it."
@@ -241,12 +239,12 @@ class depthchargectl_build(
                     )
 
             # zimage doesn't support compression
-            if board.image_format == "zimage":
+            if self.board_image_format == "zimage":
                 if compress != ["none"]:
                     raise ValueError(
                         "Image format '{}' doesn't support kernel "
                         "compression formats '{}'."
-                        .format(board.image_format, compress)
+                        .format(self.board_image_format, compress)
                     )
 
             # Try to keep the output reproducible. Initramfs date is
@@ -282,7 +280,7 @@ class depthchargectl_build(
                     cmdline=cmdline,
                     compress=(c if c != "none" else None),
                     dtbs=dtbs,
-                    image_format=board.image_format,
+                    image_format=self.board_image_format,
                     initramfs=k.initrd,
                     keyblock=keyblock,
                     name=k.description,

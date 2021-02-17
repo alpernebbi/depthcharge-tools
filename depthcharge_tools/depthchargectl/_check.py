@@ -6,7 +6,6 @@ import logging
 from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     vboot_keys,
-    Board,
     Path,
     TemporaryDirectory,
     Command,
@@ -53,10 +52,9 @@ class depthchargectl_check(
         image = self.image
 
         try:
-            board = Board(self.board_section)
             logger.info(
                 "Verifying image for board '{}' ('{}')."
-                .format(board.name, board.codename)
+                .format(self.board_name, self.board_codename)
             )
         except KeyError:
             raise ValueError(
@@ -81,7 +79,7 @@ class depthchargectl_check(
             )
 
         logger.info("Checking if image fits into size limit.")
-        if image.stat().st_size > board.image_max_size:
+        if image.stat().st_size > self.board_image_max_size:
             raise OSError(
                 3,
                 "Depthcharge image is too big for this machine.",
@@ -116,7 +114,7 @@ class depthchargectl_check(
                 check=False,
             )
 
-            if board.image_format == "fit":
+            if self.board_image_format == "fit":
                 logger.info("Checking FIT image format.")
                 proc = mkimage("-l", itb)
                 if proc.returncode != 0:
