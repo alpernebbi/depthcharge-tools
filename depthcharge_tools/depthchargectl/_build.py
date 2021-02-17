@@ -87,64 +87,91 @@ class depthchargectl_build(
     def ignore_initramfs(self):
         return self.config_section.getboolean("ignore-initramfs", False)
 
-    def __call__(self):
-        try:
-            logger.info(
-                "Building images for board '{}' ('{}')."
-                .format(self.board_name, self.board_codename)
-            )
-        except KeyError:
-            raise ValueError(
-                "Cannot build images for unsupported board '{}'."
-                .format(self.board)
-            )
+    @property
+    def kernel_release(self):
+        return self.kernel_version.release
 
-        k = self.kernel_version
-        logger.info(
-            "Building for kernel version '{}'.".format(k.release)
-        )
-
+    @property
+    def kernel(self):
         # vmlinuz is always mandatory
-        if k.kernel is None:
+        if self.kernel_version.kernel is None:
             raise ValueError(
                 "No vmlinuz file found for version '{}'."
-                .format(k.release)
+                .format(self.kernel_release)
             )
+
+        return self.kernel_version.kernel
+
+    @property
+    def initrd(self):
+        if self.ignore_initramfs:
+            logger.warn(
+                "Ignoring initramfs '{}' as configured."
+                .format(self.kernel_version.initrd)
+            )
+            return None
 
         # Initramfs is optional.
-        if k.initrd is None:
+        elif self.kernel_version.initrd is None:
             logger.info(
                 "No initramfs file found for version '{}'."
-                .format(k.release)
+                .format(self.kernel_release)
             )
 
+        return self.kernel_version.initrd
+
+    @property
+    def fdtdir(self):
         # Device trees are optional based on board configuration.
-        if self.board_dtb_name is not None:
-            if self.board_image_format == "fit":
-                if k.fdtdir is None:
-                    raise ValueError(
-                        "No dtb directory found for version '{}', "
-                        "but this machine needs a dtb."
-                        .format(k.release)
-                    )
+        if (
+            self.board_dtb_name is not None
+            and self.board_image_format == "fit"
+            and self.kernel_version.fdtdir is None
+        ):
+            raise ValueError(
+                "No dtb directory found for version '{}', "
+                "but this machine needs a dtb."
+                .format(self.kernel_release)
+            )
 
-                dtbs = sorted(k.fdtdir.glob(
-                    "**/{}".format(self.board_dtb_name)
-                ))
+        return self.kernel_version.fdtdir
 
-                if not dtbs:
-                    raise ValueError(
-                        "No dtb file '{}' found in '{}'."
-                        .format(self.board_dtb_name, k.fdtdir)
-                    )
+    @property
+    def dtbs(self):
+        fdtdir = self.fdtdir
 
-            elif self.board_image_format == "zimage":
-                raise ValueError(
-                    "Image format '{}' doesn't support dtb files "
-                    "('{}') required by your board."
-                    .format(self.board_image_format, self.board_dtb_name)
-                )
+        if fdtdir is None:
+            raise ValueError(
+                "No dtb directory found for version '{}', "
+                "but this machine needs a dtb."
+                .format(self.kernel_release)
+            )
 
+        dtbs = sorted(fdtdir.glob(
+            "**/{}".format(self.board_dtb_name)
+        ))
+
+        if not dtbs:
+            raise ValueError(
+                "No dtb file '{}' found in '{}'."
+                .format(self.board_dtb_name, fdtdir)
+            )
+
+        elif self.board_image_format == "zimage":
+            raise ValueError(
+                "Image format '{}' doesn't support dtb files "
+                "('{}') required by your board."
+                .format(self.board_image_format, self.board_dtb_name)
+            )
+
+        return dtbs
+
+    @property
+    def description(self):
+        return self.kernel_version.description
+
+    @property
+    def root(self):
         # On at least Debian, the root the system should boot from
         # is included in the initramfs. Custom kernels might still
         # be able to boot without an initramfs, but we need to
@@ -157,27 +184,34 @@ class depthchargectl_build(
                 logger.info(
                     "Using root as set in user configured cmdline."
                 )
-                break
+                return root
+
+        logger.info("Trying to figure out a root for cmdline.")
+        root = findmnt.fstab("/").stdout.rstrip("\n")
+
+        if root:
+            logger.info("Using root as set in /etc/fstab.")
         else:
-            logger.info("Trying to prepend root into cmdline.")
-            root = findmnt.fstab("/").stdout.rstrip("\n")
+            logger.warn(
+                "Couldn't figure out a root cmdline parameter from "
+                "/etc/fstab. Will use '{}' from kernel."
+                .format(root)
+            )
+            root = findmnt.kernel("/").stdout.rstrip("\n")
 
-            if root:
-                logger.info("Using root as set in /etc/fstab.")
-            else:
-                logger.warn(
-                    "Couldn't figure out a root cmdline parameter from "
-                    "/etc/fstab. Will use '{}' from kernel."
-                    .format(root)
-                )
-                root = findmnt.kernel("/").stdout.rstrip("\n")
+        if not root:
+            raise ValueError(
+                "Couldn't figure out a root cmdline parameter."
+            )
 
-            if not root:
-                raise ValueError(
-                    "Couldn't figure out a root cmdline parameter."
-                )
+        return root
 
-            # Prepend it so that user-given cmdline overrides it.
+    @property
+    def cmdline(self):
+        cmdline = self.kernel_cmdline or []
+        root = self.root
+
+        if 'root={}'.format(self.root) not in cmdline:
             logger.info(
                 "Prepending 'root={}' to kernel cmdline."
                 .format(root)
@@ -186,31 +220,24 @@ class depthchargectl_build(
 
         if self.ignore_initramfs:
             logger.warn(
-                "Ignoring initramfs '{}' as configured, "
+                "Ignoring initramfs as configured, "
                 "appending 'noinitrd' to the kernel cmdline."
-                .format(k.initrd)
+                .format(self.initrd)
             )
-            k.initrd = None
             cmdline.append("noinitrd")
 
         # Linux kernel without an initramfs only supports certain
         # types of root parameters, check for them.
-        if k.initrd is None and root_requires_initramfs(root):
+        if self.initrd is None and root_requires_initramfs(root):
             raise ValueError(
                 "An initramfs is required for root '{}'."
                 .format(root)
             )
 
-        # Default to OS-distributed keys, override with custom
-        # values if given.
-        _, keyblock, signprivate, signpubkey = vboot_keys()
-        if self.vboot_keyblock is not None:
-            keyblock = self.vboot_keyblock
-        if self.vboot_private_key is not None:
-            signprivate = self.vboot_private_key
-        if self.vboot_public_key is not None:
-            signpubkey = self.vboot_public_key
+        return cmdline
 
+    @property
+    def compress(self):
         # Allowed compression levels. We will call mkdepthcharge by
         # hand multiple times for these.
         compress = (
@@ -235,14 +262,18 @@ class depthchargectl_build(
                     .format(self.board_image_format, compress)
                 )
 
+        return compress
+
+    @property
+    def timestamp(self):
         # Try to keep the output reproducible. Initramfs date is
         # bound to be later than vmlinuz date, so prefer that if
         # possible.
         if "SOURCE_DATE_EPOCH" not in os.environ:
-            if k.initrd is not None:
-                date = int(k.initrd.stat().st_mtime)
+            if self.initrd is not None:
+                date = int(self.initrd.stat().st_mtime)
             else:
-                date = int(k.kernel.stat().st_mtime)
+                date = int(self.kernel.stat().st_mtime)
 
             if date:
                 os.environ["SOURCE_DATE_EPOCH"] = str(date)
@@ -252,29 +283,67 @@ class depthchargectl_build(
                     "nor vmlinuz."
                 )
 
+        return os.environ["SOURCE_DATE_EPOCH"]
+
+    @property
+    def images_dir(self):
         # Keep images in their own directory, which might not be
         # created at install-time
-        images = Path("/tmp/boot/depthcharge-tools/images")
-        os.makedirs(images, exist_ok=True)
+        images_dir = Path("/boot/depthcharge-tools/images")
+        os.makedirs(images_dir, exist_ok=True)
 
-        # Build to temporary files so we do not overwrite existing
+        return images_dir
+
+    @property
+    def output(self):
+        output = self.images_dir / "{}.img".format(self.kernel_release)
+
+        return output
+
+    def __call__(self):
+        try:
+            logger.info(
+                "Building images for board '{}' ('{}')."
+                .format(self.board_name, self.board_codename)
+            )
+        except KeyError:
+            raise ValueError(
+                "Cannot build images for unsupported board '{}'."
+                .format(self.board)
+            )
+
+        logger.info(
+            "Building for kernel version '{}'."
+            .format(self.kernel_release)
+        )
+
+        # Default to OS-distributed keys, override with custom
+        # values if given.
+        _, keyblock, signprivate, signpubkey = vboot_keys()
+        if self.vboot_keyblock is not None:
+            keyblock = self.vboot_keyblock
+        if self.vboot_private_key is not None:
+            signprivate = self.vboot_private_key
+        if self.vboot_public_key is not None:
+            signpubkey = self.vboot_public_key
+
+        # Build to a temporary file so we do not overwrite existing
         # images with an unbootable image.
-        output = images / "{}.img".format(k.release)
-        outtmp = images / "{}.img.tmp".format(k.release)
+        outtmp = self.images_dir / "{}.img.tmp".format(self.kernel_release)
 
-        for c in compress:
-            logger.info("Trying with compression '{}'.".format(c))
+        for compress in self.compress:
+            logger.info("Trying with compression '{}'.".format(compress))
             mkdepthcharge(
-                cmdline=cmdline,
-                compress=(c if c != "none" else None),
-                dtbs=dtbs,
+                cmdline=self.cmdline,
+                compress=compress,
+                dtbs=self.dtbs,
                 image_format=self.board_image_format,
-                initramfs=k.initrd,
+                initramfs=self.initrd,
                 keyblock=keyblock,
-                name=k.description,
+                name=self.description,
                 output=outtmp,
                 signprivate=signprivate,
-                vmlinuz=k.kernel,
+                vmlinuz=self.kernel,
             )
 
             try:
@@ -288,9 +357,9 @@ class depthchargectl_build(
                 logger.warn(
                     "Image with compression '{}' is too big "
                     "for this board."
-                    .format(c)
+                    .format(compress)
                 )
-                if c != compress[-1]:
+                if compress != self.compress[-1]:
                     continue
                 logger.error(
                     "The initramfs might be too big for this machine. "
@@ -308,14 +377,14 @@ class depthchargectl_build(
             )
 
         logger.info("Copying newly built image and info to output.")
-        outtmp.copy_to(output)
+        outtmp.copy_to(self.output)
         outtmp.unlink()
 
         logger.info(
             "Built image for kernel version '{}'."
-            .format(k.release)
+            .format(self.kernel_release)
         )
-        return output
+        return self.output
 
     global_options = depthchargectl.global_options
 
