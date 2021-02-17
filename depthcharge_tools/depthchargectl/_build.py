@@ -3,6 +3,7 @@
 import argparse
 import logging
 import os
+import shlex
 import textwrap
 
 from depthcharge_tools import __version__
@@ -10,7 +11,7 @@ from depthcharge_tools.mkdepthcharge import mkdepthcharge
 from depthcharge_tools.utils import (
     root_requires_initramfs,
     vboot_keys,
-    Config,
+    Board,
     Disk,
     Partition,
     Path,
@@ -74,12 +75,34 @@ class depthchargectl_build(
         """Build images for all available kernel versions."""
         return all_versions
 
-    def __call__(self):
-        config = Config(self.config, "depthchargectl/build")
-        board = self.board
+    @property
+    def config_section(self):
+        parser = self.config
+        section_name = "depthchargectl/build"
 
+        if section_name not in parser.sections():
+            parser.add_section(section_name)
+        return self.config[section_name]
+
+    @property
+    def kernel_cmdline(self):
+        cmdline = self.config_section.get("kernel-cmdline")
+        if cmdline is not None:
+            return shlex.split(cmdline)
+
+    @property
+    def kernel_compression(self):
+        compress = self.config_section.get("kernel-compression")
+        if compress is not None:
+            return compress.split(" ")
+
+    @property
+    def ignore_initramfs(self):
+        return self.config_section.getboolean("ignore-initramfs", False)
+
+    def __call__(self):
         try:
-            board = config[board]
+            board = Board(self.board_section)
             logger.info(
                 "Building images for board '{}' ('{}')."
                 .format(board.name, board.codename)
@@ -87,7 +110,7 @@ class depthchargectl_build(
         except KeyError:
             raise ValueError(
                 "Cannot build images for unsupported board '{}'."
-                .format(board)
+                .format(self.board)
             )
 
         for k in self.kernel_version:
@@ -140,7 +163,7 @@ class depthchargectl_build(
             # is included in the initramfs. Custom kernels might still
             # be able to boot without an initramfs, but we need to
             # inject a root= parameter for that.
-            cmdline = config.kernel_cmdline or []
+            cmdline = self.kernel_cmdline or []
             for c in cmdline:
                 lhs, _, rhs = c.partition("=")
                 if lhs.lower() == "root":
@@ -175,7 +198,7 @@ class depthchargectl_build(
                 )
                 cmdline.append("root={}".format(root))
 
-            if config.ignore_initramfs:
+            if self.ignore_initramfs:
                 logger.warn(
                     "Ignoring initramfs '{}' as configured, "
                     "appending 'noinitrd' to the kernel cmdline."
@@ -195,17 +218,17 @@ class depthchargectl_build(
             # Default to OS-distributed keys, override with custom
             # values if given.
             _, keyblock, signprivate, signpubkey = vboot_keys()
-            if config.vboot_keyblock is not None:
-                keyblock = config.vboot_keyblock
-            if config.vboot_private_key is not None:
-                signprivate = config.vboot_private_key
-            if config.vboot_public_key is not None:
-                signpubkey = config.vboot_public_key
+            if self.vboot_keyblock is not None:
+                keyblock = self.vboot_keyblock
+            if self.vboot_private_key is not None:
+                signprivate = self.vboot_private_key
+            if self.vboot_public_key is not None:
+                signpubkey = self.vboot_public_key
 
             # Allowed compression levels. We will call mkdepthcharge by
             # hand multiple times for these.
             compress = (
-                config.kernel_compression
+                self.kernel_compression
                 or board.kernel_compression
                 or ["none"]
             )

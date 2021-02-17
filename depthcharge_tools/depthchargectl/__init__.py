@@ -98,6 +98,22 @@ class depthchargectl(
 
         return parser
 
+    @property
+    def config_section(self):
+        return self.config["depthchargectl"]
+
+    @property
+    def vboot_keyblock(self):
+        return self.config_section.get("vboot-keyblock")
+
+    @property
+    def vboot_public_key(self):
+        return self.config_section.get("vboot-public-key")
+
+    @property
+    def vboot_private_key(self):
+        return self.config_section.get("vboot-private-key")
+
     @global_options.add
     @Argument("--board", nargs=1)
     def board(self, codename=None):
@@ -109,7 +125,7 @@ class depthchargectl(
         }
 
         if codename is None:
-            codename = self.config["depthcharge-tools"].get("board", None)
+            codename = self.config_section.get("board", None)
 
         if codename in boards:
             return codename
@@ -174,6 +190,12 @@ class depthchargectl(
         raise ValueError(
             "Could not detect which board this is running on."
         )
+
+    @property
+    def board_section(self):
+        for name, section in self.config.items():
+            if section.get("codename") == self.board:
+                return section
 
     @Subparsers()
     def command(self, cmd):
