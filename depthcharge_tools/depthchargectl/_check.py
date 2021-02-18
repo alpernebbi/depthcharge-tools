@@ -80,7 +80,7 @@ class depthchargectl_check(
         logger.info("Checking depthcharge image signatures.")
         if vbutil_kernel(
             "--verify", image,
-            "--signpubkey", self.vboot-public-key,
+            "--signpubkey", self.vboot_public_key,
             check=False,
         ).returncode != 0:
             raise OSError(
