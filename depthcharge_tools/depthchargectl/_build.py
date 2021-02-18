@@ -261,15 +261,6 @@ class depthchargectl_build(
         return os.environ["SOURCE_DATE_EPOCH"]
 
     @property
-    def images_dir(self):
-        # Keep images in their own directory, which might not be
-        # created at install-time
-        images_dir = Path("/boot/depthcharge-tools/images")
-        os.makedirs(images_dir, exist_ok=True)
-
-        return images_dir
-
-    @property
     def output(self):
         output = self.images_dir / "{}.img".format(self.kernel_release)
 
@@ -291,6 +282,9 @@ class depthchargectl_build(
             "Building for kernel version '{}'."
             .format(self.kernel_release)
         )
+
+        # Images dir might not have been created at install-time
+        os.makedirs(self.images_dir, exist_ok=True)
 
         # Build to a temporary file so we do not overwrite existing
         # images with an unbootable image.

@@ -14,6 +14,7 @@ from depthcharge_tools.utils import (
     Group,
     Subparsers,
     ConfigDict,
+    Path,
     vboot_keys,
     cros_hwid,
     dt_compatibles,
@@ -234,6 +235,15 @@ class depthchargectl(
     @property
     def board_image_format(self):
         return self.board.get("image-format")
+
+    @global_options.add
+    @Argument("--images-dir", nargs=1)
+    def images_dir(self, dir_=None):
+        """Directory to store built images"""
+        if dir_ is None:
+            dir_ = "/boot/depthcharge-tools/images"
+
+        return Path(dir_)
 
     @Subparsers()
     def command(self, cmd):

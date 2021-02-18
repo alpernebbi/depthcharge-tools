@@ -31,10 +31,6 @@ class depthchargectl_remove(
 
     config_section = "depthchargectl/remove"
 
-    @property
-    def images_dir(self):
-        return Path("/boot/depthcharge-tools/images")
-
     @Group
     def positionals(self):
         """Positional arguments"""
