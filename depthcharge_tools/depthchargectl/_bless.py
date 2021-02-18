@@ -49,3 +49,4 @@ class depthchargectl_bless(
         )
 
     global_options = depthchargectl.global_options
+    config_options = depthchargectl.config_options

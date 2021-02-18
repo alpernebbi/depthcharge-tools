@@ -113,3 +113,4 @@ class depthchargectl_check(
                     )
 
     global_options = depthchargectl.global_options
+    config_options = depthchargectl.config_options

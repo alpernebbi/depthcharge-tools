@@ -111,8 +111,6 @@ class depthchargectl_list(
                 )
         return columns
 
-    global_options = depthchargectl.global_options
-
     def __call__(self):
         columns = self.output
         rows = []
@@ -135,4 +133,7 @@ class depthchargectl_list(
         widths = [max(4, *map(len, col)) for col in zip(*rows)]
         fmt = " ".join("{{:{w}}}".format(w=w) for w in widths)
         return "\n".join(fmt.format(*row) for row in rows)
+
+    global_options = depthchargectl.global_options
+    config_options = depthchargectl.config_options
 

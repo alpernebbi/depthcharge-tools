@@ -190,4 +190,5 @@ class depthchargectl_write(
             )
 
     global_options = depthchargectl.global_options
+    config_options = depthchargectl.config_options
 

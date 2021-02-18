@@ -209,5 +209,6 @@ class depthchargectl_target(
             )
 
     global_options = depthchargectl.global_options
+    config_options = depthchargectl.config_options
 
 

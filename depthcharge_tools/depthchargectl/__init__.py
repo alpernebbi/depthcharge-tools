@@ -63,10 +63,23 @@ class depthchargectl(
         logger.setLevel(level)
         return level
 
-    @global_options.add
+    @Group
+    def config_options(self):
+        """Configuration options"""
+
+        # Autodetect OS-distributed keys if custom values not given.
+        devkeys, keyblock, signprivate, signpubkey = vboot_keys()
+        if self.vboot_keyblock is None:
+            self.vboot_keyblock = keyblock
+        if self.vboot_private_key is None:
+            self.vboot_private_key = signprivate
+        if self.vboot_public_key is None:
+            self.vboot_public_key = signpubkey
+
+    @config_options.add
     @Argument("--config", nargs=1)
     def config(self, file_=None):
-        """Override defaults with a custom configuration file"""
+        """Additional configuration file to read"""
         parser = configparser.ConfigParser(
             default_section="depthcharge-tools",
             dict_type=ConfigDict,
@@ -105,23 +118,7 @@ class depthchargectl(
 
         return parser[self.config_section]
 
-    # Default to OS-distributed keys, override with custom
-    # values if given.
-    _devkeys, _keyblock, _signprivate, _signpubkey = vboot_keys()
-
-    @property
-    def vboot_keyblock(self):
-        return self.config.get("vboot-keyblock") or self._keyblock
-
-    @property
-    def vboot_public_key(self):
-        return self.config.get("vboot-public-key") or self._signpubkey
-
-    @property
-    def vboot_private_key(self):
-        return self.config.get("vboot-private-key") or self._signprivate
-
-    @global_options.add
+    @config_options.add
     @Argument("--board", nargs=1)
     def board(self, codename=None):
         """Assume we're running on the specified board"""
@@ -198,6 +195,67 @@ class depthchargectl(
             "Could not detect which board this is running on."
         )
 
+    @config_options.add
+    @Argument("--images-dir", nargs=1)
+    def images_dir(self, dir_=None):
+        """Directory to store built images"""
+        if dir_ is None:
+            dir_ = self.config.get("images-dir")
+
+        if dir_ is None:
+            raise ValueError(
+                "Images directory is not specified"
+            )
+
+        return Path(dir_)
+
+    @config_options.add
+    @Argument("--vboot-keyblock", nargs=1)
+    def vboot_keyblock(self, keyblock=None):
+        """Keyblock file to include in images"""
+        if keyblock is None:
+            keyblock = self.config.get("vboot-keyblock")
+
+        return keyblock
+
+    @config_options.add
+    @Argument("--vboot-public-key", nargs=1)
+    def vboot_public_key(self, signpubkey=None):
+        """Public key file to verify images with"""
+        if signpubkey is None:
+            signpubkey = self.config.get("vboot-public-key")
+
+        return signpubkey
+
+    @config_options.add
+    @Argument("--vboot-private-key", nargs=1)
+    def vboot_private_key(self, signprivate=None):
+        """Private key file to sign images with"""
+        if signprivate is None:
+            signprivate = self.config.get("vboot-private-key")
+
+        return signprivate
+
+    @config_options.add
+    @Argument("--kernel-cmdline", nargs="+", metavar="CMD")
+    def kernel_cmdline(self, *cmds):
+        """Command line options for the kernel"""
+        if len(cmds) == 0:
+            cmdline = self.config.get("kernel-cmdline")
+            if cmdline is not None:
+                cmds = shlex.split(cmdline)
+
+        return list(cmds)
+
+    @config_options.add
+    @Argument("--ignore-initramfs", ignore=True)
+    def ignore_initramfs(self, ignore=None):
+        """Do not include initramfs in images"""
+        if ignore is None:
+            ignore = self.config.getboolean("ignore-initramfs", False)
+
+        return ignore
+
     @property
     def board_name(self):
         return self.board.get("name")
@@ -235,20 +293,6 @@ class depthchargectl(
     @property
     def board_image_format(self):
         return self.board.get("image-format")
-
-    @global_options.add
-    @Argument("--images-dir", nargs=1)
-    def images_dir(self, dir_=None):
-        """Directory to store built images"""
-        if dir_ is None:
-            dir_ = self.config.get("images-dir")
-
-        if dir_ is None:
-            raise ValueError(
-                "Images directory is not specified"
-            )
-
-        return Path(dir_)
 
     @Subparsers()
     def command(self, cmd):

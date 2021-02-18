@@ -149,4 +149,4 @@ class depthchargectl_remove(
             return badparts
 
     global_options = depthchargectl.global_options
-
+    config_options = depthchargectl.config_options

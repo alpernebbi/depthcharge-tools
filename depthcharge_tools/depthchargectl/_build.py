@@ -64,16 +64,6 @@ class depthchargectl_build(
         return kernel
 
     @property
-    def kernel_cmdline(self):
-        cmdline = self.config.get("kernel-cmdline")
-        if cmdline is not None:
-            return shlex.split(cmdline)
-
-    @property
-    def ignore_initramfs(self):
-        return self.config.getboolean("ignore-initramfs", False)
-
-    @property
     def kernel_release(self):
         return self.kernel_version.release
 
@@ -346,4 +336,5 @@ class depthchargectl_build(
         return self.output
 
     global_options = depthchargectl.global_options
+    config_options = depthchargectl.config_options
 
