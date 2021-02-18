@@ -66,10 +66,10 @@ class depthchargectl_remove(
                     .format(image)
                 )
 
-        if not image.is_file():
+        if not self.image.is_file():
             raise TypeError(
                 "Image to remove '{}' is not a file."
-                .format(image)
+                .format(self.image)
             )
 
     @positionals.add
