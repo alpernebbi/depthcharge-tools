@@ -100,8 +100,8 @@ class depthchargectl_build(
     def fdtdir(self):
         # Device trees are optional based on board configuration.
         if (
-            self.board_dtb_name is not None
-            and self.board_image_format == "fit"
+            self.board.dtb_name is not None
+            and self.board.image_format == "fit"
             and self.kernel_version.fdtdir is None
         ):
             raise ValueError(
@@ -124,20 +124,20 @@ class depthchargectl_build(
             )
 
         dtbs = sorted(fdtdir.glob(
-            "**/{}".format(self.board_dtb_name)
+            "**/{}".format(self.board.dtb_name)
         ))
 
         if not dtbs:
             raise ValueError(
                 "No dtb file '{}' found in '{}'."
-                .format(self.board_dtb_name, fdtdir)
+                .format(self.board.dtb_name, fdtdir)
             )
 
-        elif self.board_image_format == "zimage":
+        elif self.board.image_format == "zimage":
             raise ValueError(
                 "Image format '{}' doesn't support dtb files "
                 "('{}') required by your board."
-                .format(self.board_image_format, self.board_dtb_name)
+                .format(self.board.image_format, self.board.dtb_name)
             )
 
         return dtbs
@@ -218,13 +218,13 @@ class depthchargectl_build(
         # hand multiple times for these.
 
         # zimage doesn't support compression
-        if self.board_image_format == "zimage":
+        if self.board.image_format == "zimage":
             return ["none"]
 
         compress = ["none"]
-        if self.board_boots_lz4_kernel:
+        if self.board.boots_lz4_kernel:
             compress += ["lz4"]
-        if self.board_boots_lzma_kernel:
+        if self.board.boots_lzma_kernel:
             compress += ["lzma"]
 
         return compress
@@ -260,7 +260,7 @@ class depthchargectl_build(
         try:
             logger.info(
                 "Building images for board '{}' ('{}')."
-                .format(self.board_name, self.board_codename)
+                .format(self.board.name, self.board.codename)
             )
         except KeyError:
             raise ValueError(
@@ -286,7 +286,7 @@ class depthchargectl_build(
                 cmdline=self.cmdline,
                 compress=compress,
                 dtbs=self.dtbs,
-                image_format=self.board_image_format,
+                image_format=self.board.image_format,
                 initramfs=self.initrd,
                 keyblock=self.vboot_keyblock,
                 name=self.description,

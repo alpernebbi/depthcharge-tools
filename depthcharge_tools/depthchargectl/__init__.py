@@ -23,6 +23,49 @@ from depthcharge_tools.utils import (
 logger = logging.getLogger(__name__)
 
 
+class Board:
+    def __init__(self, config):
+        self._config = config
+
+    @property
+    def name(self):
+        return self._config.get("name")
+
+    @property
+    def codename(self):
+        return self._config.get("codename")
+
+    @property
+    def dtb_name(self):
+        return self._config.get("dtb-name")
+
+    @property
+    def dt_compatible(self):
+        return self._config.get("dt-compatible")
+
+    @property
+    def hwid_match(self):
+        pattern = self._config.get("hwid-match")
+        if pattern:
+            return re.compile(pattern)
+
+    @property
+    def boots_lz4_kernel(self):
+        return self._config.getboolean("boots-lz4-kernel", False)
+
+    @property
+    def boots_lzma_kernel(self):
+        return self._config.getboolean("boots-lzma-kernel", False)
+
+    @property
+    def image_max_size(self):
+        return self._config.getint("image-max-size")
+
+    @property
+    def image_format(self):
+        return self._config.get("image-format")
+
+
 class depthchargectl(
     Command,
     prog="depthchargectl",
@@ -123,7 +166,7 @@ class depthchargectl(
     def board(self, codename=None):
         """Assume we're running on the specified board"""
         boards = {
-            section.get("codename"): section
+            section.get("codename"): Board(section)
             for name, section in self.config.parser.items()
             if "codename" in section
         }
@@ -142,22 +185,20 @@ class depthchargectl(
 
         hwid = cros_hwid()
         def hwid_match(item):
-            codename, section = item
+            codename, board = item
             try:
-                hwid_match = section.get("hwid-match")
-                return bool(re.match(hwid_match, hwid))
+                return bool(re.match(board.hwid_match, hwid))
             except:
                 return False
 
         matches = tuple(filter(hwid_match, boards.items()))
         if matches:
-            codename, section = matches[0]
-            name = section.get("name", "(unnamed)")
+            codename, board = matches[0]
             logger.info(
                 "Detected board '{}' ('{}') by HWID."
-                .format(name, codename)
+                .format(board.name, board.codename)
             )
-            return boards[codename]
+            return board
 
         else:
             logger.warning(
@@ -169,22 +210,20 @@ class depthchargectl(
             if item is None:
                 return len(compatibles)
 
-            codename, section = item
+            codename, board = item
             try:
-                compat = section.get("dt-compatible", None)
-                return compatibles.index(compat)
+                return compatibles.index(board.dt_compatible)
             except ValueError:
                 return float("inf")
 
         match = min((None, *boards.items()), key=compat_preference)
         if match is not None:
-            codename, section = match
-            name = section.get("name", "(unnamed)")
+            codename, board = match
             logger.info(
                 "Detected board '{}' ('{}') by device-tree compatibles."
-                .format(name, codename)
+                .format(board.name, board.codename)
             )
-            return boards[codename]
+            return board
 
         else:
             logger.warning(
@@ -255,44 +294,6 @@ class depthchargectl(
             ignore = self.config.getboolean("ignore-initramfs", False)
 
         return ignore
-
-    @property
-    def board_name(self):
-        return self.board.get("name")
-
-    @property
-    def board_codename(self):
-        return self.board.get("codename")
-
-    @property
-    def board_dtb_name(self):
-        return self.board.get("dtb-name")
-
-    @property
-    def board_dt_compatible(self):
-        return self.board.get("dt-compatible")
-
-    @property
-    def board_hwid_match(self):
-        pattern = self.board.get("hwid-match")
-        if pattern:
-            return re.compile(pattern)
-
-    @property
-    def board_boots_lz4_kernel(self):
-        return self.board.getboolean("boots-lz4-kernel", False)
-
-    @property
-    def board_boots_lzma_kernel(self):
-        return self.board.getboolean("boots-lzma-kernel", False)
-
-    @property
-    def board_image_max_size(self):
-        return self.board.getint("image-max-size")
-
-    @property
-    def board_image_format(self):
-        return self.board.get("image-format")
 
     @Subparsers()
     def command(self, cmd):

@@ -46,7 +46,7 @@ class depthchargectl_check(
         try:
             logger.info(
                 "Verifying image for board '{}' ('{}')."
-                .format(self.board_name, self.board_codename)
+                .format(self.board.name, self.board.codename)
             )
         except KeyError:
             raise ValueError(
@@ -61,7 +61,7 @@ class depthchargectl_check(
             )
 
         logger.info("Checking if image fits into size limit.")
-        if image.stat().st_size > self.board_image_max_size:
+        if image.stat().st_size > self.board.image_max_size:
             raise OSError(
                 3,
                 "Depthcharge image is too big for this machine.",
@@ -96,7 +96,7 @@ class depthchargectl_check(
                 check=False,
             )
 
-            if self.board_image_format == "fit":
+            if self.board.image_format == "fit":
                 logger.info("Checking FIT image format.")
                 proc = mkimage("-l", itb)
                 if proc.returncode != 0:
