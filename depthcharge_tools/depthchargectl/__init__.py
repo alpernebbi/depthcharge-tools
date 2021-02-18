@@ -241,7 +241,12 @@ class depthchargectl(
     def images_dir(self, dir_=None):
         """Directory to store built images"""
         if dir_ is None:
-            dir_ = "/boot/depthcharge-tools/images"
+            dir_ = self.config.get("images-dir")
+
+        if dir_ is None:
+            raise ValueError(
+                "Images directory is not specified"
+            )
 
         return Path(dir_)
 
