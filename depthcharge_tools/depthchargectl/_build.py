@@ -197,7 +197,7 @@ class depthchargectl_build(
         cmdline = self.kernel_cmdline or []
         root = self.root
 
-        if 'root={}'.format(self.root) not in cmdline:
+        if 'root={}'.format(root) not in cmdline:
             logger.info(
                 "Prepending 'root={}' to kernel cmdline."
                 .format(root)
