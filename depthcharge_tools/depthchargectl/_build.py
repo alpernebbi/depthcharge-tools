@@ -45,10 +45,11 @@ class depthchargectl_build(
     @Argument
     def kernel_version(self, kernel_version=None):
         """Installed kernel version to build an image for."""
+        kernels = Kernel.all()
 
-        if kernel_version is not None:
+        if isinstance(kernel_version, str):
             kernels = [
-                k for k in Kernel.all()
+                k for k in kernels
                 if k.release == kernel_version
             ]
             if not kernels:
@@ -58,122 +59,144 @@ class depthchargectl_build(
                 )
             kernel = kernels[0]
 
-        else:
-            kernel = max(Kernel.all())
+        elif kernels:
+            kernel = max(kernels)
 
         return kernel
 
-    @property
-    def kernel_release(self):
-        return self.kernel_version.release
+    @Group
+    def options(self):
+        """Options"""
 
-    @property
-    def kernel(self):
+    @Group
+    def custom_kernel_options(self):
+        """Custom kernel specification"""
+
+    @custom_kernel_options.add
+    @Argument("--kernel-release", nargs=1)
+    def kernel_release(self, name=None):
+        """Release name for the kernel used in image name"""
+        if name is None:
+            name = self.kernel_version.release
+
+        return name
+
+    @custom_kernel_options.add
+    @Argument("--kernel", nargs=1)
+    def kernel(self, file_=None):
+        """Kernel executable"""
+        if file_ is None:
+            file_ = self.kernel_version.kernel
+
         # vmlinuz is always mandatory
-        if self.kernel_version.kernel is None:
+        if file_ is None:
             raise ValueError(
                 "No vmlinuz file found for version '{}'."
                 .format(self.kernel_release)
             )
 
-        return self.kernel_version.kernel
+        return file_
 
-    @property
-    def initrd(self):
+    @custom_kernel_options.add
+    @Argument("--initramfs", nargs=1)
+    def initrd(self, file_=None):
+        """Ramdisk image"""
+        if file_ is None:
+            file_ = self.kernel_version.initrd
+
         if self.ignore_initramfs:
             logger.warn(
                 "Ignoring initramfs '{}' as configured."
-                .format(self.kernel_version.initrd)
+                .format(file_)
             )
             return None
 
         # Initramfs is optional.
-        elif self.kernel_version.initrd is None:
+        if file_ is None:
             logger.info(
                 "No initramfs file found for version '{}'."
                 .format(self.kernel_release)
             )
 
-        return self.kernel_version.initrd
+        return file_
 
-    @property
-    def fdtdir(self):
+    @custom_kernel_options.add
+    @Argument("--fdtdir", nargs=1)
+    def fdtdir(self, dir_=None):
+        """Directory to search device-tree binaries for the board"""
+        if dir_ is None:
+            dir_ = self.kernel_version.fdtdir
+
+        return dir_
+
+    @custom_kernel_options.add
+    @Argument("--dtbs", nargs="+", metavar="FILE")
+    def dtbs(self, *files):
+        """Device-tree binary files to use instead of searching fdtdir"""
+
         # Device trees are optional based on board configuration.
-        if (
-            self.board.dtb_name is not None
-            and self.board.image_format == "fit"
-            and self.kernel_version.fdtdir is None
-        ):
-            raise ValueError(
-                "No dtb directory found for version '{}', "
-                "but this machine needs a dtb."
-                .format(self.kernel_release)
-            )
-
-        return self.kernel_version.fdtdir
-
-    @property
-    def dtbs(self):
-        fdtdir = self.fdtdir
-
-        if fdtdir is None:
-            raise ValueError(
-                "No dtb directory found for version '{}', "
-                "but this machine needs a dtb."
-                .format(self.kernel_release)
-            )
-
-        dtbs = sorted(fdtdir.glob(
-            "**/{}".format(self.board.dtb_name)
-        ))
-
-        if not dtbs:
-            raise ValueError(
-                "No dtb file '{}' found in '{}'."
-                .format(self.board.dtb_name, fdtdir)
-            )
-
-        elif self.board.image_format == "zimage":
-            raise ValueError(
-                "Image format '{}' doesn't support dtb files "
-                "('{}') required by your board."
-                .format(self.board.image_format, self.board.dtb_name)
-            )
-
-        return dtbs
-
-    @property
-    def description(self):
-        return self.kernel_version.description
-
-    @property
-    def root(self):
-        # On at least Debian, the root the system should boot from
-        # is included in the initramfs. Custom kernels might still
-        # be able to boot without an initramfs, but we need to
-        # inject a root= parameter for that.
-        cmdline = self.kernel_cmdline or []
-        for c in cmdline:
-            lhs, _, rhs = c.partition("=")
-            if lhs.lower() == "root":
-                root = rhs
-                logger.info(
-                    "Using root as set in user configured cmdline."
+        if self.board.dtb_name is not None and len(files) == 0:
+            if self.fdtdir is None:
+                raise ValueError(
+                    "No dtb directory found for version '{}', "
+                    "but this machine needs a dtb."
+                    .format(self.kernel_release)
                 )
-                return root
 
-        logger.info("Trying to figure out a root for cmdline.")
-        root = findmnt.fstab("/").stdout.rstrip("\n")
+            files = sorted(self.fdtdir.glob(
+                "**/{}".format(self.board.dtb_name)
+            ))
 
-        if root:
-            logger.info("Using root as set in /etc/fstab.")
-        else:
-            logger.warn(
-                "Couldn't figure out a root cmdline parameter from "
-                "/etc/fstab. Will use '{}' from kernel."
-                .format(root)
+            if len(files) == 0:
+                raise ValueError(
+                    "No dtb file '{}' found in '{}'."
+                    .format(self.board.dtb_name, self.fdtdir)
+                )
+
+        if self.board.image_format == "zimage" and len(files) != 0:
+            raise ValueError(
+                "Image format '{}' doesn't support dtb files."
+                .format(self.board.image_format)
             )
-            root = findmnt.kernel("/").stdout.rstrip("\n")
+
+        return files
+
+    @options.add
+    @Argument("--description", nargs=1)
+    def description(self, desc=None):
+        """Human-readable description for the image"""
+        if desc is None:
+            desc = self.kernel_version.description
+
+        return desc
+
+    @options.add
+    @Argument("--root", nargs=1)
+    def root(self, root=None):
+        """Root device to add to kernel cmdline"""
+        if root is None:
+            cmdline = self.kernel_cmdline or []
+            for c in cmdline:
+                lhs, _, rhs = c.partition("=")
+                if lhs.lower() == "root":
+                    root = rhs
+                    logger.info(
+                        "Using root as set in user configured cmdline."
+                    )
+
+        if root is None:
+            logger.info("Trying to figure out a root for cmdline.")
+            root = findmnt.fstab("/").stdout.rstrip("\n")
+
+            if root:
+                logger.info("Using root as set in /etc/fstab.")
+            else:
+                logger.warn(
+                    "Couldn't figure out a root cmdline parameter from "
+                    "/etc/fstab. Will use '{}' from kernel."
+                    .format(root)
+                )
+                root = findmnt.kernel("/").stdout.rstrip("\n")
 
         if not root:
             raise ValueError(
@@ -182,17 +205,21 @@ class depthchargectl_build(
 
         return root
 
+    # This should be overriding kernel_cmdline from the parent instead...
     @property
     def cmdline(self):
         cmdline = self.kernel_cmdline or []
-        root = self.root
 
-        if 'root={}'.format(root) not in cmdline:
+        # On at least Debian, the root the system should boot from
+        # is included in the initramfs. Custom kernels might still
+        # be able to boot without an initramfs, but we need to
+        # inject a root= parameter for that.
+        if 'root={}'.format(self.root) not in cmdline:
             logger.info(
                 "Prepending 'root={}' to kernel cmdline."
-                .format(root)
+                .format(self.root)
             )
-            cmdline.append("root={}".format(root))
+            cmdline.append("root={}".format(self.root))
 
         if self.ignore_initramfs:
             logger.warn(
@@ -204,57 +231,73 @@ class depthchargectl_build(
 
         # Linux kernel without an initramfs only supports certain
         # types of root parameters, check for them.
-        if self.initrd is None and root_requires_initramfs(root):
+        if self.initrd is None and root_requires_initramfs(self.root):
             raise ValueError(
                 "An initramfs is required for root '{}'."
-                .format(root)
+                .format(self.root)
             )
 
         return cmdline
 
-    @property
-    def compress(self):
+    @options.add
+    @Argument("--compress", nargs="+", metavar="TYPE")
+    def compress(self, *compress):
+        """Compression types to attempt."""
+
         # Allowed compression levels. We will call mkdepthcharge by
         # hand multiple times for these.
+        for c in compress:
+            if c not in ("none", "lz4", "lzma"):
+                raise ValueError(
+                    "Unsupported compression type '{}'."
+                    .format(t)
+                )
 
-        # zimage doesn't support compression
-        if self.board.image_format == "zimage":
-            return ["none"]
+        if len(compress) == 0:
+            compress = ["none"]
+            if self.board.boots_lz4_kernel:
+                compress += ["lz4"]
+            if self.board.boots_lzma_kernel:
+                compress += ["lzma"]
 
-        compress = ["none"]
-        if self.board.boots_lz4_kernel:
-            compress += ["lz4"]
-        if self.board.boots_lzma_kernel:
-            compress += ["lzma"]
+            # zimage doesn't support compression
+            if self.board.image_format == "zimage":
+                compress = ["none"]
 
         return compress
 
-    @property
-    def timestamp(self):
-        # Try to keep the output reproducible. Initramfs date is
-        # bound to be later than vmlinuz date, so prefer that if
-        # possible.
-        if "SOURCE_DATE_EPOCH" not in os.environ:
+    @options.add
+    @Argument("--timestamp", nargs=1)
+    def timestamp(self, seconds=None):
+        """Build timestamp for the image"""
+        if seconds is None:
+            if "SOURCE_DATE_EPOCH" in os.environ:
+                seconds = os.environ["SOURCE_DATE_EPOCH"]
+
+        # Initramfs date is bound to be later than vmlinuz date, so
+        # prefer that if possible.
+        if seconds is None:
             if self.initrd is not None:
-                date = int(self.initrd.stat().st_mtime)
+                seconds = int(self.initrd.stat().st_mtime)
             else:
-                date = int(self.kernel.stat().st_mtime)
+                seconds = int(self.kernel.stat().st_mtime)
 
-            if date:
-                os.environ["SOURCE_DATE_EPOCH"] = str(date)
-            else:
-                logger.error(
-                    "Couldn't determine a date from initramfs "
-                    "nor vmlinuz."
-                )
+        if seconds is None:
+            logger.error(
+                "Couldn't determine a timestamp from initramfs "
+                "nor vmlinuz."
+            )
 
-        return os.environ["SOURCE_DATE_EPOCH"]
+        return seconds
 
-    @property
-    def output(self):
-        output = self.images_dir / "{}.img".format(self.kernel_release)
+    @options.add
+    @Argument("--output", nargs=1)
+    def output(self, path=None):
+        """Output image to path instead of storing in images-dir"""
+        if path is None:
+            path = self.images_dir / "{}.img".format(self.kernel_release)
 
-        return output
+        return Path(path)
 
     def __call__(self):
         try:
@@ -279,6 +322,10 @@ class depthchargectl_build(
         # Build to a temporary file so we do not overwrite existing
         # images with an unbootable image.
         outtmp = self.images_dir / "{}.img.tmp".format(self.kernel_release)
+
+        # Try to keep output reproducible.
+        if self.timestamp is not None:
+            os.environ["SOURCE_DATE_EPOCH"] = str(self.timestamp)
 
         for compress in self.compress:
             logger.info("Trying with compression '{}'.".format(compress))
