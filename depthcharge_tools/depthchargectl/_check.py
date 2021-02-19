@@ -78,15 +78,16 @@ class depthchargectl_check(
             )
 
         logger.info("Checking depthcharge image signatures.")
-        if vbutil_kernel(
-            "--verify", image,
-            "--signpubkey", self.vboot_public_key,
-            check=False,
-        ).returncode != 0:
-            raise OSError(
-                5,
-                "Depthcharge image not signed by configured keys.",
-            )
+        if self.vboot_public_key is not None:
+            if vbutil_kernel(
+                "--verify", image,
+                "--signpubkey", self.vboot_public_key,
+                check=False,
+            ).returncode != 0:
+                raise OSError(
+                    5,
+                    "Depthcharge image not signed by configured keys.",
+                )
 
         with TemporaryDirectory("-depthchargectl") as tmpdir:
             itb = tmpdir / "{}.itb".format(image.name)
