@@ -47,17 +47,51 @@ class depthchargectl_bless(
 
         return Partition(device)
 
+    @Group
+    def options(self):
+        """Options"""
+
+    @options.add
+    @Argument("--bad", bad=True)
+    def bad(self, bad=False):
+        """Set the partition as unbootable"""
+        return bad
+
+    @options.add
+    @Argument("--oneshot", oneshot=True)
+    def oneshot(self, oneshot=False):
+        """Set the partition to be tried once"""
+        return oneshot
+
     def __call__(self):
-        logger.info(
-            "Setting '{}' as the highest-priority bootable part."
-            .format(self.partition)
-        )
-        self.partition.attribute = 0x111
-        self.partition.prioritize()
-        logger.info(
-            "Set '{}' as next to boot and successful."
-            .format(self.partition)
-        )
+        if self.bad == False:
+            logger.info(
+                "Setting '{}' as the highest-priority bootable part."
+                .format(self.partition)
+            )
+            self.partition.tries = 1
+            self.partition.prioritize()
+
+            if self.oneshot == False:
+                logger.info(
+                    "Setting '{}' as successfully booted."
+                    .format(self.partition)
+                )
+                self.partition.successful = 1
+
+            else:
+                logger.info(
+                    "Setting '{}' as not yet successfully booted."
+                    .format(self.partition)
+                )
+                self.partition.successful = 0
+
+        else:
+            logger.info(
+                "Setting '{}' as the zero-priority unbootable part."
+                .format(self.partition)
+            )
+            self.partition.attribute = 0x000
 
     global_options = depthchargectl.global_options
     config_options = depthchargectl.config_options
