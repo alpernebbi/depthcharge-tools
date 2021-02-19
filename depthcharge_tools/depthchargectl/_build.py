@@ -318,11 +318,11 @@ class depthchargectl_build(
         )
 
         # Images dir might not have been created at install-time
-        os.makedirs(self.images_dir, exist_ok=True)
+        os.makedirs(self.output.parent, exist_ok=True)
 
         # Build to a temporary file so we do not overwrite existing
         # images with an unbootable image.
-        outtmp = self.images_dir / "{}.img.tmp".format(self.kernel_release)
+        outtmp = self.output.parent / "{}.tmp".format(self.output.name)
 
         # Try to keep output reproducible.
         if self.timestamp is not None:
