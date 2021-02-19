@@ -13,6 +13,7 @@ from depthcharge_tools.utils import (
     Command,
     Argument,
     Group,
+    installed_kernels,
 )
 
 
@@ -42,7 +43,7 @@ class depthchargectl_write(
             )
 
         image = self.image or self.kernel_version
-        kernels = Kernel.all()
+        kernels = installed_kernels()
 
         if image is None:
             self.kernel_version = max(kernels)

@@ -9,6 +9,7 @@ import textwrap
 from depthcharge_tools import __version__
 from depthcharge_tools.mkdepthcharge import mkdepthcharge
 from depthcharge_tools.utils import (
+    installed_kernels,
     root_requires_initramfs,
     Disk,
     Partition,
@@ -45,7 +46,7 @@ class depthchargectl_build(
     @Argument
     def kernel_version(self, kernel_version=None):
         """Installed kernel version to build an image for."""
-        kernels = Kernel.all()
+        kernels = installed_kernels()
 
         if isinstance(kernel_version, str):
             kernels = [

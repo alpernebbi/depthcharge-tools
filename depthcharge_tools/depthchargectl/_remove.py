@@ -96,7 +96,6 @@ class depthchargectl_remove(
 
     def __call__(self):
         image = self.image
-        kernels = Kernel.all()
 
         # When called with --vblockonly vbutil_kernel creates a file of
         # size 64KiB == 0x10000.
