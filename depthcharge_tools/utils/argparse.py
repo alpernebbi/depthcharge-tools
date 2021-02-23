@@ -442,8 +442,8 @@ class Argument(_MethodDecorator):
 
 class Group(_MethodDecorator):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self._arguments = []
+        super().__init__(*args, **kwargs)
 
     def wrap(self, func):
         if isinstance(func, Argument):
