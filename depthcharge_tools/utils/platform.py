@@ -96,9 +96,10 @@ def root_requires_initramfs(root):
     return True
 
 
-def vboot_keys(*keydirs):
-    if not keydirs:
+def vboot_keys(*keydirs, system=True):
+    if len(keydirs) == 0 or system:
         keydirs = (
+            *keydirs,
             "/usr/share/vboot/devkeys",
             "/usr/local/share/vboot/devkeys",
         )
