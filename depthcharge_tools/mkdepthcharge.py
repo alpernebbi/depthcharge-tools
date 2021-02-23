@@ -248,8 +248,8 @@ class mkdepthcharge(
         """Depthcharge image options"""
 
         keydirs = []
-        if self.devkeys is not None:
-            keydirs += [self.devkeys]
+        if self.keydir is not None:
+            keydirs += [self.keydir]
 
         # If any of the arguments are given, search nearby for others
         if self.keyblock is not None:
@@ -266,7 +266,7 @@ class mkdepthcharge(
             )
 
         # Defaults to distro-specific paths for necessary files.
-        devkeys, keyblock, signprivate, signpubkey = vboot_keys(*keydirs)
+        keydir, keyblock, signprivate, signpubkey = vboot_keys(*keydirs)
 
         if self.keyblock is None:
             self.keyblock = keyblock
@@ -331,9 +331,9 @@ class mkdepthcharge(
         return file_
 
     @vboot_options.add
-    @Argument("--devkeys")
-    def devkeys(self, dir_):
-        """Directory containing developer keys to use."""
+    @Argument("--keydir")
+    def keydir(self, dir_):
+        """Directory containing vboot keys to use."""
         if dir_ is not None:
             dir_ = Path(dir_).resolve()
 

@@ -111,7 +111,7 @@ class depthchargectl(
         """Configuration options"""
 
         # Autodetect OS-distributed keys if custom values not given.
-        devkeys, keyblock, signprivate, signpubkey = vboot_keys()
+        keydir, keyblock, signprivate, signpubkey = vboot_keys()
         if self.vboot_keyblock is None:
             self.vboot_keyblock = keyblock
         if self.vboot_private_key is None:

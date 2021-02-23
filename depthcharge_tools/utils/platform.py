@@ -103,21 +103,21 @@ def vboot_keys(*keydirs):
             "/usr/local/share/vboot/devkeys",
         )
 
-    for devkeys in keydirs:
-        devkeys = Path(devkeys)
-        if not devkeys.is_dir():
+    for keydir in keydirs:
+        keydir = Path(keydir)
+        if not keydir.is_dir():
             continue
 
-        keyblock = devkeys / "kernel.keyblock"
-        signprivate = devkeys / "kernel_data_key.vbprivk"
-        signpubkey = devkeys / "kernel_subkey.vbpubk"
+        keyblock = keydir / "kernel.keyblock"
+        signprivate = keydir / "kernel_data_key.vbprivk"
+        signpubkey = keydir / "kernel_subkey.vbpubk"
 
         if (
             keyblock.exists()
             and signprivate.exists()
             and signpubkey.exists()
         ):
-            return devkeys, keyblock, signprivate, signpubkey
+            return keydir, keyblock, signprivate, signpubkey
 
     return None, None, None, None
 
