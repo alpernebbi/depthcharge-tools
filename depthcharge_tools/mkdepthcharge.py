@@ -25,88 +25,118 @@ logger = logging.getLogger(__name__)
 class mkdepthcharge(
     Command,
     prog="mkdepthcharge",
-    usage="%(prog)s [options] -o FILE [--] VMLINUZ [INITRAMFS] [DTB ...]",
+    usage="%(prog)s [options] -o FILE [--] [VMLINUZ] [INITRAMFS] [DTB ...]",
     add_help=False,
 ):
     """Build boot images for the ChromeOS bootloader."""
 
+
     @Group
     def input_files(self):
         """Input files"""
-        vmlinuz = None
-        initramfs = None
+
+    @input_files.add
+    @Argument(help=argparse.SUPPRESS)
+    def files(self, *files):
+        vmlinuz = []
+        initramfs = []
         dtbs = []
 
-        for f in [self.vmlinuz, self.initramfs, *(self.dtbs or [])]:
-            if f is None:
-                pass
+        files = [Path(f).resolve() for f in files]
 
-            elif f.is_vmlinuz():
-                if vmlinuz is None:
-                    vmlinuz = f
-                else:
-                    raise TypeError("Can't build with multiple kernels")
+        for f in files:
+            if f.is_vmlinuz():
+                vmlinuz.append(f)
 
             elif f.is_initramfs():
-                if initramfs is None:
-                    initramfs = f
-                else:
-                    raise TypeError("Can't build with multiple initramfs")
+                initramfs.append(f)
 
             elif f.is_dtb():
                 dtbs.append(f)
 
-            elif vmlinuz is None:
-                vmlinuz = f
+            elif len(vmlinuz) == 0:
+                vmlinuz.append(f)
 
-            elif initramfs is None:
-                initramfs = f
+            elif len(initramfs) == 0:
+                initramfs.append(f)
 
             else:
                 dtbs.append(f)
 
-        self.vmlinuz = vmlinuz
-        self.initramfs = initramfs
-        self.dtbs = dtbs
-
-        if vmlinuz is not None:
-            logger.info("Using vmlinuz: '{}'.".format(vmlinuz))
-        else:
-            msg = "vmlinuz argument is required."
-            raise ValueError(msg)
-
-        if initramfs is not None:
-            logger.info("Using initramfs: '{}'.".format(initramfs))
-
-        for dtb in dtbs:
-            logger.info("Using dtb: '{}'.".format(dtb))
+        return {
+            "vmlinuz": vmlinuz,
+            "initramfs": initramfs,
+            "dtbs": dtbs,
+        }
 
     @input_files.add
-    @Argument
-    def vmlinuz(self, vmlinuz):
+    @Argument("-d", "--vmlinuz", nargs=1)
+    def vmlinuz(self, vmlinuz=None):
         """Kernel executable"""
+        files = self.files["vmlinuz"]
+
         if vmlinuz is not None:
-            vmlinuz = Path(vmlinuz).resolve()
+            files = [Path(vmlinuz).resolve(), *files]
+
+        if len(files) == 0:
+            raise ValueError(
+                "vmlinuz argument is required."
+            )
+
+        elif len(files) > 1:
+            raise ValueError(
+                "Can't build with multiple kernels"
+            )
+
+        vmlinuz = files[0]
+        logger.info(
+            "Using vmlinuz: '{}'."
+            .format(vmlinuz)
+        )
 
         return vmlinuz
 
     @input_files.add
-    @Argument
+    @Argument("-i", "--initramfs", nargs=1)
     def initramfs(self, initramfs=None):
         """Ramdisk image"""
+        files = self.files["initramfs"]
+
         if initramfs is not None:
-            initramfs = Path(initramfs).resolve()
+            files = [Path(initramfs).resolve(), *files]
+
+        if len(files) > 1:
+            raise ValueError(
+                "Can't build with multiple initramfs"
+            )
+
+        if files:
+            initramfs = files[0]
+            logger.info(
+                "Using initramfs: '{}'."
+                .format(initramfs)
+            )
+        else:
+            initramfs = None
 
         return initramfs
 
     @input_files.add
-    @Argument(metavar="DTB")
+    @Argument("-b", "--dtbs", metavar="DTB", nargs="+")
     def dtbs(self, *dtbs):
         """Device-tree binary file"""
-        if dtbs is not None:
+        files = self.files["dtbs"]
+
+        if dtbs:
             dtbs = [Path(dtb).resolve() for dtb in dtbs]
-        else:
-            dtbs = []
+
+        dtbs = [*dtbs, *files]
+
+        for dtb in dtbs:
+            logger.info(
+                "Using dtb: '{}'."
+                .format(dtb)
+            )
 
         return dtbs
 
