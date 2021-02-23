@@ -5,7 +5,9 @@ import configparser
 import copy
 import glob
 import logging
+import os
 import re
+import tempfile
 
 from depthcharge_tools import __version__, config_ini, config_files
 from depthcharge_tools.utils import (
@@ -105,6 +107,23 @@ class depthchargectl(
         level = level - int(verbosity) * 10
         logger.setLevel(level)
         return level
+
+    @global_options.add
+    @Argument("--tmpdir", nargs=1)
+    def tmpdir(self, dir_=None):
+        """Directory to keep temporary files."""
+        if dir_ is None:
+            dir_ = tempfile.TemporaryDirectory(
+                prefix="depthchargectl-",
+            )
+            dir_ = self.exitstack.enter_context(dir_)
+
+        dir_ = Path(dir_)
+        os.makedirs(dir_, exist_ok=True)
+
+        logger.debug("Working in temp dir '{}'.".format(dir_))
+
+        return dir_
 
     @Group
     def config_options(self):
