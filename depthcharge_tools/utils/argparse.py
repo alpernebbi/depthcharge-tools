@@ -2,6 +2,7 @@
 
 import argparse
 import copy
+import contextlib
 import functools
 import inspect
 import logging
@@ -720,7 +721,11 @@ class CommandMeta(type):
 
     def __call__(cls, *args, **kwargs):
         instance = super().__call__()
-        return instance(*args, **kwargs)
+        if hasattr(instance, "__enter__"):
+            with instance as inst:
+                return inst(*args, **kwargs)
+        else:
+            return instance(*args, **kwargs)
 
     def main(cls, *argv):
         if len(argv) == 0:
@@ -927,4 +932,12 @@ class CommandMeta(type):
 
 
 class Command(metaclass=CommandMeta):
-    pass
+    def __init__(self):
+        self.exitstack = contextlib.ExitStack()
+
+    def __enter__(self):
+        self.exitstack.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return self.exitstack.__exit__(exc_type, exc_value, traceback)
