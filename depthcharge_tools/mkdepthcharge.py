@@ -268,6 +268,12 @@ class mkdepthcharge(
         # Defaults to distro-specific paths for necessary files.
         keydir, keyblock, signprivate, signpubkey = vboot_keys(*keydirs)
 
+        if keydir:
+            logger.info(
+                "Defaulting to keys from '{}' for missing arguments."
+                .format(keydir)
+            )
+
         if self.keyblock is None:
             self.keyblock = keyblock
         if self.signprivate is None:
