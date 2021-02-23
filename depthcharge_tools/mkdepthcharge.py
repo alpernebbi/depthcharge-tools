@@ -2,8 +2,10 @@
 
 import argparse
 import logging
+import os
 import platform
 import sys
+import tempfile
 
 from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
@@ -12,7 +14,6 @@ from depthcharge_tools.utils import (
     vboot_keys,
     Architecture,
     Path,
-    TemporaryDirectory,
     Command,
     Argument,
     Group,
@@ -169,6 +170,23 @@ class mkdepthcharge(
             )
 
         return Path(file_).resolve()
+
+    @options.add
+    @Argument("--tmpdir", nargs=1)
+    def tmpdir(self, dir_=None):
+        """Directory to keep temporary files."""
+        if dir_ is None:
+            dir_ = tempfile.TemporaryDirectory(
+                prefix="mkdepthcharge-",
+            )
+            dir_ = self.exitstack.enter_context(dir_)
+
+        dir_ = Path(dir_)
+        os.makedirs(dir_, exist_ok=True)
+
+        logger.debug("Working in temp dir '{}'.".format(dir_))
+
+        return dir_
 
     @options.add
     @Argument("-A", "--arch", nargs=1)
@@ -376,111 +394,109 @@ class mkdepthcharge(
         vmlinuz = self.vmlinuz
         initramfs = self.initramfs
         dtbs = self.dtbs
+        tmpdir = self.tmpdir
 
-        with TemporaryDirectory(prefix="mkdepthcharge-") as tmpdir:
-            logger.debug("Working in temp dir '{}'.".format(tmpdir))
+        # mkimage can't open files when they are read-only for some
+        # reason. Copy them into a temp dir in fear of modifying the
+        # originals.
+        vmlinuz = vmlinuz.copy_to(tmpdir)
+        if initramfs is not None:
+            initramfs = initramfs.copy_to(tmpdir)
+        dtbs = [dtb.copy_to(tmpdir) for dtb in dtbs]
 
-            # mkimage can't open files when they are read-only for some
-            # reason. Copy them into a temp dir in fear of modifying the
-            # originals.
-            vmlinuz = vmlinuz.copy_to(tmpdir)
+        # We can add write permissions after we copy the files to temp.
+        vmlinuz.chmod(0o755)
+        if initramfs is not None:
+            initramfs.chmod(0o755)
+        for dtb in dtbs:
+            dtb.chmod(0o755)
+
+        # Debian packs the arm64 kernel uncompressed, but the bindeb-pkg
+        # kernel target packs it as gzip.
+        if vmlinuz.is_gzip():
+            logger.info("Kernel is gzip compressed, decompressing.")
+            vmlinuz = vmlinuz.gunzip()
+
+        # Depthcharge on arm64 with FIT supports these two compressions.
+        if self.compress == "lz4":
+            logger.info("Compressing kernel with lz4.")
+            vmlinuz = vmlinuz.lz4()
+        elif self.compress == "lzma":
+            logger.info("Compressing kernel with lzma.")
+            vmlinuz = vmlinuz.lzma()
+        elif self.compress not in (None, "none"):
+            fmt = "Compression type '{}' is not supported."
+            msg = fmt.format(compress)
+            raise ValueError(msg)
+
+        # vbutil_kernel --config argument wants cmdline as a file.
+        cmdline_file = tmpdir / "kernel.args"
+        cmdline_file.write_text(self.cmdline)
+
+        # vbutil_kernel --bootloader argument is mandatory, but it's
+        # contents don't matter at least on arm systems.
+        if self.bootloader is not None:
+            bootloader = bootloader.copy_to(tmpdir)
+        else:
+            bootloader = tmpdir / "bootloader.bin"
+            bootloader.write_bytes(bytes(512))
+            logger.info("Using dummy file for bootloader.")
+
+        if self.image_format == "fit":
+            fit_image = tmpdir / "depthcharge.fit"
+
+            initramfs_args = []
             if initramfs is not None:
-                initramfs = initramfs.copy_to(tmpdir)
-            dtbs = [dtb.copy_to(tmpdir) for dtb in dtbs]
+                initramfs_args += ["-i", initramfs]
 
-            # We can add write permissions after we copy the files to temp.
-            vmlinuz.chmod(0o755)
-            if initramfs is not None:
-                initramfs.chmod(0o755)
+            dtb_args = []
             for dtb in dtbs:
-                dtb.chmod(0o755)
+                dtb_args += ["-b", dtb]
 
-            # Debian packs the arm64 kernel uncompressed, but the bindeb-pkg
-            # kernel target packs it as gzip.
-            if vmlinuz.is_gzip():
-                logger.info("Kernel is gzip compressed, decompressing.")
-                vmlinuz = vmlinuz.gunzip()
-
-            # Depthcharge on arm64 with FIT supports these two compressions.
-            if self.compress == "lz4":
-                logger.info("Compressing kernel with lz4.")
-                vmlinuz = vmlinuz.lz4()
-            elif self.compress == "lzma":
-                logger.info("Compressing kernel with lzma.")
-                vmlinuz = vmlinuz.lzma()
-            elif self.compress not in (None, "none"):
-                fmt = "Compression type '{}' is not supported."
-                msg = fmt.format(compress)
-                raise ValueError(msg)
-
-            # vbutil_kernel --config argument wants cmdline as a file.
-            cmdline_file = tmpdir / "kernel.args"
-            cmdline_file.write_text(self.cmdline)
-
-            # vbutil_kernel --bootloader argument is mandatory, but it's
-            # contents don't matter at least on arm systems.
-            if self.bootloader is not None:
-                bootloader = bootloader.copy_to(tmpdir)
-            else:
-                bootloader = tmpdir / "bootloader.bin"
-                bootloader.write_bytes(bytes(512))
-                logger.info("Using dummy file for bootloader.")
-
-            if self.image_format == "fit":
-                fit_image = tmpdir / "depthcharge.fit"
-
-                initramfs_args = []
-                if initramfs is not None:
-                    initramfs_args += ["-i", initramfs]
-
-                dtb_args = []
-                for dtb in dtbs:
-                    dtb_args += ["-b", dtb]
-
-                logger.info("Packing files as FIT image:")
-                proc = mkimage(
-                    "-f", "auto",
-                    "-A", self.arch.mkimage,
-                    "-O", "linux",
-                    "-C", self.compress,
-                    "-n", self.name,
-                    *initramfs_args,
-                    *dtb_args,
-                    "-d", vmlinuz,
-                    fit_image,
-                )
-                logger.info(proc.stdout)
-
-                logger.info("Using FIT image as vboot kernel.")
-                vmlinuz_vboot = fit_image
-
-            elif self.image_format == "zimage":
-                logger.info("Using vmlinuz file as vboot kernel.")
-                vmlinuz_vboot = vmlinuz
-
-            logger.info("Packing files as depthcharge image.")
-            proc = vbutil_kernel(
-                "--version", "1",
-                "--arch", self.arch.vboot,
-                "--vmlinuz", vmlinuz_vboot,
-                "--config", cmdline_file,
-                "--bootloader", bootloader,
-                "--keyblock", self.keyblock,
-                "--signprivate", self.signprivate,
-                "--pack", self.output,
+            logger.info("Packing files as FIT image:")
+            proc = mkimage(
+                "-f", "auto",
+                "-A", self.arch.mkimage,
+                "-O", "linux",
+                "-C", self.compress,
+                "-n", self.name,
+                *initramfs_args,
+                *dtb_args,
+                "-d", vmlinuz,
+                fit_image,
             )
             logger.info(proc.stdout)
 
-            logger.info("Verifying built depthcharge image:")
-            signpubkey_args = []
-            if self.signpubkey is not None:
-                signpubkey_args += ["--signpubkey", self.signpubkey]
+            logger.info("Using FIT image as vboot kernel.")
+            vmlinuz_vboot = fit_image
 
-            proc = vbutil_kernel(
-                "--verify", self.output,
-                *signpubkey_args,
-            )
-            logger.info(proc.stdout)
+        elif self.image_format == "zimage":
+            logger.info("Using vmlinuz file as vboot kernel.")
+            vmlinuz_vboot = vmlinuz
+
+        logger.info("Packing files as depthcharge image.")
+        proc = vbutil_kernel(
+            "--version", "1",
+            "--arch", self.arch.vboot,
+            "--vmlinuz", vmlinuz_vboot,
+            "--config", cmdline_file,
+            "--bootloader", bootloader,
+            "--keyblock", self.keyblock,
+            "--signprivate", self.signprivate,
+            "--pack", self.output,
+        )
+        logger.info(proc.stdout)
+
+        logger.info("Verifying built depthcharge image:")
+        signpubkey_args = []
+        if self.signpubkey is not None:
+            signpubkey_args += ["--signpubkey", self.signpubkey]
+
+        proc = vbutil_kernel(
+            "--verify", self.output,
+            *signpubkey_args,
+        )
+        logger.info(proc.stdout)
 
         return self.output
 
