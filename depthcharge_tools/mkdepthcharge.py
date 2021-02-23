@@ -256,6 +256,8 @@ class mkdepthcharge(
             keydirs += [self.keyblock.parent]
         if self.signprivate is not None:
             keydirs += [self.signprivate.parent]
+        if self.signpubkey is not None:
+            keydirs += [self.signpubkey.parent]
 
         for d in sorted(set(keydirs), key=keydirs.index):
             logger.info(
@@ -264,12 +266,14 @@ class mkdepthcharge(
             )
 
         # Defaults to distro-specific paths for necessary files.
-        devkeys, keyblock, signprivate, _ = vboot_keys(*keydirs)
+        devkeys, keyblock, signprivate, signpubkey = vboot_keys(*keydirs)
 
         if self.keyblock is None:
             self.keyblock = keyblock
         if self.signprivate is None:
             self.signprivate = signprivate
+        if self.signpubkey is None:
+            self.signpubkey = signpubkey
 
         # We might still not have the vboot keys after all that.
         if self.keyblock is None:
@@ -281,6 +285,11 @@ class mkdepthcharge(
             raise ValueError("Couldn't find a usable signprivate file.")
         else:
             logger.info("Using signprivate file '{}'.".format(self.signprivate))
+
+        if self.signpubkey is None:
+            logger.warn("Couldn't find a usable signpubkey file.")
+        else:
+            logger.info("Using signpubkey file '{}'.".format(self.signpubkey))
 
 
     @vboot_options.add
@@ -343,6 +352,15 @@ class mkdepthcharge(
     @Argument("--signprivate")
     def signprivate(self, file_):
         """Private key (.vbprivk) to sign the image."""
+        if file_ is not None:
+            file_ = Path(file_).resolve()
+
+        return file_
+
+    @vboot_options.add
+    @Argument("--signpubkey")
+    def signpubkey(self, file_):
+        """Public key (.vbpubk) to verify the image."""
         if file_ is not None:
             file_ = Path(file_).resolve()
 
@@ -448,7 +466,14 @@ class mkdepthcharge(
             logger.info(proc.stdout)
 
             logger.info("Verifying built depthcharge image:")
-            proc = vbutil_kernel("--verify", self.output)
+            signpubkey_args = []
+            if self.signpubkey is not None:
+                signpubkey_args += ["--signpubkey", self.signpubkey]
+
+            proc = vbutil_kernel(
+                "--verify", self.output,
+                *signpubkey_args,
+            )
             logger.info(proc.stdout)
 
         return self.output
