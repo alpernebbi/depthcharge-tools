@@ -247,50 +247,41 @@ class mkdepthcharge(
     def vboot_options(self):
         """Depthcharge image options"""
 
-        devkeys = self.devkeys
-        keyblock = self.keyblock
-        signprivate = self.signprivate
+        keydirs = []
+        if self.devkeys is not None:
+            keydirs += [self.devkeys]
 
-        # Default to distro-specific paths for necessary files.
-        if keyblock is None and signprivate is None:
-            if devkeys is not None:
-                logger.info(
-                    "Searching for keyblock and signprivate in dir '{}'."
-                    .format(devkeys)
-                )
-                _, keyblock, signprivate, _ = vboot_keys(devkeys)
-            else:
-                logger.info("Searching for keyblock and signprivate.")
-                devkeys, keyblock, signprivate, _ = vboot_keys()
+        # If any of the arguments are given, search nearby for others
+        if self.keyblock is not None:
+            keydirs += [self.keyblock.parent]
+        if self.signprivate is not None:
+            keydirs += [self.signprivate.parent]
 
-        elif keyblock is not None and signprivate is not None:
-            pass
+        for d in sorted(set(keydirs), key=keydirs.index):
+            logger.info(
+                "Searching '{}' for vboot keys."
+                .format(d)
+            )
 
-        elif keyblock is None:
-            d = devkeys or signprivate.parent
-            logger.info("Searching for keyblock in dir '{}'.".format(d))
-            devkeys, keyblock, _, _ = vboot_keys(d)
+        # Defaults to distro-specific paths for necessary files.
+        devkeys, keyblock, signprivate, _ = vboot_keys(*keydirs)
 
-        elif signprivate is None:
-            logger.info("Searching for signprivate in dir '{}'.".format(d))
-            devkeys, _, signprivate, _ = vboot_keys(d)
+        if self.keyblock is None:
+            self.keyblock = keyblock
+        if self.signprivate is None:
+            self.signprivate = signprivate
 
         # We might still not have the vboot keys after all that.
-        if keyblock is not None:
-            logger.info("Using keyblock file '{}'.".format(keyblock))
+        if self.keyblock is None:
+            raise ValueError("Couldn't find a usable keyblock file.")
         else:
-            msg = "Couldn't find a usable keyblock file."
-            raise ValueError(msg)
+            logger.info("Using keyblock file '{}'.".format(self.keyblock))
 
-        if signprivate is not None:
-            logger.info("Using signprivate file '{}'.".format(signprivate))
+        if self.signprivate is None:
+            raise ValueError("Couldn't find a usable signprivate file.")
         else:
-            msg = "Couldn't find a usable signprivate file."
-            raise ValueError(msg)
+            logger.info("Using signprivate file '{}'.".format(self.signprivate))
 
-        self.devkeys = devkeys
-        self.keyblock = keyblock
-        self.signprivate = signprivate
 
     @vboot_options.add
     @Argument("-c", "--cmdline", append=True, nargs="+")
