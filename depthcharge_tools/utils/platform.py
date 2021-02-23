@@ -112,11 +112,14 @@ def vboot_keys(*keydirs):
         signprivate = keydir / "kernel_data_key.vbprivk"
         signpubkey = keydir / "kernel_subkey.vbpubk"
 
-        if (
-            keyblock.exists()
-            and signprivate.exists()
-            and signpubkey.exists()
-        ):
+        if not keyblock.exists():
+            keyblock = None
+        if not signprivate.exists():
+            signprivate = None
+        if not signpubkey.exists():
+            signpubkey = None
+
+        if keyblock or signprivate or signpubkey:
             return keydir, keyblock, signprivate, signpubkey
 
     return None, None, None, None
