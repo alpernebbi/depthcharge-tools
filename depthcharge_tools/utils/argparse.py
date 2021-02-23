@@ -934,6 +934,7 @@ class CommandMeta(type):
 class Command(metaclass=CommandMeta):
     def __init__(self):
         self.exitstack = contextlib.ExitStack()
+        self.logger = logging.getLogger(self.__module__)
 
     def __enter__(self):
         self.exitstack.__enter__()
