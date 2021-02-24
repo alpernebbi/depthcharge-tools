@@ -19,7 +19,6 @@ from depthcharge_tools.utils import (
     Argument,
     Group,
     findmnt,
-    sha256sum,
 )
 
 from depthcharge_tools.depthchargectl import depthchargectl
