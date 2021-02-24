@@ -19,6 +19,7 @@ from depthcharge_tools.utils import (
     Argument,
     Group,
     findmnt,
+    fdtget,
 )
 
 from depthcharge_tools.depthchargectl import depthchargectl
@@ -135,7 +136,7 @@ class depthchargectl_build(
         """Device-tree binary files to use instead of searching fdtdir"""
 
         # Device trees are optional based on board configuration.
-        if self.board.dtb_name is not None and len(files) == 0:
+        if self.board.dt_compatible and len(files) == 0:
             if self.fdtdir is None:
                 raise ValueError(
                     "No dtb directory found for version '{}', "
@@ -143,14 +144,21 @@ class depthchargectl_build(
                     .format(self.kernel_release)
                 )
 
-            files = sorted(self.fdtdir.glob(
-                "**/{}".format(self.board.dtb_name)
+            def is_compatible(dt_file):
+                if self.board.dt_compatible == True:
+                    return True
+                proc = fdtget(dt_file, "/", "compatible", check=False)
+                return self.board.dt_compatible in proc.stdout.split()
+
+            files = list(filter(
+                is_compatible,
+                self.fdtdir.glob("**/*.dtb"),
             ))
 
             if len(files) == 0:
                 raise ValueError(
-                    "No dtb file '{}' found in '{}'."
-                    .format(self.board.dtb_name, self.fdtdir)
+                    "No dtb file compatible with '{}' found in '{}'."
+                    .format(self.board.dt_compatible, self.fdtdir)
                 )
 
         if self.board.image_format == "zimage" and len(files) != 0:

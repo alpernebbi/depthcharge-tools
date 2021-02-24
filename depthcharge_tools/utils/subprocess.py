@@ -144,6 +144,11 @@ class CrossystemRunner(ProcessRunner):
         super().__init__("sudo", "crossystem")
 
 
+class FdtgetRunner(ProcessRunner):
+    def __init__(self):
+        super().__init__("fdtget")
+
+
 gzip = GzipRunner()
 lz4 = Lz4Runner()
 lzma = LzmaRunner()
@@ -153,3 +158,4 @@ cgpt = CgptRunner()
 findmnt = FindmntRunner()
 blockdev = BlockdevRunner()
 crossystem = CrossystemRunner()
+fdtget = FdtgetRunner()

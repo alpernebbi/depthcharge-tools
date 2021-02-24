@@ -38,12 +38,14 @@ class Board:
         return self._config.get("codename")
 
     @property
-    def dtb_name(self):
-        return self._config.get("dtb-name")
-
-    @property
     def dt_compatible(self):
-        return self._config.get("dt-compatible")
+        compat = self._config.get("dt-compatible", "False")
+        if compat == "True":
+            return True
+        elif compat == "False":
+            return False
+        else:
+            return compat
 
     @property
     def hwid_match(self):
