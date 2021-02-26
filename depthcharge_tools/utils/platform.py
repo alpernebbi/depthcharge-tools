@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 
-import collections
 import platform
 import re
 import shlex
@@ -289,52 +288,3 @@ class Architecture(str):
             return "x86"
         if self in self.x86_64:
             return "amd64"
-
-
-class SysDevTree(collections.defaultdict):
-    def __init__(self, sys=None, dev=None):
-        super().__init__(set)
-
-        sys = Path(sys or "/sys")
-        dev = Path(dev or "/dev")
-
-        for sysdir in (sys / "class" / "block").iterdir():
-            for device in (sysdir / "dm" / "name").read_lines():
-                self.add(dev / "mapper" / device, dev / sysdir.name)
-
-            for device in (sysdir / "slaves").iterdir():
-                self.add(dev / sysdir.name, dev / device.name)
-
-            for device in (sysdir / "holders").iterdir():
-                self.add(dev / device.name, dev / sysdir.name)
-
-            for device in sysdir.iterdir():
-                if device.name.startswith(sysdir.name):
-                    self.add(dev / device.name, dev / sysdir.name)
-
-        self.sys = sys
-        self.dev = dev
-
-    def add(self, child, parent):
-        if child.exists() and parent.exists():
-            if child != parent:
-                self[child].add(parent)
-
-    def leaves(self, *children):
-        ls = set()
-
-        if not children:
-            ls.update(*self.values())
-            ls.difference_update(self.keys())
-            return ls
-
-        children = [Path(c).resolve() for c in children]
-        while children:
-            c = children.pop(0)
-            if c in self:
-                for p in self[c]:
-                    children.append(p)
-            else:
-                ls.add(c)
-
-        return ls

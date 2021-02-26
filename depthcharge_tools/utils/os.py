@@ -1,11 +1,12 @@
 #! /usr/bin/env python3
 
+import collections
+import pathlib
 import re
 
 from depthcharge_tools.utils.pathlib import Path
 from depthcharge_tools.utils.platform import (
     kernel_cmdline,
-    SysDevTree
 )
 from depthcharge_tools.utils.subprocess import (
     cgpt,
@@ -14,8 +15,99 @@ from depthcharge_tools.utils.subprocess import (
 )
 
 
+class DiskGraph:
+    def __init__(self, sys=None, dev=None):
+        self._edges = collections.defaultdict(set)
+
+        sys = pathlib.Path(sys or "/sys")
+        dev = pathlib.Path(dev or "/dev")
+
+        def iterdir(path):
+            return path.iterdir() if path.is_dir() else []
+
+        def read_lines(path):
+            return path.read_text().splitlines() if path.is_file() else []
+
+        for sysdir in iterdir(sys / "class" / "block"):
+            for device in read_lines(sysdir / "dm" / "name"):
+                self.add_edge(dev / sysdir.name, dev / "mapper" / device)
+
+            for device in iterdir(sysdir / "slaves"):
+                self.add_edge(dev / device.name, dev / sysdir.name)
+
+            for device in iterdir(sysdir / "holders"):
+                self.add_edge(dev / sysdir.name, dev / device.name)
+
+            for device in sysdir.iterdir():
+                if device.name.startswith(sysdir.name):
+                    self.add_edge(dev / sysdir.name, dev / device.name)
+
+        self._sys = sys
+        self._dev = dev
+
+    def add_edge(self, node, child):
+        node = pathlib.Path(node).resolve()
+        child = pathlib.Path(child).resolve()
+
+        if node.exists() and child.exists() and node != child:
+            self._edges[node].add(child)
+
+    def children(self, *nodes):
+        nodes = set(pathlib.Path(n).resolve() for n in nodes)
+        node_children = set()
+        for node in nodes:
+            node_children.update(self._edges[node])
+
+        return node_children
+
+    def parents(self, *nodes):
+        nodes = set(pathlib.Path(n).resolve() for n in nodes)
+        node_parents = set()
+        for parent, children in self._edges.items():
+            if children.intersection(nodes):
+                node_parents.add(parent)
+
+        return node_parents
+
+    def leaves(self, *nodes):
+        nodes = set(pathlib.Path(n).resolve() for n in nodes)
+
+        leaves = set()
+        if len(nodes) == 0:
+            leaves.update(*self._edges.values())
+            leaves.difference_update(self._edges.keys())
+            return leaves
+
+        leaves = self.leaves()
+        node_leaves = set()
+        while nodes:
+            node_leaves.update(nodes.intersection(leaves))
+            nodes.difference_update(node_leaves)
+            nodes = self.children(*nodes)
+
+        return node_leaves
+
+    def roots(self, *nodes):
+        nodes = set(pathlib.Path(n).resolve() for n in nodes)
+
+        roots = set()
+        if len(nodes) == 0:
+            roots.update(self._edges.keys())
+            roots.difference_update(*self._edges.values())
+            return roots
+
+        roots = self.roots()
+        node_roots = set()
+        while nodes:
+            node_roots.update(nodes.intersection(roots))
+            nodes.difference_update(node_roots)
+            nodes = self.parents(*nodes)
+
+        return node_roots
+
+
 class Disk:
-    tree = SysDevTree()
+    graph = DiskGraph()
 
     def __init__(self, path):
         if isinstance(path, Disk):
@@ -50,9 +142,9 @@ class Disk:
                 children.append(arg)
 
         disks = []
-        for path in sorted(Disk.tree.leaves(*children)):
+        for path in sorted(Disk.graph.roots(*children)):
             try:
-                dev = Disk(Path("/dev") / path)
+                dev = Disk(path)
                 disks.append(dev)
             except ValueError:
                 pass
