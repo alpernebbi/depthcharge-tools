@@ -3,6 +3,7 @@
 import collections
 import pathlib
 import re
+import shlex
 
 from depthcharge_tools.utils.pathlib import Path
 from depthcharge_tools.utils.platform import (
@@ -16,11 +17,21 @@ from depthcharge_tools.utils.subprocess import (
 
 
 class DiskGraph:
-    def __init__(self, sys=None, dev=None):
+    def __init__(
+        self,
+        sys="/sys",
+        dev="/dev",
+        fstab="/etc/fstab",
+        mtab="/etc/mtab",
+        mountinfo="/proc/self/mountinfo",
+    ):
         self._edges = collections.defaultdict(set)
 
-        sys = pathlib.Path(sys or "/sys")
-        dev = pathlib.Path(dev or "/dev")
+        sys = pathlib.Path(sys)
+        dev = pathlib.Path(dev)
+        fstab = pathlib.Path(fstab)
+        mtab = pathlib.Path(mtab)
+        mountinfo = pathlib.Path(mountinfo)
 
         def iterdir(path):
             return path.iterdir() if path.is_dir() else []
@@ -42,8 +53,32 @@ class DiskGraph:
                 if device.name.startswith(sysdir.name):
                     self.add_edge(dev / sysdir.name, dev / device.name)
 
+        fstab_mounts = {}
+        for line in read_lines(fstab):
+            if line and not line.startswith("#"):
+                fields = shlex.split(line)
+                device, mount = fields[0], fields[1]
+                fstab_mounts[mount] = device
+
+        mtab_mounts = {}
+        for line in read_lines(mtab):
+            if line and not line.startswith("#"):
+                fields = shlex.split(line)
+                device, mount = fields[0], fields[1]
+                mtab_mounts[mount] = device
+
+        mountinfo_mounts = {}
+        for line in read_lines(mountinfo):
+            if line and not line.startswith("#"):
+                fields = shlex.split(line)
+                device, mount = fields[9], fields[4]
+                mountinfo_mounts[mount] = device
+
         self._sys = sys
         self._dev = dev
+        self._fstab = fstab_mounts
+        self._mtab = mtab_mounts
+        self._mountinfo = mountinfo_mounts
 
     def add_edge(self, node, child):
         node = pathlib.Path(node).resolve()
