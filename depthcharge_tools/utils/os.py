@@ -80,6 +80,58 @@ class DiskGraph:
         self._mtab = mtab_mounts
         self._mountinfo = mountinfo_mounts
 
+    def evaluate(self, device):
+        dev = self._dev
+
+        if device is None:
+            return None
+
+        elif device.startswith("ID="):
+            label = device[len("ID="):]
+            device = dev / "disk" / "by-id" / label
+
+        elif device.startswith("LABEL="):
+            label = device[len("LABEL="):]
+            device = dev / "disk" / "by-label" / label
+
+        elif device.startswith("PARTLABEL="):
+            partlabel = device[len("PARTLABEL="):]
+            device = dev / "disk" / "by-partlabel" / partlabel
+
+        elif device.startswith("UUID="):
+            uuid = device[len("UUID="):]
+
+            device = dev / "disk" / "by-uuid" / uuid
+            if not device.exists():
+                device = dev / "disk" / "by-uuid" / uuid.lower()
+
+        elif device.startswith("PARTUUID="):
+            partuuid, _, partnroff = (
+                device[len("PARTUUID="):].partition("/PARTNROFF=")
+            )
+
+            device = dev / "disk" / "by-partuuid" / partuuid
+            if not device.exists():
+                device = dev / "disk" / "by-partuuid" / partuuid.lower()
+
+            if partnroff:
+                device = device.resolve()
+                match = re.match("(.*[^0-9])([0-9]+)$", device.name)
+                if not match:
+                    return None
+                prefix, partno = match.groups()
+                partno = str(int(partno) + int(partnroff))
+                device = device.with_name("{}{}".format(prefix, partno))
+
+        elif re.match("[0-9]+:[0-9]+", device):
+            device = dev / "block" / device
+
+        device = Path(device).resolve()
+        if not device.exists() or dev not in device.parents:
+            return None
+
+        return device
+
     def add_edge(self, node, child):
         node = pathlib.Path(node).resolve()
         child = pathlib.Path(child).resolve()
