@@ -115,25 +115,6 @@ class CgptRunner(ProcessRunner):
         return proc
 
 
-class FindmntRunner(ProcessRunner):
-    def __init__(self):
-        super().__init__("findmnt")
-
-    def find(self, mntpoint, fstab=False):
-        args = ["-M", mntpoint, "--evaluate", "-n", "-o", "SOURCE"]
-        if fstab:
-            args.insert(0, "--fstab")
-        return self(*args, check=False)
-
-    def fstab(self, mntpoint):
-        args = ["-M", mntpoint, "--fstab", "-n", "-o", "SOURCE"]
-        return self(*args, check=False)
-
-    def kernel(self, mntpoint):
-        args = ["-M", mntpoint, "--kernel", "-n", "-o", "SOURCE"]
-        return self(*args, check=False)
-
-
 class BlockdevRunner(ProcessRunner):
     def __init__(self):
         super().__init__("sudo", "blockdev")
@@ -155,7 +136,6 @@ lzma = LzmaRunner()
 mkimage = MkimageRunner()
 vbutil_kernel = VbutilKernelRunner()
 cgpt = CgptRunner()
-findmnt = FindmntRunner()
 blockdev = BlockdevRunner()
 crossystem = CrossystemRunner()
 fdtget = FdtgetRunner()
