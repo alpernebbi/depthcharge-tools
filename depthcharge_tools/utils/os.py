@@ -328,6 +328,14 @@ class Disk:
             for n in proc.stdout.splitlines()
         ]
 
+    def __hash__(self):
+        return hash((self.path,))
+
+    def __eq__(self, other):
+        if isinstance(other, Disk):
+            return self.path == other.path
+        return False
+
     def __repr__(self):
         cls = self.__class__.__name__
         return "{}('{}')".format(cls, self.path)
@@ -427,6 +435,18 @@ class Partition:
 
         proc = cgpt("show", "-s", "-i", str(self.partno), self.disk.path)
         return int(proc.stdout) * 512
+
+    def __hash__(self):
+        return hash((self.path, self.disk, self.partno))
+
+    def __eq__(self, other):
+        if isinstance(other, Partition):
+            return (
+                self.path == other.path
+                and self.disk == other.disk
+                and self.partno == other.partno
+            )
+        return False
 
     def __repr__(self):
         cls = self.__class__.__name__
