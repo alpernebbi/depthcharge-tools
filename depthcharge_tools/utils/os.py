@@ -11,7 +11,6 @@ from depthcharge_tools.utils.platform import (
 )
 from depthcharge_tools.utils.subprocess import (
     cgpt,
-    findmnt,
     blockdev,
 )
 
@@ -280,57 +279,6 @@ class Disk:
             raise ValueError(msg)
 
         self.path = path
-
-    def disks(*args, bootable=False):
-        if bootable:
-            boot = Disk.by_mount("/boot")
-            if boot is not None:
-                args = (*args, boot)
-
-            root = Disk.by_mount("/")
-            if root is not None:
-                args = (*args, root)
-
-        children = []
-        for arg in args:
-            if isinstance(arg, Partition):
-                children.append(arg.path or arg.disk.path)
-            elif isinstance(arg, Disk):
-                children.append(arg.path)
-            elif arg is not None:
-                children.append(arg)
-
-        disks = []
-        for path in sorted(
-            system_disks.roots(*children),
-            key=lambda d: d.path,
-        ):
-            try:
-                dev = Disk(path)
-                disks.append(dev)
-            except ValueError:
-                pass
-
-        return disks
-
-    @classmethod
-    def by_mount(cls, mnt):
-        for fstab in (True, False):
-            proc = findmnt.find(mnt, fstab=True)
-            if proc.returncode == 0:
-                return Path(proc.stdout.strip())
-
-    @classmethod
-    def by_partuuid(cls, partuuid):
-        proc = cgpt("find", "-1", "-u", partuuid)
-        return Path(proc.stdout.strip())
-
-    @classmethod
-    def by_kern_guid(cls):
-        for arg in kernel_cmdline():
-            lhs, _, rhs = arg.partition("=")
-            if lhs == "kern_guid":
-                return cls.by_partuuid(rhs)
 
     def partition(self, partno):
         return Partition(self, partno)
