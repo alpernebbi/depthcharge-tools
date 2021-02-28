@@ -7,7 +7,7 @@ import types
 
 from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
-    Disk,
+    system_disks,
     Partition,
     Command,
     Argument,
@@ -41,7 +41,7 @@ class depthchargectl_target(
         # Disks containing /boot and / should be available during boot,
         # so we target only them by default.
         if not disks:
-            disks = Disk.disks(bootable=True)
+            disks = system_disks.bootable_disks()
 
         if not disks:
             raise ValueError(
@@ -61,7 +61,7 @@ class depthchargectl_target(
         # For arguments which are disks, search all their partitions.
         if disks:
             logger.info("Finding disks for targets '{}'.".format(disks))
-            for d in Disk.disks(*disks):
+            for d in system_disks.roots(*disks):
                 logger.info("Using '{}' as a disk.".format(d))
                 partitions.extend(d.partitions())
 
@@ -110,7 +110,7 @@ class depthchargectl_target(
     def __call__(self):
         # We will need to check partitions against this if allow_current
         # is false.
-        current = Disk.by_kern_guid()
+        current = system_disks.by_kern_guid()
 
         # Given a single partition, check if the partition is valid.
         if len(self.partitions) == 1 and len(self.disks) == 0:
@@ -156,7 +156,7 @@ class depthchargectl_target(
             logger.info(
                 "Checking if targeted partition is currently booted one."
             )
-            if not self.allow_current and part.path == current:
+            if not self.allow_current and part.path == current.path:
                 raise OSError(
                     6,
                     "Partition '{}' is the currently booted parttiion."
@@ -183,7 +183,7 @@ class depthchargectl_target(
                 )
                 continue
 
-            if not self.allow_current and p.path == current:
+            if not self.allow_current and p.path == current.path:
                 logger.info(
                     "Skipping currently booted partition '{}'."
                     .format(p)

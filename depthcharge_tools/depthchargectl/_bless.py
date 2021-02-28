@@ -5,7 +5,7 @@ import logging
 
 from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
-    Disk,
+    system_disks,
     Partition,
     Command,
     Argument,
@@ -39,13 +39,13 @@ class depthchargectl_bless(
         """ChromeOS Kernel partition to manage"""
         if device is None:
             try:
-                device = Disk.by_kern_guid()
+                device = system_disks.by_kern_guid()
             except:
                 raise ValueError(
                     "Couldn't figure out the currently booted partition."
                 )
 
-        return Partition(device)
+        return device
 
     @Group
     def options(self):

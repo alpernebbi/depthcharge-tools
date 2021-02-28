@@ -5,7 +5,7 @@ import logging
 
 from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
-    Disk,
+    system_disks,
     Command,
     Argument,
     Group,
@@ -38,13 +38,13 @@ class depthchargectl_list(
 
         if self.all_disks:
             logger.info("Searching all disks.")
-            disks = Disk.disks()
+            disks = system_disks.roots()
         elif disks:
             logger.info("Searching real disks for {}.".format(disks))
-            disks = Disk.disks(*disks)
+            disks = system_disks.roots(*disks)
         else:
             logger.info("Searching bootable disks.")
-            disks = Disk.disks(bootable=True)
+            disks = system_disks.bootable_disks()
 
         if disks:
             logger.info("Using disks: {}.".format(disks))

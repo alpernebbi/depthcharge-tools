@@ -9,16 +9,15 @@ import textwrap
 from depthcharge_tools import __version__
 from depthcharge_tools.mkdepthcharge import mkdepthcharge
 from depthcharge_tools.utils import (
+    system_disks,
     installed_kernels,
     root_requires_initramfs,
-    Disk,
     Partition,
     Path,
     Kernel,
     Command,
     Argument,
     Group,
-    findmnt,
     fdtget,
 )
 
@@ -194,17 +193,17 @@ class depthchargectl_build(
 
         if root is None:
             logger.info("Trying to figure out a root for cmdline.")
-            root = findmnt.fstab("/").stdout.rstrip("\n")
+            root = system_disks.by_mountpoint("/", fstab_only=True)
 
             if root:
                 logger.info("Using root as set in /etc/fstab.")
             else:
                 logger.warn(
                     "Couldn't figure out a root cmdline parameter from "
-                    "/etc/fstab. Will use '{}' from kernel."
+                    "/etc/fstab. Will use currently mounted '{}'."
                     .format(root)
                 )
-                root = findmnt.kernel("/").stdout.rstrip("\n")
+                root = system_disks.by_mountpoint("/")
 
         if not root:
             raise ValueError(

@@ -7,7 +7,7 @@ from depthcharge_tools import (
     __version__,
 )
 from depthcharge_tools.utils import (
-    Disk,
+    system_disks,
     Kernel,
     Path,
     Command,
@@ -106,7 +106,7 @@ class depthchargectl_remove(
             .format(image)
         )
         badparts = []
-        for disk in Disk.disks(bootable=True):
+        for disk in system_disks.bootable_disks():
             for part in disk.partitions():
                 logger.info("Checking partition '{}'.".format(part))
 
@@ -121,7 +121,7 @@ class depthchargectl_remove(
         if not badparts:
             logger.info("No partitions contain the given image.")
 
-        current = Disk.by_kern_guid()
+        current = system_disks.by_kern_guid()
         for part in badparts:
             if part.path == current and not self.force:
                 raise ValueError(

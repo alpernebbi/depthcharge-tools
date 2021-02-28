@@ -9,11 +9,11 @@ from depthcharge_tools import (
 from depthcharge_tools.utils import (
     Kernel,
     Path,
-    Disk,
     Command,
     Argument,
     Group,
     installed_kernels,
+    system_disks,
 )
 
 
@@ -160,8 +160,8 @@ class depthchargectl_write(
 
         # Check and warn if we targeted the currently booted partition,
         # as that usually means it's the only partition.
-        current = Disk.by_kern_guid()
-        if self.allow_current and target.path == current:
+        current = system_disks.by_kern_guid()
+        if self.allow_current and target.path == current.path:
             logger.warn(
                 "Overwriting the currently booted partition '{}'. "
                 "This might make your system unbootable."
