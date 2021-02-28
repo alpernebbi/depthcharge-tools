@@ -11,7 +11,6 @@ from depthcharge_tools.utils.platform import (
 )
 from depthcharge_tools.utils.subprocess import (
     cgpt,
-    blockdev,
 )
 
 
@@ -290,6 +289,15 @@ class Disk:
             for n in proc.stdout.splitlines()
         ]
 
+    @property
+    def size(self):
+        if self.path.is_file():
+            return self.path.stat().st_size
+
+        if self.path.is_block_device():
+             sysdir = Path("/sys/class/block") / self.path.name
+             return int((sysdir / "size").read_text()) * 512
+
     def __hash__(self):
         return hash((self.path,))
 
@@ -391,12 +399,18 @@ class Partition:
 
     @property
     def size(self):
-        if self.path is not None:
-            proc = blockdev("--getsize64", self.path)
-            return int(proc.stdout)
+        if self.path is None:
+            proc = cgpt("show", "-s", "-i", str(self.partno), self.disk.path)
+            blocks = int(proc.stdout)
+            return blocks * 512
 
-        proc = cgpt("show", "-s", "-i", str(self.partno), self.disk.path)
-        return int(proc.stdout) * 512
+        if self.path.is_file():
+            return self.path.stat().st_size
+
+        if self.path.is_block_device():
+             sysdir = Path("/sys/class/block") / self.path.name
+             blocks = int((sysdir / "size").read_text())
+             return blocks * 512
 
     def __hash__(self):
         return hash((self.path, self.disk, self.partno))
