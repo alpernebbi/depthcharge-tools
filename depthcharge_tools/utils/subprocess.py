@@ -115,11 +115,6 @@ class CgptRunner(ProcessRunner):
         return proc
 
 
-class BlockdevRunner(ProcessRunner):
-    def __init__(self):
-        super().__init__("sudo", "blockdev")
-
-
 class CrossystemRunner(ProcessRunner):
     def __init__(self):
         super().__init__("sudo", "crossystem")
@@ -136,6 +131,5 @@ lzma = LzmaRunner()
 mkimage = MkimageRunner()
 vbutil_kernel = VbutilKernelRunner()
 cgpt = CgptRunner()
-blockdev = BlockdevRunner()
 crossystem = CrossystemRunner()
 fdtget = FdtgetRunner()
