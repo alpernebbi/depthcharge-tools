@@ -87,19 +87,30 @@ class DiskGraph:
             return None
 
         elif device.startswith("ID="):
-            label = device[len("ID="):]
-            device = dev / "disk" / "by-id" / label
+            id_ = device[len("ID="):]
+            if not id_:
+                return None
+
+            device = dev / "disk" / "by-id" / id_
 
         elif device.startswith("LABEL="):
             label = device[len("LABEL="):]
+            if not label:
+                return None
+
             device = dev / "disk" / "by-label" / label
 
         elif device.startswith("PARTLABEL="):
             partlabel = device[len("PARTLABEL="):]
+            if not partlabel:
+                return None
+
             device = dev / "disk" / "by-partlabel" / partlabel
 
         elif device.startswith("UUID="):
             uuid = device[len("UUID="):]
+            if not uuid:
+                return None
 
             device = dev / "disk" / "by-uuid" / uuid
             if not device.exists():
@@ -109,6 +120,8 @@ class DiskGraph:
             partuuid, _, partnroff = (
                 device[len("PARTUUID="):].partition("/PARTNROFF=")
             )
+            if not partuuid:
+                return None
 
             device = dev / "disk" / "by-partuuid" / partuuid
             if not device.exists():
