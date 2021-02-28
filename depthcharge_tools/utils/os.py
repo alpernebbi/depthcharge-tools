@@ -74,11 +74,21 @@ class DiskGraph:
                 device, mount = fields[9], fields[4]
                 mountinfo_mounts[mount] = device
 
+        mounts = collections.ChainMap(
+            fstab_mounts,
+            mountinfo_mounts,
+            mtab_mounts,
+        )
+
         self._sys = sys
         self._dev = dev
-        self._fstab = fstab_mounts
-        self._mtab = mtab_mounts
-        self._mountinfo = mountinfo_mounts
+        self._fstab = fstab
+        self._mtab = mtab
+        self._mountinfo = mountinfo
+        self._fstab_mounts = fstab_mounts
+        self._mtab_mounts = mtab_mounts
+        self._mountinfo_mounts = mountinfo_mounts
+        self._mounts = mounts
 
     def evaluate(self, device):
         dev = self._dev
@@ -144,6 +154,44 @@ class DiskGraph:
             return None
 
         return device
+
+    def by_mountpoint(self, mountpoint, fstab_only=False):
+        if not Path(mountpoint).exists():
+            return None
+
+        if fstab_only:
+            device = self._fstab_mounts.get(mountpoint)
+        else:
+            device = self._mounts.get(mountpoint)
+
+        return device
+
+    def by_id(self, id_):
+        return self.evaluate("ID={}".format(id_))
+
+    def by_label(self, label):
+        return self.evaluate("LABEL={}".format(label))
+
+    def by_partlabel(self, partlabel):
+        return self.evaluate("PARTLABEL={}".format(partlabel))
+
+    def by_uuid(self, uuid):
+        return self.evaluate("UUID={}".format(uuid))
+
+    def by_partuuid(self, partuuid):
+        return self.evaluate("PARTUUID={}".format(partuuid))
+
+    def by_kern_guid(self):
+        for arg in kernel_cmdline():
+            lhs, _, rhs = arg.partition("=")
+            if lhs == "kern_guid":
+                return self.by_partuuid(rhs)
+
+    def bootable_disks(self):
+        root = self.by_mountpoint("/")
+        boot = self.by_mountpoint("/boot")
+        disks = (self.evaluate(d) for d in (root, boot) if d is not None)
+        return self.roots(*disks)
 
     def add_edge(self, node, child):
         node = pathlib.Path(node).resolve()
