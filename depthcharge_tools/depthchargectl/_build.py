@@ -226,7 +226,7 @@ class depthchargectl_build(
                 "Prepending 'root={}' to kernel cmdline."
                 .format(self.root)
             )
-            cmdline.append("root={}".format(self.root))
+            cmdline.insert(0, "root={}".format(self.root))
 
         if self.ignore_initramfs:
             logger.warn(
