@@ -16,7 +16,7 @@ from depthcharge_tools.utils.subprocess import (
 )
 
 
-class DiskGraph:
+class Disks:
     def __init__(
         self,
         sys="/sys",
@@ -25,13 +25,13 @@ class DiskGraph:
         mtab="/etc/mtab",
         mountinfo="/proc/self/mountinfo",
     ):
-        self._edges = collections.defaultdict(set)
+        self._edges = {}
 
-        sys = pathlib.Path(sys)
-        dev = pathlib.Path(dev)
-        fstab = pathlib.Path(fstab)
-        mtab = pathlib.Path(mtab)
-        mountinfo = pathlib.Path(mountinfo)
+        self._sys = sys = pathlib.Path(sys)
+        self._dev = dev = pathlib.Path(dev)
+        self._fstab = fstab = pathlib.Path(fstab)
+        self._mtab = mtab = pathlib.Path(mtab)
+        self._mountinfo = mountinfo = pathlib.Path(mountinfo)
 
         def iterdir(path):
             return path.iterdir() if path.is_dir() else []
@@ -80,15 +80,13 @@ class DiskGraph:
             mtab_mounts,
         )
 
-        self._sys = sys
-        self._dev = dev
-        self._fstab = fstab
-        self._mtab = mtab
-        self._mountinfo = mountinfo
         self._fstab_mounts = fstab_mounts
         self._mtab_mounts = mtab_mounts
         self._mountinfo_mounts = mountinfo_mounts
         self._mounts = mounts
+
+    def __getitem__(self, key):
+        return self.evaluate(key)
 
     def evaluate(self, device):
         dev = self._dev
@@ -96,7 +94,13 @@ class DiskGraph:
         if device is None:
             return None
 
-        elif device.startswith("ID="):
+        elif isinstance(device, pathlib.Path):
+            device = str(device)
+
+        elif isinstance(device, (Disk, Partition)):
+            device = str(device.path)
+
+        if device.startswith("ID="):
             id_ = device[len("ID="):]
             if not id_:
                 return None
@@ -153,18 +157,22 @@ class DiskGraph:
         if not device.exists() or dev not in device.parents:
             return None
 
-        return device
+        try:
+            return Partition(device)
+        except:
+            return Disk(device)
 
     def by_mountpoint(self, mountpoint, fstab_only=False):
         if not Path(mountpoint).exists():
             return None
 
         if fstab_only:
+            # We want the form in the fstab, e.g. PARTUUID=*
             device = self._fstab_mounts.get(mountpoint)
+            return device
         else:
             device = self._mounts.get(mountpoint)
-
-        return device
+            return self.evaluate(device)
 
     def by_id(self, id_):
         return self.evaluate("ID={}".format(id_))
@@ -190,26 +198,31 @@ class DiskGraph:
     def bootable_disks(self):
         root = self.by_mountpoint("/")
         boot = self.by_mountpoint("/boot")
-        disks = (self.evaluate(d) for d in (root, boot) if d is not None)
+        disks = set(self.evaluate(d) for d in (root, boot))
         return self.roots(*disks)
 
     def add_edge(self, node, child):
-        node = pathlib.Path(node).resolve()
-        child = pathlib.Path(child).resolve()
+        node = self.evaluate(node)
+        child = self.evaluate(child)
 
-        if node.exists() and child.exists() and node != child:
-            self._edges[node].add(child)
+        if node is None or child is None or node == child:
+            return
+
+        if node not in self._edges:
+            self._edges[node] = set()
+
+        self._edges[node].add(child)
 
     def children(self, *nodes):
-        nodes = set(pathlib.Path(n).resolve() for n in nodes)
+        nodes = set(self.evaluate(n) for n in nodes)
         node_children = set()
         for node in nodes:
-            node_children.update(self._edges[node])
+            node_children.update(self._edges.get(node, set()))
 
         return node_children
 
     def parents(self, *nodes):
-        nodes = set(pathlib.Path(n).resolve() for n in nodes)
+        nodes = set(self.evaluate(n) for n in nodes)
         node_parents = set()
         for parent, children in self._edges.items():
             if children.intersection(nodes):
@@ -218,7 +231,7 @@ class DiskGraph:
         return node_parents
 
     def leaves(self, *nodes):
-        nodes = set(pathlib.Path(n).resolve() for n in nodes)
+        nodes = set(self.evaluate(n) for n in nodes)
 
         leaves = set()
         if len(nodes) == 0:
@@ -236,7 +249,7 @@ class DiskGraph:
         return node_leaves
 
     def roots(self, *nodes):
-        nodes = set(pathlib.Path(n).resolve() for n in nodes)
+        nodes = set(self.evaluate(n) for n in nodes)
 
         roots = set()
         if len(nodes) == 0:
@@ -255,8 +268,6 @@ class DiskGraph:
 
 
 class Disk:
-    graph = DiskGraph()
-
     def __init__(self, path):
         if isinstance(path, Disk):
             path = path.path
@@ -290,7 +301,10 @@ class Disk:
                 children.append(arg)
 
         disks = []
-        for path in sorted(Disk.graph.roots(*children)):
+        for path in sorted(
+            system_disks.roots(*children),
+            key=lambda d: d.path,
+        ):
             try:
                 dev = Disk(path)
                 disks.append(dev)
@@ -454,3 +468,5 @@ class Partition:
             return "{}('{}')".format(cls, self.path)
         else:
             return "{}('{}', {})".format(cls, self.disk.path, self.partno)
+
+system_disks = Disks()
