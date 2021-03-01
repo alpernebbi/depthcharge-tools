@@ -121,7 +121,7 @@ class depthchargectl_list(
 
         # Get the actual table data we want to print
         for disk in self.disks:
-            for part in disk.partitions():
+            for part in disk.cros_partitions():
                 rows.append([
                     self.formats.get(c, "").format(part)
                     for c in columns

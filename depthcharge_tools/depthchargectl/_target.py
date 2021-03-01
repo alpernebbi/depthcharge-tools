@@ -8,6 +8,7 @@ import types
 from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     system_disks,
+    CrosPartition,
     Partition,
     Command,
     Argument,
@@ -63,7 +64,7 @@ class depthchargectl_target(
             logger.info("Finding disks for targets '{}'.".format(disks))
             for d in system_disks.roots(*disks):
                 logger.info("Using '{}' as a disk.".format(d))
-                partitions.extend(d.partitions())
+                partitions.extend(d.cros_partitions())
 
         self.disks = disks
         self.partitions = partitions
@@ -146,7 +147,7 @@ class depthchargectl_target(
             logger.info(
                 "Checking if targeted partition's type is Chrome OS Kernel."
             )
-            if part.partno not in (p.partno for p in part.disk.partitions()):
+            if part not in part.disk.cros_partitions():
                 raise OSError(
                     5,
                     "Partition '{}' is not of type Chrome OS Kernel."
@@ -191,7 +192,7 @@ class depthchargectl_target(
                 continue
 
             logger.info("Partition '{}' is usable.".format(p))
-            good_partitions.append(p)
+            good_partitions.append(CrosPartition(p.path))
 
         # Get the least-successful, least-priority, least-tries-left
         # partition in that order of preference.

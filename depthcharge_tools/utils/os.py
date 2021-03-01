@@ -283,9 +283,16 @@ class Disk:
         return Partition(self, partno)
 
     def partitions(self):
+        proc = cgpt("show", "-q", "-n", self.path)
+        return [
+            Partition(self, int(shlex.split(line)[2]))
+            for line in proc.stdout.splitlines()
+        ]
+
+    def cros_partitions(self):
         proc = cgpt("find", "-n", "-t", "kernel", self.path)
         return [
-            Partition(self, int(n))
+            CrosPartition(self, int(n))
             for n in proc.stdout.splitlines()
         ]
 
@@ -361,6 +368,42 @@ class Partition:
         self.partno = partno
 
     @property
+    def size(self):
+        if self.path is None:
+            proc = cgpt("show", "-s", "-i", str(self.partno), self.disk.path)
+            blocks = int(proc.stdout)
+            return blocks * 512
+
+        if self.path.is_file():
+            return self.path.stat().st_size
+
+        if self.path.is_block_device():
+             sysdir = Path("/sys/class/block") / self.path.name
+             blocks = int((sysdir / "size").read_text())
+             return blocks * 512
+
+    def __hash__(self):
+        return hash((self.path, self.disk, self.partno))
+
+    def __eq__(self, other):
+        if isinstance(other, Partition):
+            return (
+                self.path == other.path
+                and self.disk == other.disk
+                and self.partno == other.partno
+            )
+        return False
+
+    def __repr__(self):
+        cls = self.__class__.__name__
+        if self.path is not None:
+            return "{}('{}')".format(cls, self.path)
+        else:
+            return "{}('{}', {})".format(cls, self.disk.path, self.partno)
+
+
+class CrosPartition(Partition):
+    @property
     def attribute(self):
         proc = cgpt("show", "-A", "-i", str(self.partno), self.disk.path)
         attr = int(proc.stdout, 16)
@@ -397,38 +440,5 @@ class Partition:
     def prioritize(self):
         cgpt("prioritize", "-i", str(self.partno), self.disk.path)
 
-    @property
-    def size(self):
-        if self.path is None:
-            proc = cgpt("show", "-s", "-i", str(self.partno), self.disk.path)
-            blocks = int(proc.stdout)
-            return blocks * 512
-
-        if self.path.is_file():
-            return self.path.stat().st_size
-
-        if self.path.is_block_device():
-             sysdir = Path("/sys/class/block") / self.path.name
-             blocks = int((sysdir / "size").read_text())
-             return blocks * 512
-
-    def __hash__(self):
-        return hash((self.path, self.disk, self.partno))
-
-    def __eq__(self, other):
-        if isinstance(other, Partition):
-            return (
-                self.path == other.path
-                and self.disk == other.disk
-                and self.partno == other.partno
-            )
-        return False
-
-    def __repr__(self):
-        cls = self.__class__.__name__
-        if self.path is not None:
-            return "{}('{}')".format(cls, self.path)
-        else:
-            return "{}('{}', {})".format(cls, self.disk.path, self.partno)
 
 system_disks = Disks()

@@ -7,6 +7,7 @@ from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     system_disks,
     Partition,
+    CrosPartition,
     Command,
     Argument,
     Group,
@@ -44,8 +45,15 @@ class depthchargectl_bless(
                 raise ValueError(
                     "Couldn't figure out the currently booted partition."
                 )
+        else:
+            device = Partition(device)
 
-        return device
+        if device not in device.disk.cros_partitions():
+            raise ValueError(
+                "Partition '{}' is not a ChromeOS Kernel partition"
+            )
+
+        return CrosPartition(device.path)
 
     @Group
     def options(self):

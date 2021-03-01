@@ -107,7 +107,7 @@ class depthchargectl_remove(
         )
         badparts = []
         for disk in system_disks.bootable_disks():
-            for part in disk.partitions():
+            for part in disk.cros_partitions():
                 logger.info("Checking partition '{}'.".format(part))
 
                 # It's OK to check only the vblock header, as that
