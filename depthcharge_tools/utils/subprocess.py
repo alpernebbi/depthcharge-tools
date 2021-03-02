@@ -114,6 +114,58 @@ class CgptRunner(ProcessRunner):
 
         return proc
 
+    def get_raw_attribute(self, disk, partno):
+        proc = self("show", "-A", "-i", str(partno), str(disk))
+        attribute = int(proc.stdout, 16)
+        return attribute
+
+    def set_raw_attribute(self, disk, partno, attribute):
+        self("add", "-A", hex(attribute), "-i", str(partno), str(disk))
+
+    def get_flags(self, disk, partno):
+        attribute = self.get_raw_attribute(disk, partno)
+        successful = (attribute >> 8) & 0x1
+        tries = (attribute >> 4) & 0xF
+        priority = (attribute >> 0) & 0xF
+
+        return {
+            "S": successful,
+            "P": priority,
+            "T": tries,
+        }
+
+    def set_flags(self, disk, partno, S=None, P=None, T=None):
+        flag_args = []
+        if S is not None:
+            flag_args += ["-S", str(int(S))]
+        if P is not None:
+            flag_args += ["-P", str(int(P))]
+        if T is not None:
+            flag_args += ["-T", str(int(T))]
+
+        self("add", *flag_args, "-i", str(partno), str(disk))
+
+    def get_size(self, disk, partno):
+        proc = self("show", "-s", "-i", str(partno), str(disk))
+        blocks = int(proc.stdout)
+        return blocks * 512
+
+    def find_partitions(self, disk, type=None):
+        if type is None:
+            # cgpt find needs at least one of -t, -u, -l
+            proc = self("show", "-q", "-n", disk)
+            lines = proc.stdout.splitlines()
+            partnos = [int(shlex.split(line)[2]) for line in lines]
+
+        else:
+            proc = self("find", "-n", "-t", type, disk)
+            partnos = [int(n) for n in proc.stdout.splitlines()]
+
+        return partnos
+
+    def prioritize(self, disk, partno):
+        self("prioritize", "-i", str(partno), str(disk))
+
 
 class CrossystemRunner(ProcessRunner):
     def __init__(self):

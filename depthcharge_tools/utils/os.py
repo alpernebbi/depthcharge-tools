@@ -283,17 +283,15 @@ class Disk:
         return Partition(self, partno)
 
     def partitions(self):
-        proc = cgpt("show", "-q", "-n", self.path)
         return [
-            Partition(self, int(shlex.split(line)[2]))
-            for line in proc.stdout.splitlines()
+            Partition(self, n)
+            for n in cgpt.find_partitions(self.path)
         ]
 
     def cros_partitions(self):
-        proc = cgpt("find", "-n", "-t", "kernel", self.path)
         return [
-            CrosPartition(self, int(n))
-            for n in proc.stdout.splitlines()
+            CrosPartition(self, n)
+            for n in cgpt.find_partitions(self.path, type="kernel")
         ]
 
     @property
@@ -370,9 +368,7 @@ class Partition:
     @property
     def size(self):
         if self.path is None:
-            proc = cgpt("show", "-s", "-i", str(self.partno), self.disk.path)
-            blocks = int(proc.stdout)
-            return blocks * 512
+            return cgpt.get_size(self.disk.path, self.partno)
 
         if self.path.is_file():
             return self.path.stat().st_size
@@ -405,40 +401,61 @@ class Partition:
 class CrosPartition(Partition):
     @property
     def attribute(self):
-        proc = cgpt("show", "-A", "-i", str(self.partno), self.disk.path)
-        attr = int(proc.stdout, 16)
-        return attr
+        return cgpt.get_raw_attribute(self.disk.path, self.partno)
 
     @attribute.setter
     def attribute(self, attr):
-        cgpt("add", "-A", hex(attr), "-i", str(self.partno), self.disk.path)
+        return cgpt.set_raw_attribute(self.disk.path, self.partno, attr)
+
+    @property
+    def flags(self):
+        flags = cgpt.get_flags(self.disk.path, self.partno)
+        return {
+            "successful": flags["S"],
+            "priority": flags["P"],
+            "tries": flags["T"],
+        }
+
+    @flags.setter
+    def flags(self, value):
+        if isinstance(value, dict):
+            S = value.get("successful", None)
+            P = value.get("priority", None)
+            T = value.get("tries", None)
+
+        else:
+            S = getattr(value, "successful", None)
+            P = getattr(value, "priority", None)
+            T = getattr(value, "tries", None)
+
+        cgpt.set_flags(self.disk.path, self.partno, S=S, P=P, T=T)
 
     @property
     def successful(self):
-        return (self.attribute >> 8) & 0x1
+        return self.flags["successful"]
 
     @successful.setter
-    def successful(self, s):
-        cgpt("add", "-S", str(s), "-i", str(self.partno), self.disk.path)
+    def successful(self, value):
+        self.flags = {"successful": value}
 
     @property
     def tries(self):
-        return (self.attribute >> 4) & 0xF
+        return self.flags["tries"]
 
     @tries.setter
-    def tries(self, t):
-        cgpt("add", "-T", str(t), "-i", str(self.partno), self.disk.path)
+    def tries(self, value):
+        self.flags = {"tries": value}
 
     @property
     def priority(self):
-        return (self.attribute >> 0) & 0xF
+        return self.flags["priority"]
 
     @priority.setter
-    def priority(self, p):
-        cgpt("add", "-P", str(p), "-i", str(self.partno), self.disk.path)
+    def priority(self, value):
+        self.flags = {"priority": value}
 
     def prioritize(self):
-        cgpt("prioritize", "-i", str(self.partno), self.disk.path)
+        return cgpt.prioritize(self.disk.path, self.partno)
 
 
 system_disks = Disks()
