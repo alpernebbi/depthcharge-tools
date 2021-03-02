@@ -300,8 +300,8 @@ class Disk:
             return self.path.stat().st_size
 
         if self.path.is_block_device():
-             sysdir = Path("/sys/class/block") / self.path.name
-             return int((sysdir / "size").read_text()) * 512
+            sysdir = Path("/sys/class/block") / self.path.name
+            return int((sysdir / "size").read_text()) * 512
 
     def __hash__(self):
         return hash((self.path,))
@@ -374,9 +374,9 @@ class Partition:
             return self.path.stat().st_size
 
         if self.path.is_block_device():
-             sysdir = Path("/sys/class/block") / self.path.name
-             blocks = int((sysdir / "size").read_text())
-             return blocks * 512
+            sysdir = Path("/sys/class/block") / self.path.name
+            blocks = int((sysdir / "size").read_text())
+            return blocks * 512
 
     def __hash__(self):
         return hash((self.path, self.disk, self.partno))
