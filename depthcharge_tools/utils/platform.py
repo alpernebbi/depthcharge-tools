@@ -198,49 +198,41 @@ class Kernel:
         else:
             return "{}, with Linux {}".format(os_name, self.release)
 
-    def _release_parts(self):
-        return [
-            [
-                (
-                    not (dot.startswith("rc") or dot.startswith("trunk")),
-                    int(dot) if dot.isnumeric() else -1,
-                    str(dot),
-                )
-                for dot in dash.split(".")
-            ]
-            for dash in self.release.split("-")
-        ]
+    def _comparable_parts(self):
+        pattern = "([^a-zA-Z0-9]?)([a-zA-Z]*)([0-9]*)"
 
-    def _comparable_parts(self, other):
-        end = (True, -1, "")
+        parts = []
+        for sep, text, num in re.findall(pattern, self.release):
+            # x.y.z > x.y-* == x.y* > x.y~*
+            sep = {
+                "~": -1,
+                ".": 1,
+            }.get(sep, 0)
 
-        s, o = self._release_parts(), other._release_parts()
-        for si, oi in zip(s, o):
-            if len(si) > len(oi):
-                oi += [end] * (len(si) - len(oi))
-            if len(oi) > len(si):
-                si += [end] * (len(oi) - len(si))
+            # x.y-* == x.y* > x.y > x.y-rc* == x.y-trunk*
+            text = ({
+                "rc": -1,
+                "trunk": -1,
+            }.get(text, 0), text)
 
-        if len(s) > len(o):
-            o += [[end]] * (len(s) - len(o))
-        if len(o) > len(s):
-            s += [[end]] * (len(o) - len(s))
+            # Compare numbers as numbers
+            num = int(num) if num else 0
 
-        return s, o
+            parts.append((sep, text, num))
+
+        return tuple(parts)
 
     def __lt__(self, other):
         if not isinstance(other, Kernel):
             return NotImplemented
 
-        s, o = self._comparable_parts(other)
-        return s < o
+        return self._comparable_parts() < other._comparable_parts()
 
     def __gt__(self, other):
         if not isinstance(other, Kernel):
             return NotImplemented
 
-        s, o = self._comparable_parts(other)
-        return s > o
+        return self._comparable_parts() > other._comparable_parts()
 
 
 class Architecture(str):
