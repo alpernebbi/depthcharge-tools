@@ -234,6 +234,9 @@ class Kernel:
     def _comparable_parts(self):
         pattern = "([^a-zA-Z0-9]?)([a-zA-Z]*)([0-9]*)"
 
+        if self.release is None:
+            return ()
+
         parts = []
         for sep, text, num in re.findall(pattern, self.release):
             # x.y.z > x.y-* == x.y* > x.y~*
