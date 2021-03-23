@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 
+import glob
+import pathlib
 import platform
 import re
 import shlex
@@ -130,47 +132,71 @@ def installed_kernels():
     initrds = {}
     fdtdirs = {}
 
-    for f in Path("/boot").iterdir():
-        f = f.resolve()
-        if not f.is_file():
-            continue
+    def files(*patterns):
+        for pattern in patterns:
+            for path in glob.glob(pattern, recursive=True):
+                path = pathlib.Path(path)
+                if path.is_file():
+                    yield path
 
-        if (
-            f.name.startswith("vmlinuz-")
-            or f.name.startswith("vmlinux-")
-        ):
-            _, _, release = f.name.partition("-")
-            kernels[release] = f
+    def dirs(*patterns):
+        for pattern in patterns:
+            for path in glob.glob(pattern, recursive=True):
+                path = pathlib.Path(path)
+                if path.is_dir():
+                    yield path
 
-        if f.name in (
-            "vmlinux", "vmlinuz",
-            "Image", "zImage", "bzImage",
-        ):
-            kernels[None] = f
+    for f in files(
+        "/boot/vmlinuz-*",
+        "/boot/vmlinux-*",
+    ):
+        _, _, release = f.name.partition("-")
+        kernels[release] = f
 
-        if (
-            f.name.startswith("initrd-")
-            or f.name.startswith("initrd.img-")
-        ):
-            _, _, release = f.name.partition("-")
-            initrds[release] = f
+    for f in files(
+        "/boot/vmlinuz",
+        "/boot/vmlinux",
+        "/vmlinuz",
+        "/vmlinux",
+        "/boot/Image",
+        "/boot/zImage",
+        "/boot/bzImage",
+    ):
+        kernels[None] = f
+        break
 
-        if f.name in ("initrd", "initrd.img"):
-            initrds[None] = f
+    for f in files(
+        "/boot/initrd-*",
+        "/boot/initrd.img-*",
+    ):
+        _, _, release = f.name.partition("-")
+        initrds[release] = f
 
-    for d in Path("/usr/lib").iterdir():
-        if not d.is_dir():
-            continue
+    for f in files(
+        "/boot/initrd.img",
+        "/boot/initrd",
+        "/initrd.img",
+        "/initrd",
+    ):
+        initrds[None] = f
+        break
 
-        if d.name.startswith("linux-image-"):
-            _, _, release = d.name.partition("linux-image-")
-            fdtdirs[release] = d
+    for d in dirs(
+        "/usr/lib/linux-image-*",
+    ):
+        _, _, release = d.name.partition("linux-image-")
+        fdtdirs[release] = d
 
-    for d in Path("/boot/dtbs").iterdir():
+    for d in dirs(
+        "/boot/dtbs/*",
+    ):
         if d.name in kernels:
             fdtdirs[d.name] = d
-        else:
-            fdtdirs[None] = Path("/boot/dtbs")
+
+    for d in dirs(
+        "/boot/dtbs",
+    ):
+        fdtdirs[None] = d
 
     return [
         Kernel(
