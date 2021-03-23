@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import collections
 import glob
 import pathlib
 import platform
@@ -196,7 +197,13 @@ def installed_kernels():
     for d in dirs(
         "/boot/dtbs",
     ):
-        fdtdirs[None] = d
+        # Duplicate dtb files means that the directory is split by
+        # kernel release and we can't use it for a single release.
+        dtbs = d.glob("**/*.dtb")
+        counts = collections.Counter(dtb.name for dtb in dtbs)
+        if all(c <= 1 for c in counts.values()):
+            fdtdirs[None] = d
+            break
 
     return [
         Kernel(
