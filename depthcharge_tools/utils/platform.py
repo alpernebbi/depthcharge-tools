@@ -56,21 +56,6 @@ def kernel_cmdline():
     return shlex.split(cmdline)
 
 
-def is_cros_board(vboot=True):
-    cmd = kernel_cmdline()
-
-    # ChromeOS firmware injects one of these values into the cmdline
-    # based on which boot mechanism is used.
-    if "cros_secure" in cmd:
-        return True
-    elif "cros_efi" in cmd:
-        return not vboot
-    elif "cros_legacy" in cmd:
-        return not vboot
-
-    return False
-
-
 def root_requires_initramfs(root):
     x = "[0-9a-fA-F]"
     uuid = "{x}{{8}}-{x}{{4}}-{x}{{4}}-{x}{{4}}-{x}{{12}}".format(x=x)
