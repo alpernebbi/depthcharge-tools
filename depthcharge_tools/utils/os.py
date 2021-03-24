@@ -1,11 +1,15 @@
 #! /usr/bin/env python3
 
 import collections
-import pathlib
 import re
 import shlex
 
-from depthcharge_tools.utils.pathlib import Path
+from pathlib import Path
+
+from depthcharge_tools.utils.pathlib import (
+    iterdir,
+    read_lines,
+)
 from depthcharge_tools.utils.platform import (
     kernel_cmdline,
 )
@@ -25,17 +29,11 @@ class Disks:
     ):
         self._edges = {}
 
-        self._sys = sys = pathlib.Path(sys)
-        self._dev = dev = pathlib.Path(dev)
-        self._fstab = fstab = pathlib.Path(fstab)
-        self._mtab = mtab = pathlib.Path(mtab)
-        self._mountinfo = mountinfo = pathlib.Path(mountinfo)
-
-        def iterdir(path):
-            return path.iterdir() if path.is_dir() else []
-
-        def read_lines(path):
-            return path.read_text().splitlines() if path.is_file() else []
+        self._sys = sys = Path(sys)
+        self._dev = dev = Path(dev)
+        self._fstab = fstab = Path(fstab)
+        self._mtab = mtab = Path(mtab)
+        self._mountinfo = mountinfo = Path(mountinfo)
 
         for sysdir in iterdir(sys / "class" / "block"):
             for device in read_lines(sysdir / "dm" / "name"):
@@ -47,7 +45,7 @@ class Disks:
             for device in iterdir(sysdir / "holders"):
                 self.add_edge(dev / sysdir.name, dev / device.name)
 
-            for device in sysdir.iterdir():
+            for device in iterdir(sysdir):
                 if device.name.startswith(sysdir.name):
                     self.add_edge(dev / sysdir.name, dev / device.name)
 
@@ -92,7 +90,7 @@ class Disks:
         if device is None:
             return None
 
-        elif isinstance(device, pathlib.Path):
+        elif isinstance(device, Path):
             device = str(device)
 
         elif isinstance(device, (Disk, Partition)):

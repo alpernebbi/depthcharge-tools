@@ -7,16 +7,27 @@ import platform
 import sys
 import tempfile
 
+from pathlib import Path
+
 from depthcharge_tools import __version__
 from depthcharge_tools.utils import (
     mkimage,
     vbutil_kernel,
     vboot_keys,
     Architecture,
-    Path,
     Command,
     Argument,
     Group,
+)
+from depthcharge_tools.utils.pathlib import (
+    copy,
+    is_gzip,
+    gunzip,
+    lz4,
+    lzma,
+    is_vmlinuz,
+    is_initramfs,
+    is_dtb,
 )
 
 logger = logging.getLogger(__name__)
@@ -45,13 +56,13 @@ class mkdepthcharge(
         files = [Path(f).resolve() for f in files]
 
         for f in files:
-            if f.is_vmlinuz():
+            if is_vmlinuz(f):
                 vmlinuz.append(f)
 
-            elif f.is_initramfs():
+            elif is_initramfs(f):
                 initramfs.append(f)
 
-            elif f.is_dtb():
+            elif is_dtb(f):
                 dtbs.append(f)
 
             elif len(vmlinuz) == 0:
@@ -429,10 +440,10 @@ class mkdepthcharge(
         # mkimage can't open files when they are read-only for some
         # reason. Copy them into a temp dir in fear of modifying the
         # originals.
-        vmlinuz = vmlinuz.copy_to(tmpdir)
+        vmlinuz = copy(vmlinuz, tmpdir)
         if initramfs is not None:
-            initramfs = initramfs.copy_to(tmpdir)
-        dtbs = [dtb.copy_to(tmpdir) for dtb in dtbs]
+            initramfs = copy(initramfs, tmpdir)
+        dtbs = [copy(dtb, tmpdir) for dtb in dtbs]
 
         # We can add write permissions after we copy the files to temp.
         vmlinuz.chmod(0o755)
@@ -443,17 +454,17 @@ class mkdepthcharge(
 
         # Debian packs the arm64 kernel uncompressed, but the bindeb-pkg
         # kernel target packs it as gzip.
-        if vmlinuz.is_gzip():
+        if is_gzip(vmlinuz):
             logger.info("Kernel is gzip compressed, decompressing.")
-            vmlinuz = vmlinuz.gunzip()
+            vmlinuz = gunzip(vmlinuz)
 
         # Depthcharge on arm64 with FIT supports these two compressions.
         if self.compress == "lz4":
             logger.info("Compressing kernel with lz4.")
-            vmlinuz = vmlinuz.lz4()
+            vmlinuz = lz4(vmlinuz)
         elif self.compress == "lzma":
             logger.info("Compressing kernel with lzma.")
-            vmlinuz = vmlinuz.lzma()
+            vmlinuz = lzma(vmlinuz)
         elif self.compress not in (None, "none"):
             fmt = "Compression type '{}' is not supported."
             msg = fmt.format(compress)
@@ -466,7 +477,7 @@ class mkdepthcharge(
         # vbutil_kernel --bootloader argument is mandatory, but it's
         # contents don't matter at least on arm systems.
         if self.bootloader is not None:
-            bootloader = bootloader.copy_to(tmpdir)
+            bootloader = copy(bootloader, tmpdir)
         else:
             bootloader = tmpdir / "bootloader.bin"
             bootloader.write_bytes(bytes(512))

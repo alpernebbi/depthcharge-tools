@@ -3,11 +3,12 @@
 import argparse
 import logging
 
+from pathlib import Path
+
 from depthcharge_tools import (
     __version__,
 )
 from depthcharge_tools.utils import (
-    Path,
     Command,
     Argument,
     Group,

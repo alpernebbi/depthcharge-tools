@@ -6,6 +6,8 @@ import os
 import shlex
 import textwrap
 
+from pathlib import Path
+
 from depthcharge_tools import __version__
 from depthcharge_tools.mkdepthcharge import mkdepthcharge
 from depthcharge_tools.utils import (
@@ -13,12 +15,12 @@ from depthcharge_tools.utils import (
     installed_kernels,
     root_requires_initramfs,
     Partition,
-    Path,
     Command,
     Argument,
     Group,
     fdtget,
 )
+from depthcharge_tools.utils.pathlib import copy
 
 from depthcharge_tools.depthchargectl import depthchargectl
 
@@ -379,7 +381,7 @@ class depthchargectl_build(
             )
 
         logger.info("Copying newly built image and info to output.")
-        outtmp.copy_to(self.output)
+        copy(outtmp, self.output)
         outtmp.unlink()
 
         logger.info(

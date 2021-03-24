@@ -1,74 +1,77 @@
 #! /usr/bin/env python3
 
-import pathlib
 import shutil
 
+from pathlib import Path
+
 from depthcharge_tools.utils.subprocess import (
-    gzip,
-    lz4,
-    lzma,
+    gzip as gzip_runner,
+    lz4 as lz4_runner,
+    lzma as lzma_runner,
 )
 
 
-class Path(pathlib.PosixPath):
-    def copy_to(self, dest):
-        dest = shutil.copy2(self, dest)
-        return Path(dest)
+def copy(src, dest):
+    dest = shutil.copy2(src, dest)
+    return Path(dest)
 
-    def is_gzip(self):
-        proc = gzip.test(self)
-        return proc.returncode == 0
 
-    def gunzip(self, dest=None):
-        if dest is None:
-            if self.name.endswith(".gz"):
-                dest = self.parent / self.name[:-3]
-            else:
-                dest = self.parent / (self.name + ".gunzip")
-        gzip.decompress(self, dest)
-        return Path(dest)
+def is_gzip(path):
+    proc = gzip_runner.test(path)
+    return proc.returncode == 0
 
-    def lz4(self, dest=None):
-        if dest is None:
-            dest = self.parent / (self.name + ".lz4")
-        lz4.compress(self, dest)
-        return Path(dest)
 
-    def lzma(self, dest=None):
-        if dest is None:
-            dest = self.parent / (self.name + ".lzma")
-        lzma.compress(self, dest)
-        return Path(dest)
-
-    def is_vmlinuz(self):
-        return any((
-            "vmlinuz" in self.name,
-            "vmlinux" in self.name,
-            "linux" in self.name,
-            "Image" in self.name,
-            "kernel" in self.name,
-        ))
-
-    def is_initramfs(self):
-        return any((
-            "initrd" in self.name,
-            "initramfs" in self.name,
-            "cpio" in self.name,
-        ))
-
-    def is_dtb(self):
-        return any((
-            "dtb" in self.name,
-        ))
-
-    def iterdir(self, maybe=True):
-        if maybe == False or self.is_dir():
-            return super().iterdir()
+def gunzip(src, dest=None):
+    if dest is None:
+        if src.name.endswith(".gz"):
+            dest = src.parent / src.name[:-3]
         else:
-            return []
+            dest = src.parent / (src.name + ".gunzip")
+    gzip_runner.decompress(src, dest)
+    return Path(dest)
 
-    def read_lines(self, maybe=True):
-        if maybe == False or self.is_file():
-            return self.read_text().splitlines()
-        else:
-            return []
+
+def lz4(src, dest=None):
+    if dest is None:
+        dest = src.parent / (src.name + ".lz4")
+    lz4_runner.compress(src, dest)
+    return Path(dest)
+
+
+def lzma(src, dest=None):
+    if dest is None:
+        dest = src.parent / (src.name + ".lzma")
+    lzma_runner.compress(src, dest)
+    return Path(dest)
+
+
+def is_vmlinuz(path):
+    return any((
+        "vmlinuz" in path.name,
+        "vmlinux" in path.name,
+        "linux" in path.name,
+        "Image" in path.name,
+        "kernel" in path.name,
+    ))
+
+
+def is_initramfs(path):
+    return any((
+        "initrd" in path.name,
+        "initramfs" in path.name,
+        "cpio" in path.name,
+    ))
+
+
+def is_dtb(path):
+    return any((
+        "dtb" in path.name,
+    ))
+
+
+def iterdir(path):
+    return path.iterdir() if path.is_dir() else []
+
+
+def read_lines(path):
+    return path.read_text().splitlines() if path.is_file() else []

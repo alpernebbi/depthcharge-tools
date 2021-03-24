@@ -2,8 +2,9 @@
 
 import contextlib
 import logging
-import pathlib
 import subprocess
+
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -27,20 +28,20 @@ class ProcessRunner:
         with contextlib.ExitStack() as ctx:
             stdin = kwargs.get("stdin")
             if isinstance(stdin, str):
-                stdin = pathlib.Path(stdin)
-            if isinstance(stdin, pathlib.Path):
+                stdin = Path(stdin)
+            elif isinstance(stdin, Path):
                 kwargs["stdin"] = ctx.enter_context(stdin.open("r"))
 
             stdout = kwargs.get("stdout")
             if isinstance(stdout, str):
-                stdout = pathlib.Path(stdout)
-            if isinstance(stdout, pathlib.Path):
+                stdout = Path(stdout)
+            elif isinstance(stdout, Path):
                 kwargs["stdout"] = ctx.enter_context(stdout.open("x"))
 
             stderr = kwargs.get("stderr")
             if isinstance(stderr, str):
-                stderr = pathlib.Path(stderr)
-            if isinstance(stderr, pathlib.Path):
+                stderr = Path(stderr)
+            elif isinstance(stderr, Path):
                 kwargs["stderr"] = ctx.enter_context(stderr.open("x"))
 
             return subprocess.run(args, **kwargs)

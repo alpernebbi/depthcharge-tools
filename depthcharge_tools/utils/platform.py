@@ -2,12 +2,12 @@
 
 import collections
 import glob
-import pathlib
 import platform
 import re
 import shlex
 
-from depthcharge_tools.utils.pathlib import Path
+from pathlib import Path
+
 from depthcharge_tools.utils.subprocess import crossystem
 
 
@@ -121,14 +121,14 @@ def installed_kernels():
     def files(*patterns):
         for pattern in patterns:
             for path in glob.glob(pattern, recursive=True):
-                path = pathlib.Path(path)
+                path = Path(path)
                 if path.is_file():
                     yield path
 
     def dirs(*patterns):
         for pattern in patterns:
             for path in glob.glob(pattern, recursive=True):
-                path = pathlib.Path(path)
+                path = Path(path)
                 if path.is_dir():
                     yield path
 

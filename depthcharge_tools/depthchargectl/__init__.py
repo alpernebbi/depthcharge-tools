@@ -9,6 +9,8 @@ import os
 import re
 import tempfile
 
+from pathlib import Path
+
 from depthcharge_tools import __version__, config_ini, config_files
 from depthcharge_tools.utils import (
     Command,
@@ -16,7 +18,6 @@ from depthcharge_tools.utils import (
     Group,
     Subparsers,
     ConfigDict,
-    Path,
     vboot_keys,
     cros_hwid,
     dt_compatibles,
