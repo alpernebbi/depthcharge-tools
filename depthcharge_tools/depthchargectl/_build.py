@@ -10,17 +10,25 @@ from pathlib import Path
 
 from depthcharge_tools import __version__
 from depthcharge_tools.mkdepthcharge import mkdepthcharge
-from depthcharge_tools.utils import (
-    system_disks,
-    installed_kernels,
-    root_requires_initramfs,
-    Partition,
+from depthcharge_tools.utils.argparse import (
     Command,
     Argument,
     Group,
+)
+from depthcharge_tools.utils.os import (
+    system_disks,
+    Partition,
+)
+from depthcharge_tools.utils.pathlib import (
+    copy,
+)
+from depthcharge_tools.utils.platform import (
+    installed_kernels,
+    root_requires_initramfs,
+)
+from depthcharge_tools.utils.subprocess import (
     fdtget,
 )
-from depthcharge_tools.utils.pathlib import copy
 
 from depthcharge_tools.depthchargectl import depthchargectl
 

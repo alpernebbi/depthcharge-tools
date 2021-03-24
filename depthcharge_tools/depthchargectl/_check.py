@@ -6,10 +6,12 @@ import logging
 from pathlib import Path
 
 from depthcharge_tools import __version__
-from depthcharge_tools.utils import (
+from depthcharge_tools.utils.argparse import (
     Command,
     Argument,
     Group,
+)
+from depthcharge_tools.utils.subprocess import (
     mkimage,
     vbutil_kernel,
 )

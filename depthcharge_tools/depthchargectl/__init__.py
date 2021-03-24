@@ -12,12 +12,16 @@ import tempfile
 from pathlib import Path
 
 from depthcharge_tools import __version__, config_ini, config_files
-from depthcharge_tools.utils import (
+from depthcharge_tools.utils.argparse import (
     Command,
     Argument,
     Group,
     Subparsers,
+)
+from depthcharge_tools.utils.collections import (
     ConfigDict,
+)
+from depthcharge_tools.utils.platform import (
     vboot_keys,
     cros_hwid,
     dt_compatibles,

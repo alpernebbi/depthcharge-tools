@@ -8,14 +8,17 @@ from pathlib import Path
 from depthcharge_tools import (
     __version__,
 )
-from depthcharge_tools.utils import (
+from depthcharge_tools.utils.argparse import (
     Command,
     Argument,
     Group,
-    installed_kernels,
+)
+from depthcharge_tools.utils.os import (
     system_disks,
 )
-
+from depthcharge_tools.utils.platform import (
+    installed_kernels,
+)
 
 from depthcharge_tools.depthchargectl import depthchargectl
 

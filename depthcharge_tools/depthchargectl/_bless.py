@@ -4,13 +4,15 @@ import argparse
 import logging
 
 from depthcharge_tools import __version__
-from depthcharge_tools.utils import (
-    system_disks,
-    Partition,
-    CrosPartition,
+from depthcharge_tools.utils.argparse import (
     Command,
     Argument,
     Group,
+)
+from depthcharge_tools.utils.os import (
+    system_disks,
+    Partition,
+    CrosPartition,
 )
 
 

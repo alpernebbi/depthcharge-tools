@@ -10,11 +10,7 @@ import tempfile
 from pathlib import Path
 
 from depthcharge_tools import __version__
-from depthcharge_tools.utils import (
-    mkimage,
-    vbutil_kernel,
-    vboot_keys,
-    Architecture,
+from depthcharge_tools.utils.argparse import (
     Command,
     Argument,
     Group,
@@ -28,6 +24,14 @@ from depthcharge_tools.utils.pathlib import (
     is_vmlinuz,
     is_initramfs,
     is_dtb,
+)
+from depthcharge_tools.utils.platform import (
+    Architecture,
+    vboot_keys,
+)
+from depthcharge_tools.utils.subprocess import (
+    mkimage,
+    vbutil_kernel,
 )
 
 logger = logging.getLogger(__name__)
