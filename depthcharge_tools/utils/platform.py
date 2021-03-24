@@ -206,7 +206,7 @@ def installed_kernels():
             break
 
     return [
-        Kernel(
+        KernelEntry(
             release,
             kernel=kernels[release],
             initrd=initrds.get(release, None),
@@ -215,7 +215,7 @@ def installed_kernels():
     ]
 
 
-class Kernel:
+class KernelEntry:
     def __init__(self, release, kernel, initrd=None, fdtdir=None):
         self.release = release
         self.kernel = kernel
@@ -259,13 +259,13 @@ class Kernel:
         return tuple(parts)
 
     def __lt__(self, other):
-        if not isinstance(other, Kernel):
+        if not isinstance(other, KernelEntry):
             return NotImplemented
 
         return self._comparable_parts() < other._comparable_parts()
 
     def __gt__(self, other):
-        if not isinstance(other, Kernel):
+        if not isinstance(other, KernelEntry):
             return NotImplemented
 
         return self._comparable_parts() > other._comparable_parts()

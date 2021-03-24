@@ -7,7 +7,6 @@ from depthcharge_tools import (
     __version__,
 )
 from depthcharge_tools.utils import (
-    Kernel,
     Path,
     Command,
     Argument,

@@ -14,7 +14,6 @@ from depthcharge_tools.utils import (
     root_requires_initramfs,
     Partition,
     Path,
-    Kernel,
     Command,
     Argument,
     Group,

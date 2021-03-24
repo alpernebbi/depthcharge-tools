@@ -8,7 +8,6 @@ from depthcharge_tools import (
 )
 from depthcharge_tools.utils import (
     system_disks,
-    Kernel,
     Path,
     Command,
     Argument,
