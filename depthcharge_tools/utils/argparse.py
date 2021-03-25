@@ -754,6 +754,13 @@ class CommandMeta(type):
             logging.getLogger(cls.__module__).error(err)
             sys.exit(err.errno)
 
+        except Exception as err:
+            logger = logging.getLogger(cls.__module__)
+            is_debug = logger.getEffectiveLevel() <= logging.DEBUG
+            logger.error(err, exc_info=is_debug)
+
+            sys.exit(1)
+
     def items(cls):
         def order(tup):
             attr, value = tup
