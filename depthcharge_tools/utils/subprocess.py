@@ -101,7 +101,7 @@ class VbutilKernelRunner(ProcessRunner):
 
 class CgptRunner(ProcessRunner):
     def __init__(self):
-        super().__init__("sudo", "cgpt")
+        super().__init__("cgpt")
 
     def __call__(self, *args, **kwargs):
         proc = super().__call__(*args, **kwargs)
@@ -170,7 +170,7 @@ class CgptRunner(ProcessRunner):
 
 class CrossystemRunner(ProcessRunner):
     def __init__(self):
-        super().__init__("sudo", "crossystem")
+        super().__init__("crossystem")
 
 
 class FdtgetRunner(ProcessRunner):
