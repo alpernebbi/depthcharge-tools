@@ -708,6 +708,36 @@ def command_call(call):
     return __call__
 
 
+class CommandExit(Exception):
+    def __init__(self, output=None, returncode=0, message=None):
+        if message is None:
+            if output is not None:
+                message = str(output)
+            else:
+                message = ""
+
+        if returncode != 0:
+            if message:
+                errmsg = "[Error {}] {}".format(returncode, message)
+            else:
+                errmsg = "[Error {}]".format(returncode)
+        else:
+            errmsg = message
+
+        self.returncode = returncode
+        self.output = output
+        self.message = message
+        super().__init__(errmsg)
+
+    def __repr__(self):
+        return "{}(output={!r}, returncode={!r}, message={!r})".format(
+            type(self).__qualname__,
+            self.output,
+            self.returncode,
+            self.message,
+        )
+
+
 class CommandMeta(type):
     def __new__(mcls, name, bases, attrs, **kwargs):
         call = attrs.get("__call__", None)
@@ -721,11 +751,21 @@ class CommandMeta(type):
 
     def __call__(cls, *args, **kwargs):
         instance = super().__call__()
+        raise_exit = kwargs.pop("__raise_CommandExit", False)
+
         if hasattr(instance, "__enter__"):
             with instance as inst:
-                return inst(*args, **kwargs)
+                retval = inst(*args, **kwargs)
         else:
-            return instance(*args, **kwargs)
+            retval = instance(*args, **kwargs)
+
+        if isinstance(retval, CommandExit):
+            if raise_exit:
+                raise retval
+            else:
+                retval = retval.output
+
+        return retval
 
     def main(cls, *argv):
         if len(argv) == 0:
@@ -740,7 +780,7 @@ class CommandMeta(type):
         }
 
         try:
-            output = command(**kwargs)
+            output = command(__raise_CommandExit=True, **kwargs)
             if output is not None:
                 print(output)
 
@@ -750,9 +790,15 @@ class CommandMeta(type):
         except TypeError as err:
             parser.error(err.args[0])
 
-        except OSError as err:
-            logging.getLogger(cls.__module__).error(err)
-            sys.exit(err.errno)
+        except CommandExit as exit:
+            logger = logging.getLogger(cls.__module__)
+
+            if exit.returncode != 0:
+                logger.error(exit)
+            else:
+                logger.info(exit)
+
+            sys.exit(exit.returncode)
 
         except Exception as err:
             logger = logging.getLogger(cls.__module__)
