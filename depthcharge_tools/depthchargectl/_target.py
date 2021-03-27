@@ -14,6 +14,7 @@ from depthcharge_tools.utils.argparse import (
 )
 from depthcharge_tools.utils.os import (
     system_disks,
+    Disk,
     CrosPartition,
     Partition,
 )
@@ -121,7 +122,13 @@ class depthchargectl_target(
         # For arguments which are disks, search all their partitions.
         if disks:
             logger.info("Finding disks for targets '{}'.".format(disks))
-            for d in system_disks.roots(*disks):
+            images = [
+                Disk(d)
+                for d in disks
+                if system_disks.evaluate(d) is None
+            ]
+
+            for d in (*system_disks.roots(*disks), *images):
                 logger.info("Using '{}' as a disk.".format(d))
                 partitions.extend(d.cros_partitions())
 
@@ -224,7 +231,9 @@ class depthchargectl_target(
                 continue
 
             logger.info("Partition '{}' is usable.".format(p))
-            good_partitions.append(CrosPartition(p.path))
+            good_partitions.append(
+                CrosPartition(p.disk.path, partno=p.partno),
+            )
 
         # Get the least-successful, least-priority, least-tries-left
         # partition in that order of preference.
