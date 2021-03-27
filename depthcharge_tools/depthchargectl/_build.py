@@ -339,7 +339,7 @@ class depthchargectl_build(
 
         # Build to a temporary file so we do not overwrite existing
         # images with an unbootable image.
-        outtmp = self.tmpdir / "{}.img".format(self.output.name)
+        outtmp = self.tmpdir / "{}.tmp".format(self.output.name)
 
         # Try to keep output reproducible.
         if self.timestamp is not None:
