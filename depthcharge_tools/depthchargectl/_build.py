@@ -347,18 +347,24 @@ class depthchargectl_build(
 
         for compress in self.compress:
             logger.info("Trying with compression '{}'.".format(compress))
-            mkdepthcharge(
-                cmdline=self.cmdline,
-                compress=compress,
-                dtbs=self.dtbs,
-                image_format=self.board.image_format,
-                initramfs=self.initrd,
-                keyblock=self.vboot_keyblock,
-                name=self.description,
-                output=outtmp,
-                signprivate=self.vboot_private_key,
-                vmlinuz=self.kernel,
-            )
+            try:
+                mkdepthcharge(
+                    cmdline=self.cmdline,
+                    compress=compress,
+                    dtbs=self.dtbs,
+                    image_format=self.board.image_format,
+                    initramfs=self.initrd,
+                    keyblock=self.vboot_keyblock,
+                    name=self.description,
+                    output=outtmp,
+                    signprivate=self.vboot_private_key,
+                    vmlinuz=self.kernel,
+                )
+
+            except Exception as err:
+                raise CommandExit(
+                    "Failed while creating depthcharge image.",
+                ) from err
 
             try:
                 depthchargectl.check(image=outtmp)
@@ -384,11 +390,6 @@ class depthchargectl_build(
                 raise RuntimeError(
                     "Couldn't build a small enough image for this machine."
                 )
-
-            except CommandExit as err:
-                raise RuntimeError(
-                    "Failed while creating depthcharge image."
-                ) from err
 
         else:
             raise RuntimeError(
