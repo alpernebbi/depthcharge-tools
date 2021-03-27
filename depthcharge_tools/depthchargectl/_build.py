@@ -32,7 +32,6 @@ from depthcharge_tools.utils.subprocess import (
 )
 
 from depthcharge_tools.depthchargectl import depthchargectl
-from depthcharge_tools.depthchargectl._check import SizeTooBigError
 
 logger = logging.getLogger(__name__)
 
@@ -366,34 +365,27 @@ class depthchargectl_build(
                     "Failed while creating depthcharge image.",
                 ) from err
 
-            try:
-                depthchargectl.check(image=outtmp)
+            if outtmp.stat().st_size < self.board.image_max_size:
                 break
 
-            except SizeTooBigError as err:
-                logger.warn(
-                    "Image with compression '{}' is too big "
-                    "for this board."
-                    .format(compress)
-                )
+            logger.warn(
+                "Image with compression '{}' is too big for this board."
+                .format(compress)
+            )
 
-                if compress != self.compress[-1]:
-                    continue
+            if compress != self.compress[-1]:
+                continue
 
-                logger.error(
-                    "The initramfs might be too big for this machine. "
-                    "Usually this can be resolved by including less "
-                    "modules in the initramfs and/or compressing it "
-                    "with a better algorithm. Please check your distro's "
-                    "documentation for how to do this."
-                )
-                raise RuntimeError(
-                    "Couldn't build a small enough image for this machine."
-                )
+            logger.error(
+                "The initramfs might be too big for this machine. "
+                "Usually this can be resolved by including less "
+                "modules in the initramfs and/or compressing it "
+                "with a better algorithm. Please check your distro's "
+                "documentation for how to do this."
+            )
 
-        else:
             raise RuntimeError(
-                "Failed to create a valid depthcharge image."
+                "Couldn't build a small enough image for this machine."
             )
 
         logger.info("Copying newly built image and info to output.")
