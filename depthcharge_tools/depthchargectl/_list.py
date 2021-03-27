@@ -11,6 +11,7 @@ from depthcharge_tools.utils.argparse import (
 )
 from depthcharge_tools.utils.os import (
     system_disks,
+    Disk,
 )
 
 from depthcharge_tools.depthchargectl import depthchargectl
@@ -43,7 +44,12 @@ class depthchargectl_list(
             disks = system_disks.roots()
         elif disks:
             logger.info("Searching real disks for {}.".format(disks))
-            disks = system_disks.roots(*disks)
+            images = [
+                Disk(d)
+                for d in disks
+                if system_disks.evaluate(d) is None
+            ]
+            disks = [*system_disks.roots(*disks), *images]
         else:
             logger.info("Searching bootable disks.")
             disks = system_disks.bootable_disks()
