@@ -709,7 +709,7 @@ def command_call(call):
 
 
 class CommandExit(Exception):
-    def __init__(self, output=None, returncode=0, message=None):
+    def __init__(self, output=None, returncode=1, message=None):
         if message is None:
             if output is not None:
                 message = str(output)
