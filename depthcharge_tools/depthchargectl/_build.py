@@ -398,7 +398,7 @@ class depthchargectl_build(
             else:
                 raise SizeTooBigError()
 
-        logger.info("Copying newly built image and info to output.")
+        logger.info("Copying newly built image to output.")
         copy(outtmp, self.output)
 
         logger.info(
