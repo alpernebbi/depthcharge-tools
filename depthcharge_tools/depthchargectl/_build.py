@@ -393,6 +393,7 @@ class depthchargectl_build(
                     name=self.description,
                     output=outtmp,
                     signprivate=self.vboot_private_key,
+                    signpubkey=self.vboot_public_key,
                     vmlinuz=self.kernel,
                     tmpdir=tmpdir,
                 )
