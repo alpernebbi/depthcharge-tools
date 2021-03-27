@@ -400,7 +400,6 @@ class depthchargectl_build(
 
         logger.info("Copying newly built image and info to output.")
         copy(outtmp, self.output)
-        outtmp.unlink()
 
         logger.info(
             "Built image for kernel version '{}'."
