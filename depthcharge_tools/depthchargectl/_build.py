@@ -14,6 +14,7 @@ from depthcharge_tools.utils.argparse import (
     Command,
     Argument,
     Group,
+    CommandExit,
 )
 from depthcharge_tools.utils.os import (
     system_disks,
@@ -31,6 +32,7 @@ from depthcharge_tools.utils.subprocess import (
 )
 
 from depthcharge_tools.depthchargectl import depthchargectl
+from depthcharge_tools.depthchargectl._check import SizeTooBigError
 
 logger = logging.getLogger(__name__)
 
@@ -361,18 +363,17 @@ class depthchargectl_build(
             try:
                 depthchargectl.check(image=outtmp)
                 break
-            except OSError as err:
-                if err.errno != 3:
-                    raise RuntimeError(
-                        "Failed while creating depthcharge image."
-                    )
+
+            except SizeTooBigError as err:
                 logger.warn(
                     "Image with compression '{}' is too big "
                     "for this board."
                     .format(compress)
                 )
+
                 if compress != self.compress[-1]:
                     continue
+
                 logger.error(
                     "The initramfs might be too big for this machine. "
                     "Usually this can be resolved by including less "
@@ -383,6 +384,12 @@ class depthchargectl_build(
                 raise RuntimeError(
                     "Couldn't build a small enough image for this machine."
                 )
+
+            except CommandExit as err:
+                raise RuntimeError(
+                    "Failed while creating depthcharge image."
+                ) from err
+
         else:
             raise RuntimeError(
                 "Failed to create a valid depthcharge image."

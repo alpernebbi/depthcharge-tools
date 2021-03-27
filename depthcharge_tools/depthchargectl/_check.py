@@ -10,6 +10,7 @@ from depthcharge_tools.utils.argparse import (
     Command,
     Argument,
     Group,
+    CommandExit,
 )
 from depthcharge_tools.utils.subprocess import (
     mkimage,
@@ -19,6 +20,53 @@ from depthcharge_tools.utils.subprocess import (
 from depthcharge_tools.depthchargectl import depthchargectl
 
 logger = logging.getLogger(__name__)
+
+
+class SizeTooBigError(CommandExit):
+    def __init__(self, image, image_size, max_size):
+        message = (
+            "Image '{}' ({} bytes) must be smaller than {} bytes."
+            .format(image, image_size, max_size)
+        )
+
+        self.image = image
+        self.image_size = image_size
+        self.max_size = max_size
+        super().__init__(output=False, returncode=3, message=message)
+
+
+class NotADepthchargeImageError(CommandExit):
+    def __init__(self, image):
+        message = (
+            "Image '{}' is not a depthcharge image."
+            .format(image)
+        )
+
+        self.image = image
+        super().__init__(output=False, returncode=4, message=message)
+
+
+class VbootSignatureError(CommandExit):
+    def __init__(self, image):
+        message = (
+            "Depthcharge image '{}' is not signed by the configured keys."
+            .format(image)
+        )
+
+        self.image = image
+        super().__init__(output=False, returncode=5, message=message)
+
+
+class ImageFormatError(CommandExit):
+    def __init__(self, image, board_format):
+        message = (
+            "Image '{}' must be in '{}' format."
+            .format(image, board_format)
+        )
+
+        self.image = image
+        self.board_format = board_format
+        super().__init__(output=False, returncode=6, message=message)
 
 
 @depthchargectl.subcommand("check")
@@ -40,7 +88,12 @@ class depthchargectl_check(
     @Argument
     def image(self, image):
         """Depthcharge image to check validity of."""
-        return Path(image)
+        image = Path(image)
+
+        if not image.is_file():
+            raise ValueError("Image argument must be a file")
+
+        return image
 
     def __call__(self):
         image = self.image
@@ -56,17 +109,13 @@ class depthchargectl_check(
                 .format(self.board)
             )
 
-        if not image.is_file():
-            raise OSError(
-                2,
-                "Image is not a file."
-            )
-
         logger.info("Checking if image fits into size limit.")
-        if image.stat().st_size > self.board.image_max_size:
-            raise OSError(
-                3,
-                "Depthcharge image is too big for this machine.",
+        image_size = image.stat().st_size
+        if image_size > self.board.image_max_size:
+            raise SizeTooBigError(
+                image,
+                image_size,
+                self.board.image_max_size,
             )
 
         logger.info("Checking depthcharge image validity.")
@@ -74,10 +123,7 @@ class depthchargectl_check(
             "--verify", image,
             check=False,
         ).returncode != 0:
-            raise OSError(
-                4,
-                "Image couldn't be interpreted by vbutil_kernel.",
-            )
+            raise NotADepthchargeImageError(image)
 
         logger.info("Checking depthcharge image signatures.")
         if self.vboot_public_key is not None:
@@ -86,10 +132,7 @@ class depthchargectl_check(
                 "--signpubkey", self.vboot_public_key,
                 check=False,
             ).returncode != 0:
-                raise OSError(
-                    5,
-                    "Depthcharge image not signed by configured keys.",
-                )
+                raise VbootSignatureError(image)
 
         itb = self.tmpdir / "{}.itb".format(image.name)
         vbutil_kernel(
@@ -102,17 +145,11 @@ class depthchargectl_check(
             logger.info("Checking FIT image format.")
             proc = mkimage("-l", itb)
             if proc.returncode != 0:
-                raise OSError(
-                    6,
-                    "Packed vmlinuz image not recognized by mkimage.",
-                )
+                raise ImageFormatError(image, self.board.image_format)
 
             head = proc.stdout.splitlines()[0]
             if not head.startswith("FIT description:"):
-                raise OSError(
-                    6,
-                    "Packed vmlinuz image is not a FIT image.",
-                )
+                raise ImageFormatError(image, self.board.image_format)
 
     global_options = depthchargectl.global_options
     config_options = depthchargectl.config_options
