@@ -362,6 +362,8 @@ class depthchargectl_build(
 
         for compress in self.compress:
             logger.info("Trying with compression '{}'.".format(compress))
+            tmpdir = self.tmpdir / "mkdepthcharge-{}".format(compress)
+
             try:
                 mkdepthcharge(
                     cmdline=self.cmdline,
@@ -374,6 +376,7 @@ class depthchargectl_build(
                     output=outtmp,
                     signprivate=self.vboot_private_key,
                     vmlinuz=self.kernel,
+                    tmpdir=tmpdir,
                 )
 
             except Exception as err:
