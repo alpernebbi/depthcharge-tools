@@ -10,6 +10,7 @@ from depthcharge_tools.utils.argparse import (
     Command,
     Argument,
     Group,
+    CommandExit,
 )
 from depthcharge_tools.utils.os import (
     system_disks,
@@ -21,6 +22,62 @@ from depthcharge_tools.utils.os import (
 from depthcharge_tools.depthchargectl import depthchargectl
 
 logger = logging.getLogger(__name__)
+
+
+class NotABlockDeviceError(CommandExit):
+    def __init__(self, device):
+        message = (
+            "Target '{}' is not a valid block device."
+            .format(device)
+        )
+
+        self.device = device
+        super().__init__(message=message, returncode=2)
+
+
+class NotCrosPartitionError(CommandExit):
+    def __init__(self, partition):
+        message = (
+            "Partition '{}' is not of type Chrome OS Kernel."
+            .format(partition)
+        )
+
+        self.partition = partition
+        super().__init__(message=message, returncode=5)
+
+
+class BootedPartitionError(CommandExit):
+    def __init__(self, partition):
+        message = (
+            "Partition '{}' is the currently booted parttiion."
+            .format(partition)
+        )
+
+        self.partition = partition
+        super().__init__(message=message, returncode=6)
+
+
+class PartitionSizeTooSmallError(CommandExit):
+    def __init__(self, partition, part_size, min_size):
+        message = (
+            "Partition '{}' ('{}' bytes) is smaller than '{}' bytes."
+            .format(partition, part_size, min_size)
+        )
+
+        self.partition = partition
+        self.part_size = part_size
+        self.min_size = min_size
+        super().__init__(message=message, returncode=7)
+
+
+class NoUsableCrosPartition(CommandExit):
+    def __init__(self):
+        message = (
+            "No usable Chrome OS Kernel partition found "
+            "for given input arguments."
+        )
+
+        super().__init__(message=message, output=[])
 
 
 @depthchargectl.subcommand("target")
@@ -121,60 +178,33 @@ class depthchargectl_target(
 
             logger.info("Checking if target partition is writable.")
             if part.path is not None and not part.path.is_block_device():
-                raise OSError(
-                    2,
-                    "Target '{}' is not a valid block device."
-                    .format(part),
-                )
+                raise NotABlockDeviceError(part.path)
 
             logger.info("Checking if targeted partition's disk is writable.")
             if not part.disk.path.is_block_device():
-                raise OSError(
-                    3,
-                    "Target '{}' is not a valid block device."
-                    .format(part),
-                )
-
-            logger.info(
-                "Checking if we can parse targeted partition's "
-                "partition number."
-            )
-            if part.partno is None:
-                raise OSError(
-                    4,
-                    "Could not parse partition number for '{}'."
-                    .format(part),
-                )
+                raise NotABlockDeviceError(part.disk.path)
 
             logger.info(
                 "Checking if targeted partition's type is Chrome OS Kernel."
             )
             if part not in part.disk.cros_partitions():
-                raise OSError(
-                    5,
-                    "Partition '{}' is not of type Chrome OS Kernel."
-                    .format(part),
-                )
+                raise NotCrosPartitionError(part)
 
             logger.info(
                 "Checking if targeted partition is currently booted one."
             )
             if not self.allow_current and part.path == current.path:
-                raise OSError(
-                    6,
-                    "Partition '{}' is the currently booted parttiion."
-                    .format(part),
-                )
+                raise BootedPartitionError(part)
 
             logger.info(
                 "Checking if targeted partition is bigger than given "
                 "minimum size."
             )
             if self.min_size is not None and part.size < self.min_size:
-                raise OSError(
-                    7,
-                    "Partition '{}' smaller than '{}' bytes."
-                    .format(part, self.min_size),
+                raise PartitionSizeTooSmallError(
+                    part,
+                    part.size,
+                    self.min_size,
                 )
 
         good_partitions = []
@@ -206,10 +236,7 @@ class depthchargectl_target(
         if good_partitions:
             return good_partitions[0]
         else:
-            raise ValueError(
-                "No usable Chrome OS Kernel partition found "
-                "for given input arguments."
-            )
+            return NoUsableCrosPartition()
 
     global_options = depthchargectl.global_options
     config_options = depthchargectl.config_options
