@@ -36,6 +36,22 @@ from depthcharge_tools.depthchargectl import depthchargectl
 logger = logging.getLogger(__name__)
 
 
+class SizeTooBigError(CommandExit):
+    def __init__(self):
+        super().__init__(
+            "Couldn't build a small enough image for this board.",
+        )
+
+
+class InitramfsSizeTooBigError(SizeTooBigError):
+    def __init__(self):
+        super(SizeTooBigError, self).__init__(
+            "Couldn't build a small enough image for this board. "
+            "This is usually solvable by making the initramfs smaller, "
+            "check your OS's documentation on how to do so."
+        )
+
+
 @depthchargectl.subcommand("build")
 class depthchargectl_build(
     depthchargectl,
@@ -373,20 +389,11 @@ class depthchargectl_build(
                 .format(compress)
             )
 
-            if compress != self.compress[-1]:
-                continue
-
-            logger.error(
-                "The initramfs might be too big for this machine. "
-                "Usually this can be resolved by including less "
-                "modules in the initramfs and/or compressing it "
-                "with a better algorithm. Please check your distro's "
-                "documentation for how to do this."
-            )
-
-            raise RuntimeError(
-                "Couldn't build a small enough image for this machine."
-            )
+        else:
+            if self.initrd is not None:
+                raise InitramfsSizeTooBigError()
+            else:
+                raise SizeTooBigError()
 
         logger.info("Copying newly built image and info to output.")
         copy(outtmp, self.output)
