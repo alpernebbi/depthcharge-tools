@@ -199,7 +199,8 @@ class depthchargectl_build(
     def description(self, desc=None):
         """Human-readable description for the image"""
         if desc is None:
-            desc = self.kernel_version.description
+            if self.board.image_format != "zimage":
+                desc = self.kernel_version.description
 
         return desc
 
