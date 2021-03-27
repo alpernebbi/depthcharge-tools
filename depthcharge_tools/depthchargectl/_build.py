@@ -382,6 +382,7 @@ class depthchargectl_build(
 
             try:
                 mkdepthcharge(
+                    arch=self.board.arch,
                     cmdline=self.cmdline,
                     compress=compress,
                     dtbs=self.dtbs,

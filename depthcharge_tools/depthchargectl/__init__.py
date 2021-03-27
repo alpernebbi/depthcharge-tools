@@ -43,6 +43,10 @@ class Board:
         return self._config.get("codename")
 
     @property
+    def arch(self):
+        return self._config.get("arch")
+
+    @property
     def dt_compatible(self):
         compat = self._config.get("dt-compatible", "False")
         if compat == "True":
