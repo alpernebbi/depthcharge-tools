@@ -709,24 +709,31 @@ def command_call(call):
 
 
 class CommandExit(Exception):
-    def __init__(self, message=None, output=None, returncode=1):
+    def __init__(
+        self,
+        message=None,
+        output=None,
+        returncode=1,
+        errno=None,
+    ):
         if message is None:
             if output is not None:
                 message = str(output)
             else:
                 message = ""
 
-        if returncode != 0:
+        if errno is not None:
             if message:
-                errmsg = "[Error {}] {}".format(returncode, message)
+                errmsg = "[Errno {}] {}".format(errno, message)
             else:
-                errmsg = "[Error {}]".format(returncode)
+                errmsg = "[Errno {}]".format(errno)
         else:
             errmsg = message
 
         self.returncode = returncode
         self.output = output
         self.message = message
+        self.errno = errno
         super().__init__(errmsg)
 
     def __repr__(self):
