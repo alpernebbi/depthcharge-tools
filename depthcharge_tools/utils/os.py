@@ -462,5 +462,28 @@ class CrosPartition(Partition):
     def prioritize(self):
         return cgpt.prioritize(self.disk.path, self.partno)
 
+    def _comparable_parts(self):
+        flags = self.flags
+        size = self.size
+
+        return (
+            flags["successful"],
+            flags["priority"],
+            flags["tries"],
+            self.size,
+        )
+
+    def __lt__(self, other):
+        if not isinstance(other, CrosPartition):
+            return NotImplemented
+
+        return self._comparable_parts() < other._comparable_parts()
+
+    def __gt__(self, other):
+        if not isinstance(other, CrosPartition):
+            return NotImplemented
+
+        return self._comparable_parts() > other._comparable_parts()
+
 
 system_disks = Disks()

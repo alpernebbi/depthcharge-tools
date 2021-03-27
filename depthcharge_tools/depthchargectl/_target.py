@@ -228,13 +228,8 @@ class depthchargectl_target(
 
         # Get the least-successful, least-priority, least-tries-left
         # partition in that order of preference.
-        good_partitions = sorted(
-            good_partitions,
-            key=lambda p: (p.successful, p.priority, p.tries, p.size),
-        )
-
         if good_partitions:
-            return good_partitions[0]
+            return min(good_partitions)
         else:
             return NoUsableCrosPartition()
 
