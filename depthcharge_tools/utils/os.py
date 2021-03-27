@@ -344,6 +344,7 @@ class Partition:
 
         if disk is None:
             disk = Disk(path)
+            path = None
 
         if partno is None:
             fmt = "Partition number not given for disk '{}'."
