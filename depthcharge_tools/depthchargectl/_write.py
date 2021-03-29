@@ -26,6 +26,15 @@ from depthcharge_tools.depthchargectl import depthchargectl
 logger = logging.getLogger(__name__)
 
 
+class ImageBuildError(CommandExit):
+    def __init__(self, kernel_version):
+        self.kernel_version = kernel_version
+        super().__init__(
+            "Failed to build depthcharge image for kernel version '{}'."
+            .format(kernel_version)
+        )
+
+
 class NotBootableImageError(CommandExit):
     def __init__(self, image):
         self.image = image
@@ -134,9 +143,14 @@ class depthchargectl_write(
                 "Using image for newest installed kernel version '{}'."
                 .format(self.kernel_version)
             )
-            image = depthchargectl.build(
-                kernel_version=self.kernel_version,
-            )
+
+            try:
+                image = depthchargectl.build(
+                    kernel_version=self.kernel_version,
+                )
+
+            except Exception as err:
+                raise ImageBuildError(self.kernel_version) from err
 
         try:
             # This also checks if the machine is supported.
