@@ -12,6 +12,7 @@ from depthcharge_tools.utils.argparse import (
     Command,
     Argument,
     Group,
+    CommandExit,
 )
 from depthcharge_tools.utils.os import (
     system_disks,
@@ -23,6 +24,31 @@ from depthcharge_tools.utils.platform import (
 from depthcharge_tools.depthchargectl import depthchargectl
 
 logger = logging.getLogger(__name__)
+
+
+class NotBootableImageError(CommandExit):
+    def __init__(self, image):
+        self.image = image
+        super().__init__(
+            "Image '{}' is not bootable on this board."
+            .format(image)
+        )
+
+
+class NoUsableCrosPartitionError(CommandExit):
+    def __init__(self):
+        super().__init__(
+            "No usable Chrome OS Kernel partition found."
+        )
+
+
+class NoPartitionPathError(CommandExit, NotImplementedError):
+    def __init__(self, partition):
+        self.partition = partition
+        super().__init__(
+            "Cannot write image to partition '{}' without a path."
+            .format(partition)
+        )
 
 
 @depthchargectl.subcommand("write")
@@ -124,19 +150,17 @@ class depthchargectl_write(
         try:
             # This also checks if the machine is supported.
             depthchargectl.check(image=image)
+
         except Exception as err:
-            if force:
+            if self.force:
                 logger.warn(
-                    "Depthcharge image '{}' is not bootable on this "
-                    "board, continuing due to --force."
+                    "Image '{}' is not bootable on this board, "
+                    "continuing due to --force."
                     .format(image)
                 )
+
             else:
-                raise ValueError(
-                    "Depthcharge image '{}' is not bootable on this "
-                    "board."
-                    .format(image)
-                )
+                raise NotBootableImageError(image) from err
 
         # We don't want target to unconditionally avoid the current
         # partition since we will also check that here. But whatever we
@@ -148,16 +172,15 @@ class depthchargectl_write(
                 min_size=image.stat().st_size,
                 allow_current=self.allow_current,
             )
-        except:
-            raise ValueError(
-                "Couldn't find a usable partition to write to."
-            )
+
+        except Exception as err:
+            raise NoUsableCrosPartitionError() from err
+
+        if target is None:
+            raise NoUsableCrosPartitionError()
 
         if target.path is None:
-            raise ValueError(
-                "Cannot write to target partition '{}' without a path."
-                .format(target)
-            )
+            raise NoPartitionPathError(target)
 
         logger.info("Targeted partition '{}'.".format(target))
 
