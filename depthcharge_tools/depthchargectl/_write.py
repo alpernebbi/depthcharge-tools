@@ -42,15 +42,6 @@ class NoUsableCrosPartitionError(CommandExit):
         )
 
 
-class NoPartitionPathError(CommandExit, NotImplementedError):
-    def __init__(self, partition):
-        self.partition = partition
-        super().__init__(
-            "Cannot write image to partition '{}' without a path."
-            .format(partition)
-        )
-
-
 @depthchargectl.subcommand("write")
 class depthchargectl_write(
     depthchargectl,
@@ -179,9 +170,6 @@ class depthchargectl_write(
         if target is None:
             raise NoUsableCrosPartitionError()
 
-        if target.path is None:
-            raise NoPartitionPathError(target)
-
         logger.info("Targeted partition '{}'.".format(target))
 
         # Check and warn if we targeted the currently booted partition,
@@ -198,7 +186,7 @@ class depthchargectl_write(
             "Writing depthcharge image '{}' to partition '{}'."
             .format(image, target)
         )
-        target.path.write_bytes(image.read_bytes())
+        target.write_bytes(image.read_bytes())
         logger.info(
             "Wrote depthcharge image '{}' to partition '{}'."
             .format(image, target)

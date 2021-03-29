@@ -384,6 +384,16 @@ class Partition:
                 blocks = int(size_f.read_text())
                 return blocks * 512
 
+    def write_bytes(self, data):
+        if self.path is None:
+            raise NotImplementedError(
+                "Cannot write to partitions that don't have a "
+                "concrete path for the partition."
+            )
+
+        else:
+            self.path.write_bytes(data)
+
     def __hash__(self):
         return hash((self.path, self.disk, self.partno))
 
