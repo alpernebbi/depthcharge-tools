@@ -78,7 +78,7 @@ class NoUsableCrosPartition(CommandExit):
             "for given input arguments."
         )
 
-        super().__init__(message=message, output=[])
+        super().__init__(message=message, output=None)
 
 
 @depthchargectl.subcommand("target")
