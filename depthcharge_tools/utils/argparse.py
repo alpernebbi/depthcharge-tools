@@ -799,9 +799,10 @@ class CommandMeta(type):
 
         except CommandExit as exit:
             logger = logging.getLogger(cls.__module__)
+            is_debug = logger.getEffectiveLevel() <= logging.DEBUG
 
             if exit.returncode != 0:
-                logger.error(exit)
+                logger.error(exit, exc_info=is_debug)
             else:
                 logger.info(exit)
 
