@@ -66,7 +66,7 @@ class depthchargectl_write(
         kernels = installed_kernels()
 
         if image is None:
-            self.kernel_version = max(kernels)
+            self.kernel_version = max(kernels).release
             self.image = None
 
         elif isinstance(image, str):
