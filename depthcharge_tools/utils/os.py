@@ -385,11 +385,19 @@ class Partition:
                 return blocks * 512
 
     def write_bytes(self, data):
+
         if self.path is None:
-            raise NotImplementedError(
-                "Cannot write to partitions that don't have a "
-                "concrete path for the partition."
-            )
+            start = cgpt.get_start(self.disk.path, self.partno)
+
+            with self.disk.path.open("r+b") as disk:
+                seek = disk.seek(start)
+                if seek != start:
+                    raise IOError(
+                        "Couldn't seek disk to start of partition '{}'."
+                        .format(self)
+                    )
+
+                disk.write(data)
 
         else:
             self.path.write_bytes(data)

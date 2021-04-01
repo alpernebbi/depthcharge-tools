@@ -151,6 +151,11 @@ class CgptRunner(ProcessRunner):
         blocks = int(proc.stdout)
         return blocks * 512
 
+    def get_start(self, disk, partno):
+        proc = self("show", "-b", "-i", str(partno), str(disk))
+        blocks = int(proc.stdout)
+        return blocks * 512
+
     def find_partitions(self, disk, type=None):
         if type is None:
             # cgpt find needs at least one of -t, -u, -l
