@@ -385,6 +385,14 @@ class Partition:
                 return blocks * 512
 
     def write_bytes(self, data):
+        data = bytes(data)
+
+        if len(data) >= self.size:
+            raise ValueError(
+                "Data to be written ('{}' bytes) is bigger than "
+                "partition '{}' ('{}' bytes)."
+                .format(len(data), self, self.size)
+            )
 
         if self.path is None:
             start = cgpt.get_start(self.disk.path, self.partno)
