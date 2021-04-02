@@ -153,22 +153,30 @@ class depthchargectl(
     @Argument("--config", nargs=1)
     def config(self, file_=None):
         """Additional configuration file to read"""
-        parser = configparser.ConfigParser(
-            default_section="depthcharge-tools",
-            dict_type=ConfigDict,
-        )
+        if isinstance(file_, configparser.SectionProxy):
+            return file_
 
-        parser.read_string(config_ini, source="config.ini")
+        elif isinstance(file_, configparser.ConfigParser):
+            parser = file_
+            file_ = None
 
-        try:
-            for p in parser.read(config_files):
-                logger.debug("Read config file '{}'.".format(p))
-
-        except configparser.ParsingError as err:
-            logger.warning(
-                "Config file '{}' could not be parsed."
-                .format(err.filename)
+        else:
+            parser = configparser.ConfigParser(
+                default_section="depthcharge-tools",
+                dict_type=ConfigDict,
             )
+
+            parser.read_string(config_ini, source="config.ini")
+
+            try:
+                for p in parser.read(config_files):
+                    logger.debug("Read config file '{}'.".format(p))
+
+            except configparser.ParsingError as err:
+                logger.warning(
+                    "Config file '{}' could not be parsed."
+                    .format(err.filename)
+                )
 
         if file_ is not None:
             try:
