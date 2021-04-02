@@ -55,7 +55,7 @@ class NoUsableCrosPartitionError(CommandExit):
 class depthchargectl_write(
     depthchargectl,
     prog="depthchargectl write",
-    usage="%(prog)s [options] (kernel-version | image)",
+    usage="%(prog)s [options] [KERNEL-VERSION | IMAGE]",
     add_help=False,
 ):
     """Write an image to a ChromeOS kernel partition."""
