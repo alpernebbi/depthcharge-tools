@@ -356,13 +356,18 @@ class Partition:
             msg = fmt.format(partno)
             raise ValueError(msg)
 
-        elif path is None:
+        elif (
+            path is None
+            and disk.path.parent == Path("/dev")
+            and disk.path.is_block_device()
+        ):
             fmt = "{}p{}" if disk.path.name[-1].isnumeric() else "{}{}"
             name = fmt.format(disk.path.name, partno)
             path = disk.path.with_name(name)
 
-        if not (path.is_file() or path.is_block_device()):
-            path = None
+        if path is not None:
+            if not (path.is_file() or path.is_block_device()):
+                path = None
 
         self.disk = disk
         self.path = path
