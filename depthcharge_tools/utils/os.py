@@ -405,7 +405,13 @@ class Partition:
                         .format(self)
                     )
 
-                disk.write(data)
+                written = disk.write(data)
+                if written != len(data):
+                    raise IOError(
+                        "Couldn't write data to partition '{}' "
+                        "(wrote '{}' out of '{}' bytes)."
+                        .format(self, written, len(data))
+                    )
 
         else:
             self.path.write_bytes(data)
