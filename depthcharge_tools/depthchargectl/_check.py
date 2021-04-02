@@ -98,16 +98,10 @@ class depthchargectl_check(
     def __call__(self):
         image = self.image
 
-        try:
-            logger.info(
-                "Verifying image for board '{}' ('{}')."
-                .format(self.board.name, self.board.codename)
-            )
-        except KeyError:
-            raise ValueError(
-                "Cannot verify images for unsupported board '{}'."
-                .format(self.board)
-            )
+        logger.info(
+            "Verifying image for board '{}' ('{}')."
+            .format(self.board.name, self.board.codename)
+        )
 
         logger.info("Checking if image fits into size limit.")
         image_size = image.stat().st_size

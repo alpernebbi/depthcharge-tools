@@ -155,7 +155,6 @@ class depthchargectl_write(
                 raise ImageBuildError(self.kernel_version) from err
 
         try:
-            # This also checks if the machine is supported.
             depthchargectl.check(
                 image=image,
                 config=self.config,

@@ -354,16 +354,10 @@ class depthchargectl_build(
         return Path(path)
 
     def __call__(self):
-        try:
-            logger.info(
-                "Building images for board '{}' ('{}')."
-                .format(self.board.name, self.board.codename)
-            )
-        except KeyError:
-            raise ValueError(
-                "Cannot build images for unsupported board '{}'."
-                .format(self.board)
-            )
+        logger.info(
+            "Building images for board '{}' ('{}')."
+            .format(self.board.name, self.board.codename)
+        )
 
         logger.info(
             "Building for kernel version '{}'."

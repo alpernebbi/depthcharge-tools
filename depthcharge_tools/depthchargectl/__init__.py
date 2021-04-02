@@ -6,6 +6,7 @@ import copy
 import glob
 import logging
 import os
+import platform
 import re
 import tempfile
 
@@ -22,6 +23,7 @@ from depthcharge_tools.utils.collections import (
     ConfigDict,
 )
 from depthcharge_tools.utils.platform import (
+    Architecture,
     vboot_keys,
     cros_hwid,
     dt_compatibles,
@@ -273,6 +275,19 @@ class depthchargectl(
             logger.warning(
                 "Couldn't detect board by dt-compatibles."
             )
+
+        # Use generic boards per cpu architecture, since we couldn't
+        # detect this system as a proper board
+        arch = platform.machine()
+        if arch in Architecture.arm_32:
+            codename = "arm-generic"
+        elif arch in Architecture.arm_64:
+            codename = "arm64-generic"
+        elif arch in Architecture.x86_64:
+            codename = "amd64-generic"
+        board = boards.get(codename, None)
+        if board is not None:
+            return board
 
         raise ValueError(
             "Could not detect which board this is running on."
