@@ -86,6 +86,7 @@ class Disks:
 
     def evaluate(self, device):
         dev = self._dev
+        sys = self._sys
 
         if device is None:
             return None
@@ -154,9 +155,9 @@ class Disks:
             return None
 
         try:
-            return Partition(device)
+            return Partition(device, dev=dev, sys=sys)
         except:
-            return Disk(device)
+            return Disk(device, dev=dev, sys=sys)
 
     def by_mountpoint(self, mountpoint, fstab_only=False):
         if not Path(mountpoint).exists():
@@ -264,7 +265,10 @@ class Disks:
 
 
 class Disk:
-    def __init__(self, path):
+    def __init__(self, path, dev="/dev", sys="/sys"):
+        self._sys = sys = Path(sys)
+        self._dev = dev = Path(dev)
+
         if isinstance(path, Disk):
             path = path.path
         else:
@@ -278,17 +282,17 @@ class Disk:
         self.path = path
 
     def partition(self, partno):
-        return Partition(self, partno)
+        return Partition(self, partno, dev=self._dev, sys=self._sys)
 
     def partitions(self):
         return [
-            Partition(self, n)
+            Partition(self, n, dev=self._dev, sys=self._sys)
             for n in cgpt.find_partitions(self.path)
         ]
 
     def cros_partitions(self):
         return [
-            CrosPartition(self, n)
+            CrosPartition(self, n, dev=self._dev, sys=self._sys)
             for n in cgpt.find_partitions(self.path, type="kernel")
         ]
 
@@ -298,7 +302,7 @@ class Disk:
             return self.path.stat().st_size
 
         if self.path.is_block_device():
-            sysdir = Path("/sys/class/block") / self.path.name
+            sysdir = self._sys / "class" / "block" / self.path.name
 
             size_f = sysdir / "size"
             if size_f.exists():
@@ -319,7 +323,10 @@ class Disk:
 
 
 class Partition:
-    def __init__(self, path, partno=None):
+    def __init__(self, path, partno=None, dev="/dev", sys="/sys"):
+        self._dev = dev = Path(dev)
+        self._sys = sys = Path(sys)
+
         if isinstance(path, Disk):
             disk = path
             path = None
@@ -330,7 +337,7 @@ class Partition:
         if (
             disk is None
             and partno is None
-            and path.parent == Path("/dev")
+            and path.parent == dev
             and path.is_block_device()
         ):
             match = (
@@ -340,10 +347,10 @@ class Partition:
             if match:
                 diskname, partno = match.groups()
                 partno = int(partno)
-                disk = Disk(path.with_name(diskname))
+                disk = Disk(path.with_name(diskname), dev=dev, sys=sys)
 
         if disk is None:
-            disk = Disk(path)
+            disk = Disk(path, dev=dev, sys=sys)
             path = None
 
         if partno is None:
@@ -358,7 +365,7 @@ class Partition:
 
         elif (
             path is None
-            and disk.path.parent == Path("/dev")
+            and disk.path.parent == dev
             and disk.path.is_block_device()
         ):
             fmt = "{}p{}" if disk.path.name[-1].isnumeric() else "{}{}"
@@ -382,7 +389,7 @@ class Partition:
             return self.path.stat().st_size
 
         if self.path.is_block_device():
-            sysdir = Path("/sys/class/block") / self.path.name
+            sysdir = self._sys / "class" / "block" / self.path.name
 
             size_f = sysdir / "size"
             if size_f.exists():
