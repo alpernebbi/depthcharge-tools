@@ -147,6 +147,15 @@ class depthchargectl_write(
             try:
                 image = depthchargectl.build(
                     kernel_version=self.kernel_version,
+                    config=self.config,
+                    board=self.board,
+                    tmpdir=self.tmpdir / "build",
+                    images_dir=self.images_dir,
+                    vboot_keyblock=self.vboot_keyblock,
+                    vboot_public_key=self.vboot_public_key,
+                    vboot_private_key=self.vboot_private_key,
+                    kernel_cmdline=self.kernel_cmdline,
+                    ignore_initramfs=self.ignore_initramfs,
                 )
 
             except Exception as err:
@@ -154,7 +163,18 @@ class depthchargectl_write(
 
         try:
             # This also checks if the machine is supported.
-            depthchargectl.check(image=image)
+            depthchargectl.check(
+                image=image,
+                config=self.config,
+                board=self.board,
+                tmpdir=self.tmpdir / "check",
+                images_dir=self.images_dir,
+                vboot_keyblock=self.vboot_keyblock,
+                vboot_public_key=self.vboot_public_key,
+                vboot_private_key=self.vboot_private_key,
+                kernel_cmdline=self.kernel_cmdline,
+                ignore_initramfs=self.ignore_initramfs,
+            )
 
         except Exception as err:
             if self.force:
@@ -176,6 +196,15 @@ class depthchargectl_write(
                 disks=[self.target] if self.target else (),
                 min_size=image.stat().st_size,
                 allow_current=self.allow_current,
+                config=self.config,
+                board=self.board,
+                tmpdir=self.tmpdir / "target",
+                images_dir=self.images_dir,
+                vboot_keyblock=self.vboot_keyblock,
+                vboot_public_key=self.vboot_public_key,
+                vboot_private_key=self.vboot_private_key,
+                kernel_cmdline=self.kernel_cmdline,
+                ignore_initramfs=self.ignore_initramfs,
             )
 
         except Exception as err:
