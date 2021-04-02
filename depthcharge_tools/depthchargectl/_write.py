@@ -18,6 +18,7 @@ from depthcharge_tools.utils.os import (
     system_disks,
 )
 from depthcharge_tools.utils.platform import (
+    KernelEntry,
     installed_kernels,
 )
 
@@ -71,27 +72,23 @@ class depthchargectl_write(
                 "Image and kernel_version arguments are mutually exclusive"
             )
 
-        image = self.image or self.kernel_version
-        kernels = installed_kernels()
+        arg = self.image or self.kernel_version
 
-        if image is None:
-            self.kernel_version = max(kernels).release
+        # Turn arg into a relevant KernelEntry if it's a kernel version
+        # or a Path() if not
+        if isinstance(arg, str):
+            arg = max(
+                (k for k in installed_kernels() if k.release == arg),
+                default=Path(arg).resolve(),
+            )
+
+        if isinstance(arg, KernelEntry):
             self.image = None
+            self.kernel_version = arg
 
-        elif isinstance(image, str):
-            for k in kernels:
-                if image == k.release:
-                    logger.info(
-                        "Using image for given kernel version '{}'."
-                        .format(k.release)
-                    )
-                    self.kernel_version = k.release
-                    self.image = None
-                    break
-            else:
-                self.kernel_version = None
-                self.image = Path(image).resolve()
-                logger.info("Using given image '{}'.".format(image))
+        elif isinstance(arg, Path):
+            self.image = arg
+            self.kernel_version = None
 
     @positionals.add
     @Argument(dest=argparse.SUPPRESS, nargs=argparse.SUPPRESS)
@@ -135,15 +132,11 @@ class depthchargectl_write(
 
     def __call__(self):
         if self.image is not None:
+            logger.info("Using given image '{}'." .format(self.image))
             image = self.image
 
         else:
             # No image given, try creating one.
-            logger.info(
-                "Using image for newest installed kernel version '{}'."
-                .format(self.kernel_version)
-            )
-
             try:
                 image = depthchargectl.build(
                     kernel_version=self.kernel_version,
