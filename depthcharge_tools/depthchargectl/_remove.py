@@ -12,6 +12,7 @@ from depthcharge_tools.utils.argparse import (
     Command,
     Argument,
     Group,
+    CommandExit,
 )
 from depthcharge_tools.utils.os import (
     system_disks,
@@ -20,6 +21,15 @@ from depthcharge_tools.utils.os import (
 from depthcharge_tools.depthchargectl import depthchargectl
 
 logger = logging.getLogger(__name__)
+
+
+class BootedPartitionError(CommandExit):
+    def __init__(self, partition):
+        self.partition = partition
+        super().__init__(
+            "Refusing to disable currently booted partition '{}'."
+            .format(partition)
+        )
 
 
 @depthchargectl.subcommand("remove")
@@ -124,11 +134,15 @@ class depthchargectl_remove(
             logger.info("No partitions contain the given image.")
 
         current = system_disks.by_kern_guid()
-        for part in badparts:
-            if part.path == current and not self.force:
-                raise ValueError(
-                    "Refusing to disable currently booted partition."
+        if current in badparts:
+            if self.force:
+                logger.warn(
+                    "Deactivating the currently booted partition '{}'. "
+                    "This might make your system unbootable."
+                    .format(target)
                 )
+            else:
+                raise CurrentlyBootedPartitionError(part)
 
         for part in badparts:
             logger.info("Deactivating '{}'.".format(part))
