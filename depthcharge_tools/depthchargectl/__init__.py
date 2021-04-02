@@ -203,6 +203,12 @@ class depthchargectl(
     @Argument("--board", nargs=1)
     def board(self, codename=None):
         """Assume we're running on the specified board"""
+        if isinstance(codename, Board):
+            return codename
+
+        elif isinstance(codename, configparser.SectionProxy):
+            return Board(codename)
+
         boards = {
             section.get("codename"): Board(section)
             for name, section in self.config.parser.items()
