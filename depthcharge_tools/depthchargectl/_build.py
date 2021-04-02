@@ -24,6 +24,7 @@ from depthcharge_tools.utils.pathlib import (
     copy,
 )
 from depthcharge_tools.utils.platform import (
+    KernelEntry,
     installed_kernels,
     root_requires_initramfs,
 )
@@ -71,19 +72,22 @@ class depthchargectl_build(
     @Argument
     def kernel_version(self, kernel_version=None):
         """Installed kernel version to build an image for."""
+        if isinstance(kernel_version, KernelEntry):
+            return kernel_version
+
         kernels = installed_kernels()
 
         if isinstance(kernel_version, str):
-            kernels = [
-                k for k in kernels
-                if k.release == kernel_version
-            ]
-            if not kernels:
+            kernel = max(
+                (k for k in kernels if k.release == kernel_version),
+                default=None,
+            )
+
+            if kernel is None:
                 raise ValueError(
                     "Could not find an installed kernel for version '{}'."
                     .format(kernel_version)
                 )
-            kernel = kernels[0]
 
         elif kernels:
             kernel = max(kernels)
