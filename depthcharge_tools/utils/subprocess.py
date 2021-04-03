@@ -131,13 +131,16 @@ class CgptRunner(ProcessRunner):
         priority = (attribute >> 0) & 0xF
 
         return {
+            "A": attribute,
             "S": successful,
             "P": priority,
             "T": tries,
         }
 
-    def set_flags(self, disk, partno, S=None, P=None, T=None):
+    def set_flags(self, disk, partno, A=None, S=None, P=None, T=None):
         flag_args = []
+        if A is not None:
+            flag_args += ["-A", str(int(A))]
         if S is not None:
             flag_args += ["-S", str(int(S))]
         if P is not None:

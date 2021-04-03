@@ -461,6 +461,7 @@ class CrosPartition(Partition):
     def flags(self):
         flags = cgpt.get_flags(self.disk.path, self.partno)
         return {
+            "attribute": flags["A"],
             "successful": flags["S"],
             "priority": flags["P"],
             "tries": flags["T"],
@@ -469,16 +470,18 @@ class CrosPartition(Partition):
     @flags.setter
     def flags(self, value):
         if isinstance(value, dict):
+            A = value.get("attribute", None)
             S = value.get("successful", None)
             P = value.get("priority", None)
             T = value.get("tries", None)
 
         else:
+            A = getattr(value, "attribute", None)
             S = getattr(value, "successful", None)
             P = getattr(value, "priority", None)
             T = getattr(value, "tries", None)
 
-        cgpt.set_flags(self.disk.path, self.partno, S=S, P=P, T=T)
+        cgpt.set_flags(self.disk.path, self.partno, A=A, S=S, P=P, T=T)
 
     @property
     def successful(self):
