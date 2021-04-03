@@ -807,18 +807,21 @@ class CommandMeta(type):
             parser.error(err.args[0])
 
         except CommandExit as exit:
-            is_debug = logger.getEffectiveLevel() <= logging.DEBUG
-
             if exit.returncode != 0:
-                logger.error(exit, exc_info=is_debug)
+                logger.error(
+                    exit,
+                    exc_info=logger.isEnabledFor(logging.DEBUG),
+                )
             else:
                 logger.info(exit)
 
             sys.exit(exit.returncode)
 
         except Exception as err:
-            is_debug = logger.getEffectiveLevel() <= logging.DEBUG
-            logger.error(err, exc_info=is_debug)
+            logger.error(
+                err,
+                exc_info=logger.isEnabledFor(logging.DEBUG),
+            )
 
             sys.exit(1)
 
