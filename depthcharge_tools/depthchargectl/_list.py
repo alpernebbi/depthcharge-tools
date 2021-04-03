@@ -45,7 +45,10 @@ class CrosPartitions(collections.UserList):
             self._check(part)
 
         if columns is None:
-            columns = ["S", "P", "T", "PATH"]
+            if any(part.path is None for part in partitions):
+                columns = ["S", "P", "T", "DISKPATH", "PARTNO"]
+            else:
+                columns = ["S", "P", "T", "PATH"]
 
         self._headings = headings
         self._columns = columns
