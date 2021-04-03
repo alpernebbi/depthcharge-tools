@@ -45,30 +45,6 @@ def lzma(src, dest=None):
     return Path(dest)
 
 
-def is_vmlinuz(path):
-    return any((
-        "vmlinuz" in path.name,
-        "vmlinux" in path.name,
-        "linux" in path.name,
-        "Image" in path.name,
-        "kernel" in path.name,
-    ))
-
-
-def is_initramfs(path):
-    return any((
-        "initrd" in path.name,
-        "initramfs" in path.name,
-        "cpio" in path.name,
-    ))
-
-
-def is_dtb(path):
-    return any((
-        "dtb" in path.name,
-    ))
-
-
 def iterdir(path):
     return path.iterdir() if path.is_dir() else []
 

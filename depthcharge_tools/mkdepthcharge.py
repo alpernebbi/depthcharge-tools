@@ -4,6 +4,7 @@ import argparse
 import logging
 import os
 import platform
+import subprocess
 import sys
 import tempfile
 
@@ -21,9 +22,6 @@ from depthcharge_tools.utils.pathlib import (
     gunzip,
     lz4,
     lzma,
-    is_vmlinuz,
-    is_initramfs,
-    is_dtb,
 )
 from depthcharge_tools.utils.platform import (
     Architecture,
@@ -32,6 +30,7 @@ from depthcharge_tools.utils.platform import (
 from depthcharge_tools.utils.subprocess import (
     mkimage,
     vbutil_kernel,
+    gzip as gzip_runner,
 )
 
 
@@ -59,21 +58,38 @@ class mkdepthcharge(
         files = [Path(f).resolve() for f in files]
 
         for f in files:
-            if is_vmlinuz(f):
+            with f.open("rb") as f_:
+                head = f_.read(4096)
+
+            # Partially decompress gzip files to run detection on content
+            if head.startswith(b"\x1f\x8b"):
+                try:
+                    gzip_runner.decompress(head, subprocess.PIPE)
+                except subprocess.CalledProcessError as err:
+                    if err.output:
+                        head = err.output
+
+            # Portable Executable and ELF files
+            if head.startswith(b"MZ") or head.startswith(b"ELF"):
                 vmlinuz.append(f)
 
-            elif is_initramfs(f):
+            # Cpio files
+            elif (
+                head.startswith(b"070701")
+                or head.startswith(b"070702")
+                or head.startswith(b"070707")
+            ):
                 initramfs.append(f)
 
-            elif is_dtb(f):
+            # Device-tree blobs
+            elif head.startswith(b"\xd0\x0d\xfe\xed"):
                 dtbs.append(f)
 
+            # Failed to detect, assume in the order in usage string
             elif len(vmlinuz) == 0:
                 vmlinuz.append(f)
-
             elif len(initramfs) == 0:
                 initramfs.append(f)
-
             else:
                 dtbs.append(f)
 
