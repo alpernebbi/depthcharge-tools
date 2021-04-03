@@ -79,9 +79,11 @@ class depthchargectl_list(
     # This is just trying to getattr things, but getting DISKPATH is
     # easier this way.
     formats = {
+        "ATTRIBUTE": "{0.attribute}",
         "SUCCESSFUL": "{0.successful}",
         "PRIORITY": "{0.priority}",
         "TRIES": "{0.tries}",
+        "A": "{0.attribute}",
         "S": "{0.successful}",
         "P": "{0.priority}",
         "T": "{0.tries}",
