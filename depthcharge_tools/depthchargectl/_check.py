@@ -19,8 +19,6 @@ from depthcharge_tools.utils.subprocess import (
 
 from depthcharge_tools.depthchargectl import depthchargectl
 
-logger = logging.getLogger(__name__)
-
 
 class SizeTooBigError(CommandExit):
     def __init__(self, image, image_size, max_size):
@@ -78,6 +76,7 @@ class depthchargectl_check(
 ):
     """Check if a depthcharge image can be booted."""
 
+    logger = depthchargectl.logger.getChild("check")
     config_section = "depthchargectl/check"
 
     @Group
@@ -98,12 +97,12 @@ class depthchargectl_check(
     def __call__(self):
         image = self.image
 
-        logger.info(
+        self.logger.info(
             "Verifying image for board '{}' ('{}')."
             .format(self.board.name, self.board.codename)
         )
 
-        logger.info("Checking if image fits into size limit.")
+        self.logger.info("Checking if image fits into size limit.")
         image_size = image.stat().st_size
         if image_size > self.board.image_max_size:
             raise SizeTooBigError(
@@ -112,14 +111,14 @@ class depthchargectl_check(
                 self.board.image_max_size,
             )
 
-        logger.info("Checking depthcharge image validity.")
+        self.logger.info("Checking depthcharge image validity.")
         if vbutil_kernel(
             "--verify", image,
             check=False,
         ).returncode != 0:
             raise NotADepthchargeImageError(image)
 
-        logger.info("Checking depthcharge image signatures.")
+        self.logger.info("Checking depthcharge image signatures.")
         if self.vboot_public_key is not None:
             if vbutil_kernel(
                 "--verify", image,
@@ -136,7 +135,7 @@ class depthchargectl_check(
         )
 
         if self.board.image_format == "fit":
-            logger.info("Checking FIT image format.")
+            self.logger.info("Checking FIT image format.")
             proc = mkimage("-l", itb)
             if proc.returncode != 0:
                 raise ImageFormatError(image, self.board.image_format)

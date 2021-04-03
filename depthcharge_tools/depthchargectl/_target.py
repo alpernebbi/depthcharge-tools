@@ -19,10 +19,7 @@ from depthcharge_tools.utils.os import (
     Partition,
 )
 
-
 from depthcharge_tools.depthchargectl import depthchargectl
-
-logger = logging.getLogger(__name__)
 
 
 class NotABlockDeviceError(CommandExit):
@@ -90,6 +87,7 @@ class depthchargectl_target(
 ):
     """Choose or validate a ChromeOS Kernel partition to use."""
 
+    logger = depthchargectl.logger.getChild("target")
     config_section = "depthchargectl/target"
 
     @Group
@@ -114,14 +112,14 @@ class depthchargectl_target(
         for d in list(disks):
             try:
                 partitions.append(Partition(d))
-                logger.info("Using target '{}' as a partition.".format(d))
+                self.logger.info("Using target '{}' as a partition.".format(d))
                 disks.remove(d)
             except:
                 pass
 
         # For arguments which are disks, search all their partitions.
         if disks:
-            logger.info("Finding disks for targets '{}'.".format(disks))
+            self.logger.info("Finding disks for targets '{}'.".format(disks))
             images = [
                 Disk(d)
                 for d in disks
@@ -129,7 +127,7 @@ class depthchargectl_target(
             ]
 
             for d in (*system_disks.roots(*disks), *images):
-                logger.info("Using '{}' as a disk.".format(d))
+                self.logger.info("Using '{}' as a disk.".format(d))
                 partitions.extend(d.cros_partitions())
 
         self.disks = disks
@@ -183,27 +181,27 @@ class depthchargectl_target(
         if len(self.partitions) == 1 and len(self.disks) == 0:
             part = self.partitions[0]
 
-            logger.info("Checking if target partition is writable.")
+            self.logger.info("Checking if target partition is writable.")
             if part.path is not None and not part.path.is_block_device():
                 raise NotABlockDeviceError(part.path)
 
-            logger.info("Checking if targeted partition's disk is writable.")
+            self.logger.info("Checking if targeted partition's disk is writable.")
             if not part.disk.path.is_block_device():
                 raise NotABlockDeviceError(part.disk.path)
 
-            logger.info(
+            self.logger.info(
                 "Checking if targeted partition's type is Chrome OS Kernel."
             )
             if part not in part.disk.cros_partitions():
                 raise NotCrosPartitionError(part)
 
-            logger.info(
+            self.logger.info(
                 "Checking if targeted partition is currently booted one."
             )
             if not self.allow_current and part.path == current.path:
                 raise BootedPartitionError(part)
 
-            logger.info(
+            self.logger.info(
                 "Checking if targeted partition is bigger than given "
                 "minimum size."
             )
@@ -217,20 +215,20 @@ class depthchargectl_target(
         good_partitions = []
         for p in self.partitions:
             if self.min_size is not None and p.size < self.min_size:
-                logger.info(
+                self.logger.info(
                     "Skipping partition '{}' as too small."
                     .format(p)
                 )
                 continue
 
             if not self.allow_current and p.path == current.path:
-                logger.info(
+                self.logger.info(
                     "Skipping currently booted partition '{}'."
                     .format(p)
                 )
                 continue
 
-            logger.info("Partition '{}' is usable.".format(p))
+            self.logger.info("Partition '{}' is usable.".format(p))
             good_partitions.append(
                 CrosPartition(p.disk.path, partno=p.partno),
             )

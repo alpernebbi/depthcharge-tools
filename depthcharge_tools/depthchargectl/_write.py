@@ -24,8 +24,6 @@ from depthcharge_tools.utils.platform import (
 
 from depthcharge_tools.depthchargectl import depthchargectl
 
-logger = logging.getLogger(__name__)
-
 
 class ImageBuildError(CommandExit):
     def __init__(self, kernel_version):
@@ -61,6 +59,7 @@ class depthchargectl_write(
 ):
     """Write an image to a ChromeOS kernel partition."""
 
+    logger = depthchargectl.logger.getChild("write")
     config_section = "depthchargectl/write"
 
     @Group
@@ -132,7 +131,7 @@ class depthchargectl_write(
 
     def __call__(self):
         if self.image is not None:
-            logger.info("Using given image '{}'." .format(self.image))
+            self.logger.info("Using given image '{}'." .format(self.image))
             image = self.image
 
         else:
@@ -170,7 +169,7 @@ class depthchargectl_write(
 
         except Exception as err:
             if self.force:
-                logger.warn(
+                self.logger.warn(
                     "Image '{}' is not bootable on this board, "
                     "continuing due to --force."
                     .format(image)
@@ -182,7 +181,7 @@ class depthchargectl_write(
         # We don't want target to unconditionally avoid the current
         # partition since we will also check that here. But whatever we
         # choose must be bigger than the image we'll write to it.
-        logger.info("Searching disks for a target partition.")
+        self.logger.info("Searching disks for a target partition.")
         try:
             target = depthchargectl.target(
                 disks=[self.target] if self.target else (),
@@ -205,36 +204,36 @@ class depthchargectl_write(
         if target is None:
             raise NoUsableCrosPartitionError()
 
-        logger.info("Targeted partition '{}'.".format(target))
+        self.logger.info("Targeted partition '{}'.".format(target))
 
         # Check and warn if we targeted the currently booted partition,
         # as that usually means it's the only partition.
         current = system_disks.by_kern_guid()
         if self.allow_current and target.path == current.path:
-            logger.warn(
+            self.logger.warn(
                 "Overwriting the currently booted partition '{}'. "
                 "This might make your system unbootable."
                 .format(target)
             )
 
-        logger.info(
+        self.logger.info(
             "Writing depthcharge image '{}' to partition '{}'."
             .format(image, target)
         )
         target.write_bytes(image.read_bytes())
-        logger.info(
+        self.logger.info(
             "Wrote depthcharge image '{}' to partition '{}'."
             .format(image, target)
         )
 
         if self.prioritize:
-            logger.info(
+            self.logger.info(
                 "Setting '{}' as the highest-priority bootable part."
                 .format(target)
             )
             target.attribute = 0x010
             target.prioritize()
-            logger.info(
+            self.logger.info(
                 "Set partition '{}' as next to boot."
                 .format(target)
             )

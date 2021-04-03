@@ -20,8 +20,6 @@ from depthcharge_tools.utils.os import (
 
 from depthcharge_tools.depthchargectl import depthchargectl
 
-logger = logging.getLogger(__name__)
-
 
 class BootedPartitionError(CommandExit):
     def __init__(self, partition):
@@ -41,6 +39,7 @@ class depthchargectl_remove(
 ):
     """Remove images and disable partitions containing them."""
 
+    logger = depthchargectl.logger.getChild("remove")
     config_section = "depthchargectl/remove"
 
     @Group
@@ -63,7 +62,7 @@ class depthchargectl_remove(
             # Instead just check if we have it as an image.
             img = (self.images_dir / "{}.img".format(image)).resolve()
             if img.parent == self.images_dir and img.is_file():
-                logger.info(
+                self.logger.info(
                     "Disabling partitions for kernel version '{}'."
                     .format(image)
                 )
@@ -73,7 +72,7 @@ class depthchargectl_remove(
             else:
                 self.image = Path(image).resolve()
                 self.kernel_version = None
-                logger.info(
+                self.logger.info(
                     "Disabling partitions for depthcharge image '{}'."
                     .format(image)
                 )
@@ -113,14 +112,14 @@ class depthchargectl_remove(
         # size 64KiB == 0x10000.
         image_vblock = image.read_bytes()[:0x10000]
 
-        logger.info(
+        self.logger.info(
             "Searching for Chrome OS Kernel partitions containing '{}'."
             .format(image)
         )
         badparts = []
         for disk in system_disks.bootable_disks():
             for part in disk.cros_partitions():
-                logger.info("Checking partition '{}'.".format(part))
+                self.logger.info("Checking partition '{}'.".format(part))
 
                 # It's OK to check only the vblock header, as that
                 # contains signatures on the content and those will be
@@ -131,12 +130,12 @@ class depthchargectl_remove(
                             badparts.append(part)
 
         if not badparts:
-            logger.info("No partitions contain the given image.")
+            self.logger.info("No partitions contain the given image.")
 
         current = system_disks.by_kern_guid()
         if current in badparts:
             if self.force:
-                logger.warn(
+                self.logger.warn(
                     "Deactivating the currently booted partition '{}'. "
                     "This might make your system unbootable."
                     .format(target)
@@ -145,20 +144,20 @@ class depthchargectl_remove(
                 raise CurrentlyBootedPartitionError(part)
 
         for part in badparts:
-            logger.info("Deactivating '{}'.".format(part))
+            self.logger.info("Deactivating '{}'.".format(part))
             part.attribute = 0x000
-            logger.info("Deactivated '{}'.".format(part))
+            self.logger.info("Deactivated '{}'.".format(part))
 
         if image.parent == self.images_dir:
-            logger.info(
+            self.logger.info(
                 "Image '{}' is in images dir, deleting."
                 .format(image)
             )
             image.unlink()
-            logger.info("Deleted image '{}'.".format(image))
+            self.logger.info("Deleted image '{}'.".format(image))
 
         else:
-            logger.info("Not deleting image file '{}'.")
+            self.logger.info("Not deleting image file '{}'.")
 
         if badparts:
             return badparts

@@ -18,8 +18,6 @@ from depthcharge_tools.utils.os import (
 
 from depthcharge_tools.depthchargectl import depthchargectl
 
-logger = logging.getLogger(__name__)
-
 
 @depthchargectl.subcommand("bless")
 class depthchargectl_bless(
@@ -30,6 +28,7 @@ class depthchargectl_bless(
 ):
     """Set the active or given partition as successfully booted."""
 
+    logger = depthchargectl.logger.getChild("list")
     config_section = "depthchargectl/bless"
 
     @Group
@@ -75,7 +74,7 @@ class depthchargectl_bless(
 
     def __call__(self):
         if self.bad == False:
-            logger.info(
+            self.logger.info(
                 "Setting '{}' as the highest-priority bootable part."
                 .format(self.partition)
             )
@@ -83,21 +82,21 @@ class depthchargectl_bless(
             self.partition.prioritize()
 
             if self.oneshot == False:
-                logger.info(
+                self.logger.info(
                     "Setting '{}' as successfully booted."
                     .format(self.partition)
                 )
                 self.partition.successful = 1
 
             else:
-                logger.info(
+                self.logger.info(
                     "Setting '{}' as not yet successfully booted."
                     .format(self.partition)
                 )
                 self.partition.successful = 0
 
         else:
-            logger.info(
+            self.logger.info(
                 "Setting '{}' as the zero-priority unbootable part."
                 .format(self.partition)
             )

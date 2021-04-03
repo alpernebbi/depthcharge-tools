@@ -16,8 +16,6 @@ from depthcharge_tools.utils.os import (
 
 from depthcharge_tools.depthchargectl import depthchargectl
 
-logger = logging.getLogger(__name__)
-
 
 @depthchargectl.subcommand("list")
 class depthchargectl_list(
@@ -28,6 +26,7 @@ class depthchargectl_list(
 ):
     """List ChromeOS kernel partitions."""
 
+    logger = depthchargectl.logger.getChild("list")
     config_section = "depthchargectl/list"
 
     @Group
@@ -40,10 +39,10 @@ class depthchargectl_list(
         """Disks to check for ChromeOS kernel partitions."""
 
         if self.all_disks:
-            logger.info("Searching all disks.")
+            self.logger.info("Searching all disks.")
             disks = system_disks.roots()
         elif disks:
-            logger.info("Searching real disks for {}.".format(disks))
+            self.logger.info("Searching real disks for {}.".format(disks))
             images = [
                 Disk(d)
                 for d in disks
@@ -51,11 +50,11 @@ class depthchargectl_list(
             ]
             disks = [*system_disks.roots(*disks), *images]
         else:
-            logger.info("Searching bootable disks.")
+            self.logger.info("Searching bootable disks.")
             disks = system_disks.bootable_disks()
 
         if disks:
-            logger.info("Using disks: {}.".format(disks))
+            self.logger.info("Using disks: {}.".format(disks))
         else:
             raise ValueError("Could not find any matching disks.")
 
@@ -99,15 +98,15 @@ class depthchargectl_list(
 
         if len(columns) == 0:
             columns = "S,P,T,PATH"
-            logger.info("Using default output format '{}'.".format(columns))
+            self.logger.info("Using default output format '{}'.".format(columns))
 
         elif len(columns) == 1 and isinstance(columns[0], str):
             columns = columns[0]
-            logger.info("Using output format '{}'.".format(columns))
+            self.logger.info("Using output format '{}'.".format(columns))
 
         else:
             columns = ",".join(columns)
-            logger.info("Using output format '{}'.".format(columns))
+            self.logger.info("Using output format '{}'.".format(columns))
 
         columns = columns.split(',')
 
@@ -124,7 +123,7 @@ class depthchargectl_list(
         rows = []
 
         if self.headings:
-            logger.info("Including headings.")
+            self.logger.info("Including headings.")
             rows.append(list(columns))
 
         # Get the actual table data we want to print

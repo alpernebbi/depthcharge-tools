@@ -34,8 +34,6 @@ from depthcharge_tools.utils.subprocess import (
     vbutil_kernel,
 )
 
-logger = logging.getLogger(__name__)
-
 
 class mkdepthcharge(
     Command,
@@ -45,6 +43,7 @@ class mkdepthcharge(
 ):
     """Build boot images for the ChromeOS bootloader."""
 
+    logger = logging.getLogger(__name__)
 
     @Group
     def input_files(self):
@@ -104,7 +103,7 @@ class mkdepthcharge(
             )
 
         vmlinuz = files[0]
-        logger.info(
+        self.logger.info(
             "Using vmlinuz: '{}'."
             .format(vmlinuz)
         )
@@ -127,7 +126,7 @@ class mkdepthcharge(
 
         if files:
             initramfs = files[0]
-            logger.info(
+            self.logger.info(
                 "Using initramfs: '{}'."
                 .format(initramfs)
             )
@@ -148,7 +147,7 @@ class mkdepthcharge(
         dtbs = [*dtbs, *files]
 
         for dtb in dtbs:
-            logger.info(
+            self.logger.info(
                 "Using dtb: '{}'."
                 .format(dtb)
             )
@@ -229,7 +228,7 @@ class mkdepthcharge(
         dir_ = Path(dir_)
         os.makedirs(dir_, exist_ok=True)
 
-        logger.debug("Working in temp dir '{}'.".format(dir_))
+        self.logger.debug("Working in temp dir '{}'.".format(dir_))
 
         return dir_
 
@@ -242,7 +241,7 @@ class mkdepthcharge(
         # the default should be this machine's.
         if arch is None:
             arch = Architecture(platform.machine())
-            logger.info("Assuming CPU architecture '{}'.".format(arch))
+            self.logger.info("Assuming CPU architecture '{}'.".format(arch))
         elif arch not in Architecture.all:
             raise ValueError(
                 "Can't build images for unknown architecture '{}'"
@@ -262,7 +261,7 @@ class mkdepthcharge(
                 format_ = "fit"
             elif self.arch in Architecture.x86:
                 format_ = "zimage"
-            logger.info("Assuming image format '{}'.".format(format_))
+            self.logger.info("Assuming image format '{}'.".format(format_))
 
         if format_ not in ("fit", "zimage"):
             raise ValueError(
@@ -323,7 +322,7 @@ class mkdepthcharge(
             keydirs += [self.signpubkey.parent]
 
         for d in sorted(set(keydirs), key=keydirs.index):
-            logger.info(
+            self.logger.info(
                 "Searching '{}' for vboot keys."
                 .format(d)
             )
@@ -332,7 +331,7 @@ class mkdepthcharge(
         keydir, keyblock, signprivate, signpubkey = vboot_keys(*keydirs)
 
         if keydir:
-            logger.info(
+            self.logger.info(
                 "Defaulting to keys from '{}' for missing arguments."
                 .format(keydir)
             )
@@ -348,17 +347,17 @@ class mkdepthcharge(
         if self.keyblock is None:
             raise ValueError("Couldn't find a usable keyblock file.")
         else:
-            logger.info("Using keyblock file '{}'.".format(self.keyblock))
+            self.logger.info("Using keyblock file '{}'.".format(self.keyblock))
 
         if self.signprivate is None:
             raise ValueError("Couldn't find a usable signprivate file.")
         else:
-            logger.info("Using signprivate file '{}'.".format(self.signprivate))
+            self.logger.info("Using signprivate file '{}'.".format(self.signprivate))
 
         if self.signpubkey is None:
-            logger.warn("Couldn't find a usable signpubkey file.")
+            self.logger.warn("Couldn't find a usable signpubkey file.")
         else:
-            logger.info("Using signpubkey file '{}'.".format(self.signpubkey))
+            self.logger.info("Using signpubkey file '{}'.".format(self.signpubkey))
 
 
     @vboot_options.add
@@ -459,15 +458,15 @@ class mkdepthcharge(
         # Debian packs the arm64 kernel uncompressed, but the bindeb-pkg
         # kernel target packs it as gzip.
         if is_gzip(vmlinuz):
-            logger.info("Kernel is gzip compressed, decompressing.")
+            self.logger.info("Kernel is gzip compressed, decompressing.")
             vmlinuz = gunzip(vmlinuz)
 
         # Depthcharge on arm64 with FIT supports these two compressions.
         if self.compress == "lz4":
-            logger.info("Compressing kernel with lz4.")
+            self.logger.info("Compressing kernel with lz4.")
             vmlinuz = lz4(vmlinuz)
         elif self.compress == "lzma":
-            logger.info("Compressing kernel with lzma.")
+            self.logger.info("Compressing kernel with lzma.")
             vmlinuz = lzma(vmlinuz)
         elif self.compress not in (None, "none"):
             fmt = "Compression type '{}' is not supported."
@@ -485,7 +484,7 @@ class mkdepthcharge(
         else:
             bootloader = tmpdir / "bootloader.bin"
             bootloader.write_bytes(bytes(512))
-            logger.info("Using dummy file for bootloader.")
+            self.logger.info("Using dummy file for bootloader.")
 
         if self.image_format == "fit":
             fit_image = tmpdir / "depthcharge.fit"
@@ -498,7 +497,7 @@ class mkdepthcharge(
             for dtb in dtbs:
                 dtb_args += ["-b", dtb]
 
-            logger.info("Packing files as FIT image:")
+            self.logger.info("Packing files as FIT image:")
             proc = mkimage(
                 "-f", "auto",
                 "-A", self.arch.mkimage,
@@ -510,16 +509,16 @@ class mkdepthcharge(
                 "-d", vmlinuz,
                 fit_image,
             )
-            logger.info(proc.stdout)
+            self.logger.info(proc.stdout)
 
-            logger.info("Using FIT image as vboot kernel.")
+            self.logger.info("Using FIT image as vboot kernel.")
             vmlinuz_vboot = fit_image
 
         elif self.image_format == "zimage":
-            logger.info("Using vmlinuz file as vboot kernel.")
+            self.logger.info("Using vmlinuz file as vboot kernel.")
             vmlinuz_vboot = vmlinuz
 
-        logger.info("Packing files as depthcharge image.")
+        self.logger.info("Packing files as depthcharge image.")
         proc = vbutil_kernel(
             "--version", "1",
             "--arch", self.arch.vboot,
@@ -530,9 +529,9 @@ class mkdepthcharge(
             "--signprivate", self.signprivate,
             "--pack", self.output,
         )
-        logger.info(proc.stdout)
+        self.logger.info(proc.stdout)
 
-        logger.info("Verifying built depthcharge image:")
+        self.logger.info("Verifying built depthcharge image:")
         signpubkey_args = []
         if self.signpubkey is not None:
             signpubkey_args += ["--signpubkey", self.signpubkey]
@@ -541,7 +540,7 @@ class mkdepthcharge(
             "--verify", self.output,
             *signpubkey_args,
         )
-        logger.info(proc.stdout)
+        self.logger.info(proc.stdout)
 
         return self.output
 

@@ -29,8 +29,6 @@ from depthcharge_tools.utils.platform import (
     dt_compatibles,
 )
 
-logger = logging.getLogger(__name__)
-
 
 class Board:
     def __init__(self, config):
@@ -89,6 +87,7 @@ class depthchargectl(
 ):
     """Manage Chrome OS kernel partitions."""
 
+    logger = logging.getLogger(__name__)
     config_section = "depthchargectl"
 
     @Group
@@ -134,7 +133,7 @@ class depthchargectl(
         dir_ = Path(dir_)
         os.makedirs(dir_, exist_ok=True)
 
-        logger.debug("Working in temp dir '{}'.".format(dir_))
+        self.logger.debug("Working in temp dir '{}'.".format(dir_))
 
         return dir_
 
@@ -172,10 +171,10 @@ class depthchargectl(
 
             try:
                 for p in parser.read(config_files):
-                    logger.debug("Read config file '{}'.".format(p))
+                    self.logger.debug("Read config file '{}'.".format(p))
 
             except configparser.ParsingError as err:
-                logger.warning(
+                self.logger.warning(
                     "Config file '{}' could not be parsed."
                     .format(err.filename)
                 )
@@ -240,14 +239,14 @@ class depthchargectl(
         matches = tuple(filter(hwid_match, boards.items()))
         if matches:
             codename, board = matches[0]
-            logger.info(
+            self.logger.info(
                 "Detected board '{}' ('{}') by HWID."
                 .format(board.name, board.codename)
             )
             return board
 
         else:
-            logger.warning(
+            self.logger.warning(
                 "Couldn't detect board by HWID."
             )
 
@@ -265,14 +264,14 @@ class depthchargectl(
         match = min((None, *boards.items()), key=compat_preference)
         if match is not None:
             codename, board = match
-            logger.info(
+            self.logger.info(
                 "Detected board '{}' ('{}') by device-tree compatibles."
                 .format(board.name, board.codename)
             )
             return board
 
         else:
-            logger.warning(
+            self.logger.warning(
                 "Couldn't detect board by dt-compatibles."
             )
 
@@ -360,7 +359,7 @@ class depthchargectl(
 
     def __call__(self):
         if hasattr(type(self), "list"):
-            logger.info("No subcommand given, defaulting to list")
+            self.logger.info("No subcommand given, defaulting to list")
             return type(self).list()
         else:
             raise ValueError("No subcommand given")

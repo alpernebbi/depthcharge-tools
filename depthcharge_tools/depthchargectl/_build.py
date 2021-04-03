@@ -34,8 +34,6 @@ from depthcharge_tools.utils.subprocess import (
 
 from depthcharge_tools.depthchargectl import depthchargectl
 
-logger = logging.getLogger(__name__)
-
 
 class SizeTooBigError(CommandExit):
     def __init__(self):
@@ -62,6 +60,7 @@ class depthchargectl_build(
 ):
     """Buld a depthcharge image for the running system."""
 
+    logger = depthchargectl.logger.getChild("build")
     config_section = "depthchargectl/build"
 
     @Group
@@ -135,7 +134,7 @@ class depthchargectl_build(
             file_ = self.kernel_version.initrd
 
         if self.ignore_initramfs:
-            logger.warn(
+            self.logger.warn(
                 "Ignoring initramfs '{}' as configured."
                 .format(file_)
             )
@@ -143,7 +142,7 @@ class depthchargectl_build(
 
         # Initramfs is optional.
         if file_ is None:
-            logger.info(
+            self.logger.info(
                 "No initramfs file found for version '{}'."
                 .format(self.kernel_release)
             )
@@ -218,18 +217,18 @@ class depthchargectl_build(
                 lhs, _, rhs = c.partition("=")
                 if lhs.lower() == "root":
                     root = rhs
-                    logger.info(
+                    self.logger.info(
                         "Using root as set in user configured cmdline."
                     )
 
         if root is None:
-            logger.info("Trying to figure out a root for cmdline.")
+            self.logger.info("Trying to figure out a root for cmdline.")
             root = system_disks.by_mountpoint("/", fstab_only=True)
 
             if root:
-                logger.info("Using root as set in /etc/fstab.")
+                self.logger.info("Using root as set in /etc/fstab.")
             else:
-                logger.warn(
+                self.logger.warn(
                     "Couldn't figure out a root cmdline parameter from "
                     "/etc/fstab. Will use currently mounted '{}'."
                     .format(root)
@@ -253,14 +252,14 @@ class depthchargectl_build(
         # be able to boot without an initramfs, but we need to
         # inject a root= parameter for that.
         if 'root={}'.format(self.root) not in cmdline:
-            logger.info(
+            self.logger.info(
                 "Prepending 'root={}' to kernel cmdline."
                 .format(self.root)
             )
             cmdline.insert(0, "root={}".format(self.root))
 
         if self.ignore_initramfs:
-            logger.warn(
+            self.logger.warn(
                 "Ignoring initramfs as configured, "
                 "appending 'noinitrd' to the kernel cmdline."
                 .format(self.initrd)
@@ -313,7 +312,7 @@ class depthchargectl_build(
             ])
 
             if inputs_size > self.board.image_max_size:
-                logger.warn(
+                self.logger.warn(
                     "Inputs are too big, skipping uncompressed build."
                 )
                 compress = [c for c in compress if c != "none"]
@@ -337,7 +336,7 @@ class depthchargectl_build(
                 seconds = int(self.kernel.stat().st_mtime)
 
         if seconds is None:
-            logger.error(
+            self.logger.error(
                 "Couldn't determine a timestamp from initramfs "
                 "nor vmlinuz."
             )
@@ -354,12 +353,12 @@ class depthchargectl_build(
         return Path(path)
 
     def __call__(self):
-        logger.info(
+        self.logger.info(
             "Building images for board '{}' ('{}')."
             .format(self.board.name, self.board.codename)
         )
 
-        logger.info(
+        self.logger.info(
             "Building for kernel version '{}'."
             .format(self.kernel_release)
         )
@@ -376,7 +375,7 @@ class depthchargectl_build(
             os.environ["SOURCE_DATE_EPOCH"] = str(self.timestamp)
 
         for compress in self.compress:
-            logger.info("Trying with compression '{}'.".format(compress))
+            self.logger.info("Trying with compression '{}'.".format(compress))
             tmpdir = self.tmpdir / "mkdepthcharge-{}".format(compress)
 
             try:
@@ -404,7 +403,7 @@ class depthchargectl_build(
             if outtmp.stat().st_size < self.board.image_max_size:
                 break
 
-            logger.warn(
+            self.logger.warn(
                 "Image with compression '{}' is too big for this board."
                 .format(compress)
             )
@@ -415,10 +414,10 @@ class depthchargectl_build(
             else:
                 raise SizeTooBigError()
 
-        logger.info("Copying newly built image to output.")
+        self.logger.info("Copying newly built image to output.")
         copy(outtmp, self.output)
 
-        logger.info(
+        self.logger.info(
             "Built image for kernel version '{}'."
             .format(self.kernel_release)
         )

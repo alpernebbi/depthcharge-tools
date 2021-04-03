@@ -789,7 +789,11 @@ class CommandMeta(type):
         root_logger = logging.getLogger()
         root_logger.addHandler(logging.StreamHandler())
         root_logger.setLevel(logging.NOTSET)
-        logger = logging.getLogger(cls.__module__)
+
+        if hasattr(command, "logger"):
+            logger = command.logger
+        else:
+            logging.getLogger(cls.__module__)
 
         try:
             output = command(__raise_CommandExit=True, **kwargs)
@@ -998,7 +1002,6 @@ class CommandMeta(type):
 class Command(metaclass=CommandMeta):
     def __init__(self):
         self.exitstack = contextlib.ExitStack()
-        self.logger = logging.getLogger(self.__module__)
 
     def __enter__(self):
         self.exitstack.__enter__()
