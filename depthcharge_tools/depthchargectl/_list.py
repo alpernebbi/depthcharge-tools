@@ -198,12 +198,15 @@ class depthchargectl_list(
 
         columns = columns.split(',')
 
-        for c in columns:
-            if c not in self.valid_columns:
-                raise ValueError(
-                    "Unsupported output column '{}'."
-                    .format(c)
-                )
+        invalid_columns = sorted(
+            set(columns).difference(self.valid_columns),
+            key=columns.index,
+        )
+        if invalid_columns:
+            raise ValueError(
+                "Unsupported output columns '{}'."
+                .format(invalid_columns)
+            )
 
         return columns
 
