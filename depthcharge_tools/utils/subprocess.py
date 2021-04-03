@@ -30,6 +30,10 @@ class ProcessRunner:
             stdin = kwargs.get("stdin")
             if isinstance(stdin, str):
                 stdin = Path(stdin)
+            elif isinstance(stdin, bytes):
+                kwargs["stdin"] = None
+                kwargs["encoding"] = None
+                kwargs["input"] = stdin
             elif isinstance(stdin, Path):
                 kwargs["stdin"] = ctx.enter_context(stdin.open("r"))
 
