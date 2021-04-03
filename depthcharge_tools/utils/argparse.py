@@ -786,6 +786,11 @@ class CommandMeta(type):
             if k != "__command"
         }
 
+        root_logger = logging.getLogger()
+        root_logger.addHandler(logging.StreamHandler())
+        root_logger.setLevel(logging.NOTSET)
+        logger = logging.getLogger(cls.__module__)
+
         try:
             output = command(__raise_CommandExit=True, **kwargs)
             if output is not None:
@@ -798,7 +803,6 @@ class CommandMeta(type):
             parser.error(err.args[0])
 
         except CommandExit as exit:
-            logger = logging.getLogger(cls.__module__)
             is_debug = logger.getEffectiveLevel() <= logging.DEBUG
 
             if exit.returncode != 0:
@@ -809,7 +813,6 @@ class CommandMeta(type):
             sys.exit(exit.returncode)
 
         except Exception as err:
-            logger = logging.getLogger(cls.__module__)
             is_debug = logger.getEffectiveLevel() <= logging.DEBUG
             logger.error(err, exc_info=is_debug)
 

@@ -8,8 +8,7 @@ import re
 import subprocess
 
 logger = logging.getLogger(__name__)
-log_handler = logging.StreamHandler()
-logger.addHandler(log_handler)
+logger.addHandler(logging.NullHandler())
 
 
 def get_version():
