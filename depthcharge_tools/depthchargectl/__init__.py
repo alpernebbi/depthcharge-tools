@@ -112,13 +112,11 @@ class depthchargectl(
 
     @global_options.add
     @Argument("-v", "--verbose", count=True)
-    def verbosity(self, verbosity):
+    def verbosity(self, verbosity=0):
         """Print more detailed output."""
-        logger = logging.getLogger()
-        level = logger.getEffectiveLevel()
-        level = level - int(verbosity) * 10
-        logger.setLevel(level)
-        return level
+        level = logging.WARNING - int(verbosity) * 10
+        self.logger.setLevel(level)
+        return verbosity
 
     @global_options.add
     @Argument("--tmpdir", nargs=1)

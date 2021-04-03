@@ -393,6 +393,7 @@ class depthchargectl_build(
                     signpubkey=self.vboot_public_key,
                     vmlinuz=self.kernel,
                     tmpdir=tmpdir,
+                    verbosity=self.verbosity,
                 )
 
             except Exception as err:

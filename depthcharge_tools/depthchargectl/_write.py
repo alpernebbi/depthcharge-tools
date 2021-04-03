@@ -148,6 +148,7 @@ class depthchargectl_write(
                     vboot_private_key=self.vboot_private_key,
                     kernel_cmdline=self.kernel_cmdline,
                     ignore_initramfs=self.ignore_initramfs,
+                    verbosity=self.verbosity,
                 )
 
             except Exception as err:
@@ -165,6 +166,7 @@ class depthchargectl_write(
                 vboot_private_key=self.vboot_private_key,
                 kernel_cmdline=self.kernel_cmdline,
                 ignore_initramfs=self.ignore_initramfs,
+                verbosity=self.verbosity,
             )
 
         except Exception as err:
@@ -196,6 +198,7 @@ class depthchargectl_write(
                 vboot_private_key=self.vboot_private_key,
                 kernel_cmdline=self.kernel_cmdline,
                 ignore_initramfs=self.ignore_initramfs,
+                verbosity=self.verbosity,
             )
 
         except Exception as err:
