@@ -20,23 +20,6 @@ from depthcharge_tools.depthchargectl import depthchargectl
 
 
 class CrosPartitions(collections.UserList):
-    # This is just trying to getattr things, but getting DISKPATH is
-    # easier this way.
-    _formats = {
-            "ATTRIBUTE": "{0.attribute}",
-            "SUCCESSFUL": "{0.successful}",
-            "PRIORITY": "{0.priority}",
-            "TRIES": "{0.tries}",
-            "A": "{0.attribute}",
-            "S": "{0.successful}",
-            "P": "{0.priority}",
-            "T": "{0.tries}",
-            "PATH": "{0.path}",
-            "DISKPATH": "{0.disk.path}",
-            "PARTNO": "{0.partno}",
-            "SIZE": "{0.size}",
-    }
-
     def __init__(self, partitions=None, columns=None, headings=True):
         if partitions is None:
             partitions = []
@@ -80,18 +63,45 @@ class CrosPartitions(collections.UserList):
         self._check(*other)
         return super().extend(other)
 
+    def _row(self, part):
+        values = {}
+
+        if set(self._columns).intersection((
+            "A", "S", "P", "T",
+            "ATTRIBUTE", "SUCCESSFUL", "PRIORITY", "TRIES",
+        )):
+            flags = part.flags
+            values.update({
+                "A": flags["attribute"],
+                "S": flags["successful"],
+                "P": flags["priority"],
+                "T": flags["tries"],
+                "ATTRIBUTE": flags["attribute"],
+                "SUCCESSFUL": flags["successful"],
+                "PRIORITY": flags["priority"],
+                "TRIES": flags["tries"],
+            })
+
+        if "SIZE" in self._columns:
+            values["SIZE"] = part.size
+
+        if part.path is not None:
+            values["PATH"] = part.path
+
+        if part.disk is not None and part.disk.path is not None:
+            values["DISKPATH"] = part.disk.path
+
+        if part.partno is not None:
+            values["PARTNO"] = part.partno
+
+        return [str(values.get(c, "")) for c in self._columns]
+
     def __str__(self):
         rows = []
 
         if self._headings:
             rows.append(self._columns)
-
-        # Get the actual table data we want to print
-        for part in self:
-            rows.append([
-                self._formats.get(c, "").format(part)
-                for c in self._columns
-            ])
+        rows.extend(self._row(part) for part in self)
 
         # Using tab characters makes things misalign when the data
         # widths vary, so find max width for each column from its data,
@@ -160,6 +170,15 @@ class depthchargectl_list(
         """List partitions on all disks."""
         return all_disks
 
+    valid_columns = {
+        "ATTRIBUTE", "SUCCESSFUL", "PRIORITY", "TRIES",
+        "A", "S", "P", "T",
+        "PATH",
+        "DISKPATH",
+        "PARTNO",
+        "SIZE",
+    }
+
     @options.add
     @Argument("-o", "--output", nargs=1, append=True)
     def output(self, *columns):
@@ -180,7 +199,7 @@ class depthchargectl_list(
         columns = columns.split(',')
 
         for c in columns:
-            if c not in CrosPartitions._formats:
+            if c not in self.valid_columns:
                 raise ValueError(
                     "Unsupported output column '{}'."
                     .format(c)
