@@ -73,7 +73,9 @@ class CrosPartitions(TypedList(CrosPartition)):
 
         if self._headings:
             rows.append(self._columns)
-        rows.extend(self._row(part) for part in self)
+
+        parts = sorted(self, key=lambda p: p.path or p.disk.path)
+        rows.extend(self._row(part) for part in parts)
 
         # Using tab characters makes things misalign when the data
         # widths vary, so find max width for each column from its data,
