@@ -98,6 +98,15 @@ class DirectedGraph:
         if node not in self.__edges:
             self.__edges[node] = set()
 
+    def remove_edge(self, node, child):
+        if node in self.__edges:
+            self.__edges[node].discard(child)
+
+    def remove_node(self, node):
+        self.__edges.pop(node, None)
+        for k, v in self.__edges.items():
+            v.discard(node)
+
     def children(self, *nodes):
         node_children = set()
         for node in nodes:
