@@ -6,6 +6,9 @@ import shlex
 
 from pathlib import Path
 
+from depthcharge_tools.utils.collections import (
+    DirectedGraph,
+)
 from depthcharge_tools.utils.pathlib import (
     iterdir,
     read_lines,
@@ -18,7 +21,7 @@ from depthcharge_tools.utils.subprocess import (
 )
 
 
-class Disks:
+class Disks(DirectedGraph):
     def __init__(
         self,
         sys="/sys",
@@ -27,7 +30,7 @@ class Disks:
         mtab="/etc/mtab",
         mountinfo="/proc/self/mountinfo",
     ):
-        self._edges = {}
+        super().__init__()
 
         self._sys = sys = Path(sys)
         self._dev = dev = Path(dev)
@@ -195,73 +198,25 @@ class Disks:
     def bootable_disks(self):
         root = self.by_mountpoint("/")
         boot = self.by_mountpoint("/boot")
-        disks = set(self.evaluate(d) for d in (root, boot))
-        return self.roots(*disks)
+        return self.roots(root, boot)
 
     def add_edge(self, node, child):
         node = self.evaluate(node)
         child = self.evaluate(child)
-
-        if node is None or child is None or node == child:
-            return
-
-        if node not in self._edges:
-            self._edges[node] = set()
-
-        self._edges[node].add(child)
+        if node is not None and child is not None and node != child:
+            return super().add_edge(node, child)
 
     def children(self, *nodes):
-        nodes = set(self.evaluate(n) for n in nodes)
-        node_children = set()
-        for node in nodes:
-            node_children.update(self._edges.get(node, set()))
-
-        return node_children
+        return super().children(*map(self.evaluate, nodes))
 
     def parents(self, *nodes):
-        nodes = set(self.evaluate(n) for n in nodes)
-        node_parents = set()
-        for parent, children in self._edges.items():
-            if children.intersection(nodes):
-                node_parents.add(parent)
-
-        return node_parents
+        return super().parents(*map(self.evaluate, nodes))
 
     def leaves(self, *nodes):
-        nodes = set(self.evaluate(n) for n in nodes)
-
-        leaves = set()
-        if len(nodes) == 0:
-            leaves.update(*self._edges.values())
-            leaves.difference_update(self._edges.keys())
-            return leaves
-
-        leaves = self.leaves()
-        node_leaves = set()
-        while nodes:
-            node_leaves.update(nodes.intersection(leaves))
-            nodes.difference_update(node_leaves)
-            nodes = self.children(*nodes)
-
-        return node_leaves
+        return super().leaves(*map(self.evaluate, nodes))
 
     def roots(self, *nodes):
-        nodes = set(self.evaluate(n) for n in nodes)
-
-        roots = set()
-        if len(nodes) == 0:
-            roots.update(self._edges.keys())
-            roots.difference_update(*self._edges.values())
-            return roots
-
-        roots = self.roots()
-        node_roots = set()
-        while nodes:
-            node_roots.update(nodes.intersection(roots))
-            nodes.difference_update(node_roots)
-            nodes = self.parents(*nodes)
-
-        return node_roots
+        return super().roots(*map(self.evaluate, nodes))
 
 
 class Disk:

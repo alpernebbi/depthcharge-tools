@@ -84,3 +84,65 @@ def TypedList(T):
             return super().extend(other)
 
     return TypedList
+
+
+class DirectedGraph:
+    def __init__(self):
+        self.__edges = {}
+
+    def add_edge(self, node, child):
+        if node not in self.__edges:
+            self.__edges[node] = set()
+
+        self.__edges[node].add(child)
+
+    def children(self, *nodes):
+        node_children = set()
+        for node in nodes:
+            node_children.update(self.__edges.get(node, set()))
+
+        return node_children
+
+    def parents(self, *nodes):
+        node_parents = set()
+        for parent, children in self.__edges.items():
+            if children.intersection(nodes):
+                node_parents.add(parent)
+
+        return node_parents
+
+    def leaves(self, *nodes):
+        nodes = set(nodes)
+
+        leaves = set()
+        if len(nodes) == 0:
+            leaves.update(*self.__edges.values())
+            leaves.difference_update(self.__edges.keys())
+            return leaves
+
+        leaves = self.leaves()
+        node_leaves = set()
+        while nodes:
+            node_leaves.update(nodes.intersection(leaves))
+            nodes.difference_update(node_leaves)
+            nodes = self.children(*nodes)
+
+        return node_leaves
+
+    def roots(self, *nodes):
+        nodes = set(nodes)
+
+        roots = set()
+        if len(nodes) == 0:
+            roots.update(self.__edges.keys())
+            roots.difference_update(*self.__edges.values())
+            return roots
+
+        roots = self.roots()
+        node_roots = set()
+        while nodes:
+            node_roots.update(nodes.intersection(roots))
+            nodes.difference_update(node_roots)
+            nodes = self.parents(*nodes)
+
+        return node_roots
