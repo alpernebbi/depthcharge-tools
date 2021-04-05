@@ -120,6 +120,7 @@ class DirectedGraph:
         if len(nodes) == 0:
             leaves.update(*self.__edges.values())
             leaves.difference_update(self.__edges.keys())
+            leaves.update(k for k, v in self.__edges.items() if not v)
             return leaves
 
         leaves = self.leaves()
