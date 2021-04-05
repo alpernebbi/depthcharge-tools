@@ -91,10 +91,12 @@ class DirectedGraph:
         self.__edges = {}
 
     def add_edge(self, node, child):
+        self.add_node(node)
+        self.__edges[node].add(child)
+
+    def add_node(self, node):
         if node not in self.__edges:
             self.__edges[node] = set()
-
-        self.__edges[node].add(child)
 
     def children(self, *nodes):
         node_children = set()
