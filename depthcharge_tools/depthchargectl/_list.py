@@ -60,6 +60,7 @@ class CrosPartitions(TypedList(CrosPartition)):
             values["PATH"] = part.path
 
         if part.disk is not None and part.disk.path is not None:
+            values["DISK"] = part.disk.path
             values["DISKPATH"] = part.disk.path
 
         if part.partno is not None:
@@ -145,7 +146,7 @@ class depthchargectl_list(
         "ATTRIBUTE", "SUCCESSFUL", "PRIORITY", "TRIES",
         "A", "S", "P", "T",
         "PATH",
-        "DISKPATH",
+        "DISKPATH", "DISK",
         "PARTNO",
         "SIZE",
     }
