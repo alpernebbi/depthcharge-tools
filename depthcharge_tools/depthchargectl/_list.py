@@ -1,7 +1,6 @@
 #! /usr/bin/env python3
 
 import argparse
-import collections
 import logging
 
 from depthcharge_tools import __version__
@@ -9,6 +8,9 @@ from depthcharge_tools.utils.argparse import (
     Command,
     Argument,
     Group,
+)
+from depthcharge_tools.utils.collections import (
+    TypedList
 )
 from depthcharge_tools.utils.os import (
     system_disks,
@@ -19,13 +21,9 @@ from depthcharge_tools.utils.os import (
 from depthcharge_tools.depthchargectl import depthchargectl
 
 
-class CrosPartitions(collections.UserList):
+class CrosPartitions(TypedList(CrosPartition)):
     def __init__(self, partitions=None, columns=None, headings=True):
-        if partitions is None:
-            partitions = []
-
-        for part in partitions:
-            self._check(part)
+        super().__init__(partitions)
 
         if columns is None:
             if any(part.path is None for part in partitions):
@@ -35,33 +33,6 @@ class CrosPartitions(collections.UserList):
 
         self._headings = headings
         self._columns = columns
-        super().__init__(partitions)
-
-    def _check(self, *args):
-        if not all(isinstance(arg, CrosPartition) for arg in args):
-            raise TypeError(
-                "CrosPartitions items must be CrosPartition objects."
-            )
-
-    def __setitem__(self, idx, value):
-        self._check(value)
-        return super().__setitem__(idx, value)
-
-    def __iadd__(self, other):
-        self._check(*other)
-        return super().__iadd__(other)
-
-    def append(self, value):
-        self._check(value)
-        return super().append(value)
-
-    def insert(self, idx, value):
-        self._check(value)
-        return super().insert(idx, value)
-
-    def extend(self, other):
-        self._check(*other)
-        return super().extend(other)
 
     def _row(self, part):
         values = {}
