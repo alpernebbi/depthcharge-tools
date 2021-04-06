@@ -92,6 +92,7 @@ class DirectedGraph:
 
     def add_edge(self, node, child):
         self.add_node(node)
+        self.add_node(child)
         self.__edges[node].add(child)
 
     def add_node(self, node):
@@ -115,10 +116,7 @@ class DirectedGraph:
         )
 
     def nodes(self):
-        ns = set()
-        for n, cs in self.__edges.items():
-            ns.add(n)
-            ns.update(cs)
+        return set(self.__edges.keys())
 
     def children(self, *nodes):
         node_children = set()
@@ -140,8 +138,6 @@ class DirectedGraph:
 
         leaves = set()
         if len(nodes) == 0:
-            leaves.update(*self.__edges.values())
-            leaves.difference_update(self.__edges.keys())
             leaves.update(k for k, v in self.__edges.items() if not v)
             return leaves
 
