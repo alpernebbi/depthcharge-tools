@@ -142,9 +142,8 @@ def analyze_board_overlays(path):
 
     # Get parents after we have a name for every board, so that we can
     # ignore non-boards like chromiumos, portage-stable, eclass-overlay.
-    boards = set(repo_names.values())
     def add_parent(parent, child):
-        if parent != child and parent in boards:
+        if parent != child and parent in board_relations.nodes():
             board_relations.add_edge(parent, child)
 
     for overlay, repo_name in repo_names.items():

@@ -107,6 +107,19 @@ class DirectedGraph:
         for k, v in self.__edges.items():
             v.discard(node)
 
+    def edges(self):
+        return set(
+            (n, c)
+            for n, cs in self.__edges.items()
+            for c in cs
+        )
+
+    def nodes(self):
+        ns = set()
+        for n, cs in self.__edges.items():
+            ns.add(n)
+            ns.update(cs)
+
     def children(self, *nodes):
         node_children = set()
         for node in nodes:
