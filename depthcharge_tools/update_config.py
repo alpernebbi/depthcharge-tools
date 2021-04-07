@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import logging
+import re
 
 from pathlib import Path
 
@@ -47,6 +48,57 @@ class update_config(
         level = logging.WARNING - int(verbosity) * 10
         self.logger.setLevel(level)
         return verbosity
+
+    def parse_recovery_conf_block(self, block):
+        values = {}
+
+        for line in block.splitlines():
+            if line.startswith("#"):
+                continue
+
+            key, sep, value = line.partition("=")
+            if sep != "=":
+                raise ValueError(
+                    "No equals sign in line: '{}'"
+                    .format(line)
+                )
+
+            if key not in values:
+                values[key] = value
+            elif isinstance(values[key], list):
+                values[key].append(value)
+            else:
+                values[key] = [values[key], value]
+
+        if "hwidmatch" in values:
+            values["hwidmatch"] = re.compile(values["hwidmatch"])
+        if "filesize" in values:
+            values["filesize"] = int(values["filesize"] or 0)
+        if "zipfilesize" in values:
+            values["zipfilesize"] = int(values["zipfilesize"] or 0)
+
+        return values
+
+    def parse_recovery_conf(self, path):
+        recovery_conf = Path(path)
+
+        header, *boards = [
+            self.parse_recovery_conf_block(block)
+            for block in re.split("\n\n+", recovery_conf.read_text())
+        ]
+
+        version = header.get(
+            "recovery_tool_linux_version",
+            header.get("recovery_tool_version"),
+        )
+
+        if version != "0.9.2":
+            raise TypeError(
+                "Unsupported recovery.conf version: {}"
+                .format(header.get("recovery_tool_update", version))
+            )
+
+        return boards
 
     def __call__(self):
         pass
