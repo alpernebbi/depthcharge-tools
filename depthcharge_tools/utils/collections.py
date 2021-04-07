@@ -108,6 +108,23 @@ class DirectedGraph:
         for k, v in self.__edges.items():
             v.discard(node)
 
+    def replace_node(self, node, replacement):
+        if replacement in self.__edges:
+            raise ValueError(
+                "Replacement node '{}' already in graph."
+                .format(replacement)
+            )
+
+        parents = self.parents(node)
+        children = self.children(node)
+        self.remove_node(node)
+
+        self.add_node(replacement)
+        for p in parents:
+            self.add_edge(p, replacement)
+        for c in children:
+            self.add_edge(replacement, c)
+
     def edges(self):
         return set(
             (n, c)
