@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import json
 import logging
 import re
 
@@ -204,6 +205,45 @@ class update_config(
             layout_conf = self.parse_layout_conf(board_d)
             for parent in layout_conf.get("masters", "").split():
                 add_parent(parent, repo_name)
+
+        return board_relations
+
+    def get_project_config_boards(self, d):
+        children = set()
+
+        project_config = (
+            d / "sw_build_config" / "platform" / "chromeos-config"
+            / "generated" / "project-config.json"
+        )
+        if project_config.is_file():
+            config = json.loads(project_config.read_text())
+
+            for section in config["chromeos"]["configs"]:
+                if section["name"]:
+                    children.add(section["name"])
+
+        return children
+
+    def analyze_chromiumos_project(self, path):
+        board_relations = DirectedGraph()
+        project = Path(path)
+
+        for board in iterdir(project):
+            if not board.is_dir() or board.name.startswith("."):
+                continue
+
+            for profile in iterdir(board):
+                if not profile.is_dir() or profile.name.startswith("."):
+                    continue
+
+                # puff/puff exists
+                if profile.name != board.name:
+                    board_relations.add_edge(board.name, profile.name)
+
+                for child in self.get_project_config_boards(profile):
+                    # galaxy/{andromeda,sombrero} has galaxy
+                    if child != profile.name and child != board.name:
+                        board_relations.add_edge(profile.name, child)
 
         return board_relations
 
