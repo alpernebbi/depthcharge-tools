@@ -4,6 +4,7 @@ import json
 import logging
 import re
 
+from functools import lru_cache
 from pathlib import Path
 
 from depthcharge_tools import __version__
@@ -87,12 +88,22 @@ class update_config(
 
         return values
 
-    def parse_recovery_conf(self, path):
-        recovery_conf = Path(path)
+    @options.add
+    @Argument("-r", "--recovery-conf", required=True)
+    def recovery_conf(self, path):
+        """\
+        Chrome OS recovery.conf file for their Linux recovery tool
 
+        https://dl.google.com/dl/edgedl/chromeos/recovery/recovery.conf
+        """
+        return Path(path)
+
+    @property
+    @lru_cache
+    def recovery_conf_boards(self):
         header, *boards = [
             self.parse_recovery_conf_block(block)
-            for block in re.split("\n\n+", recovery_conf.read_text())
+            for block in re.split("\n\n+", self.recovery_conf.read_text())
         ]
 
         version = header.get(
@@ -154,13 +165,24 @@ class update_config(
 
         return children
 
-    def analyze_board_overlays(self, path):
+    @options.add
+    @Argument("-b", "--board-overlays-repo", required=True)
+    def board_overlays_repo(self, path):
+        """\
+        Chromium OS board-overlays git repository
+
+        https://chromium.googlesource.com/chromiumos/overlays/board-overlays
+        """
+        return Path(path)
+
+    @property
+    @lru_cache
+    def board_overlays_relations(self):
         board_relations = DirectedGraph()
-        board_overlays = Path(path)
         repo_names = {}
 
         # Find canonical names for each board
-        for board_d in iterdir(board_overlays):
+        for board_d in iterdir(self.board_overlays_repo):
             if not board_d.is_dir() or board_d.name.startswith("."):
                 continue
 
@@ -188,7 +210,7 @@ class update_config(
                 board_relations.add_edge(parent, child)
 
         for overlay, repo_name in repo_names.items():
-            board_d = board_overlays / overlay
+            board_d = self.board_overlays_repo / overlay
 
             for parent in self.get_profiles_base_parent_boards(board_d):
                 add_parent(parent, repo_name)
@@ -224,11 +246,22 @@ class update_config(
 
         return children
 
-    def analyze_chromiumos_project(self, path):
-        board_relations = DirectedGraph()
-        project = Path(path)
+    @options.add
+    @Argument("-p", "--chromiumos-project-repo", required=True)
+    def chromiumos_project_repo(self, path):
+        """\
+        Chromium OS's chromiumos/project git repository
 
-        for board in iterdir(project):
+        https://chromium.googlesource.com/chromiumos/project
+        """
+        return Path(path)
+
+    @property
+    @lru_cache
+    def chromiumos_project_relations(self):
+        board_relations = DirectedGraph()
+
+        for board in iterdir(self.chromiumos_project_repo):
             if not board.is_dir() or board.name.startswith("."):
                 continue
 
