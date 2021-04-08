@@ -297,6 +297,16 @@ class update_config(
             for parent in layout_conf.get("masters", "").split():
                 add_parent(parent, repo_name)
 
+        # "project-*" overlays don't really look like boards, but they
+        # can be the sole parent of actual boards (e.g. freon was to a
+        # lot of boards) so we can't just remove their descendants.
+        projects = set(
+            overlay.name.partition("-")[2]
+            for overlay in self.board_overlays_repo.glob("project-*")
+        )
+        for project in projects:
+            board_relations.remove_node(project)
+
         for board in iterdir(self.chromiumos_project_repo):
             if not board.is_dir() or board.name.startswith("."):
                 continue
