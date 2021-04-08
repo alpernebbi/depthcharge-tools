@@ -150,6 +150,28 @@ class DirectedGraph:
 
         return node_parents
 
+    def ancestors(self, *nodes):
+        nodes = set(nodes)
+
+        ancestors = self.parents(*nodes)
+        tmp = self.parents(*ancestors)
+        while tmp - ancestors:
+            ancestors.update(tmp)
+            tmp = self.parents(*ancestors)
+
+        return ancestors
+
+    def descendants(self, *nodes):
+        nodes = set(nodes)
+
+        descendants = self.children(*nodes)
+        tmp = self.children(*descendants)
+        while tmp - descendants:
+            descendants.update(tmp)
+            tmp = self.children(*descendants)
+
+        return descendants
+
     def leaves(self, *nodes):
         nodes = set(nodes)
 
