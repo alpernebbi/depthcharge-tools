@@ -218,9 +218,35 @@ class update_config(
         """
         return Path(path)
 
+    def get_project_config_boards(self, d):
+        children = set()
+
+        project_config = (
+            d / "sw_build_config" / "platform" / "chromeos-config"
+            / "generated" / "project-config.json"
+        )
+        if project_config.is_file():
+            config = json.loads(project_config.read_text())
+
+            for section in config["chromeos"]["configs"]:
+                if section["name"]:
+                    children.add(section["name"])
+
+        return children
+
+    @options.add
+    @Argument("-p", "--chromiumos-project-repo", required=True)
+    def chromiumos_project_repo(self, path):
+        """\
+        Chromium OS's chromiumos/project git repository
+
+        https://chromium.googlesource.com/chromiumos/project
+        """
+        return Path(path)
+
     @property
     @lru_cache
-    def board_overlays_relations(self):
+    def board_relations(self):
         board_relations = DirectedGraph()
         repo_names = {}
 
@@ -270,39 +296,6 @@ class update_config(
             layout_conf = self.parse_layout_conf(board_d)
             for parent in layout_conf.get("masters", "").split():
                 add_parent(parent, repo_name)
-
-        return board_relations
-
-    def get_project_config_boards(self, d):
-        children = set()
-
-        project_config = (
-            d / "sw_build_config" / "platform" / "chromeos-config"
-            / "generated" / "project-config.json"
-        )
-        if project_config.is_file():
-            config = json.loads(project_config.read_text())
-
-            for section in config["chromeos"]["configs"]:
-                if section["name"]:
-                    children.add(section["name"])
-
-        return children
-
-    @options.add
-    @Argument("-p", "--chromiumos-project-repo", required=True)
-    def chromiumos_project_repo(self, path):
-        """\
-        Chromium OS's chromiumos/project git repository
-
-        https://chromium.googlesource.com/chromiumos/project
-        """
-        return Path(path)
-
-    @property
-    @lru_cache
-    def chromiumos_project_relations(self):
-        board_relations = DirectedGraph()
 
         for board in iterdir(self.chromiumos_project_repo):
             if not board.is_dir() or board.name.startswith("."):
