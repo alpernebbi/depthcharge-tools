@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import collections
 import json
 import logging
 import re
@@ -99,7 +100,7 @@ class update_config(
     @property
     @lru_cache
     def recovery_conf_boards(self):
-        header, *boards = [
+        header, *blocks = [
             self.parse_recovery_conf_block(block)
             for block in re.split("\n\n+", self.recovery_conf.read_text())
         ]
@@ -115,7 +116,51 @@ class update_config(
                 .format(header.get("recovery_tool_update", version))
             )
 
-        return boards
+        boards = collections.defaultdict(list)
+        for block in blocks:
+            hwidmatch = block.get("hwidmatch")
+
+            # This might be a parent board, but the best fallback we have
+            codename = block.get("file").split("_")[2]
+
+            if hwidmatch == "duplicate of rabbid":
+                codename = "rabbid"
+                block["hwidmatch"] = None
+            elif hwidmatch == "duplicate of C433":
+                codename = "shyvana"
+                block["hwidmatch"] = None
+            elif hwidmatch == "Duplicate of BARLA":
+                codename = "barla"
+                block["hwidmatch"] = None
+
+            elif hwidmatch.strip("^(").startswith("ACER ZGB"):
+                pass # x86-zgb, x86-zgb-he
+            elif hwidmatch.strip("^(").startswith("IEC MARIO"):
+                pass # x86-mario
+            elif hwidmatch.strip("^(").startswith("SAMS ALEX"):
+                pass # x86-alex, x86-alex-he
+
+            elif hwidmatch in (
+                "DOES NOT MATCH ANYTHING",
+                "NO MATCH JUST FOR ENTRY",
+            ):
+                codename = block.get("file").split("_")[2]
+                block["hwidmatch"] = None
+
+            else:
+                m = re.match("^\^?\(?([0-9A-Z]+)[^0-9A-Za-z]", hwidmatch)
+                if m:
+                    codename = m.group(1).lower()
+                else:
+                    self.logger.warning(
+                        "Could not parse codename for hwidmatch '{}'."
+                        .format(hwidmatch)
+                    )
+
+            if codename:
+                boards[codename].append(block)
+
+        return dict(boards)
 
     def read_profiles_repo_name(self, d):
         # A single-line file, so return the first line
