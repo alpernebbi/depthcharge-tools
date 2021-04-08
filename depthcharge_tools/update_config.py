@@ -324,6 +324,19 @@ class update_config(
                     if child != profile.name and child != board.name:
                         board_relations.add_edge(profile.name, child)
 
+        # Right now each node should have a single parent, so we can
+        # turn them into a chipset-x/baseboard-y/z/t form by the parents
+        multiparents = {
+            board: board_relations.parents(board)
+            for board in board_relations.nodes()
+            if len(board_relations.parents(board)) > 1
+        }
+        if multiparents:
+            raise ValueError(
+                "The following boards have multiple parents: '{}'."
+                .format(multiparents)
+            )
+
         return board_relations
 
     def __call__(self):
