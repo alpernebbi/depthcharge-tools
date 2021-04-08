@@ -79,8 +79,6 @@ class update_config(
             else:
                 values[key] = [values[key], value]
 
-        if "hwidmatch" in values:
-            values["hwidmatch"] = re.compile(values["hwidmatch"])
         if "filesize" in values:
             values["filesize"] = int(values["filesize"] or 0)
         if "zipfilesize" in values:
