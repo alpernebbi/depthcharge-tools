@@ -307,9 +307,12 @@ class update_config(
         for project in projects:
             board_relations.remove_node(project)
 
+        # Some newer board variants are only in this project repo
         for board in iterdir(self.chromiumos_project_repo):
             if not board.is_dir() or board.name.startswith("."):
                 continue
+
+            board_relations.add_node(board.name)
 
             for profile in iterdir(board):
                 if not profile.is_dir() or profile.name.startswith("."):
@@ -320,8 +323,16 @@ class update_config(
                     board_relations.add_edge(board.name, profile.name)
 
                 for child in self.get_project_config_boards(profile):
+                    # shadowkeep/shadowkeep/shadowkeep exists
+                    if child == profile.name == board.name:
+                        continue
+
                     # galaxy/{andromeda,sombrero} has galaxy
-                    if child != profile.name and child != board.name:
+                    # make them {andromeda,sombrero}_galaxy
+                    elif child == board.name:
+                        child = "{}_{}".format(profile.name, child)
+
+                    if child != profile.name:
                         board_relations.add_edge(profile.name, child)
 
         # Right now each node should have a single parent, so we can
