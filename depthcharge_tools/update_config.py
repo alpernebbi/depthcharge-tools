@@ -348,6 +348,23 @@ class update_config(
                 .format(multiparents)
             )
 
+        # Convert the nodes to the path-to-node format we want
+        paths = {}
+        for board in board_relations.nodes():
+            parts = [board]
+            parents = board_relations.parents(board)
+
+            while parents:
+                parent = parents.pop()
+                parts.append(parent)
+                parents = board_relations.parents(parent)
+
+            paths[board] = "/".join(reversed(parts))
+
+        for board, path in paths.items():
+            if board != path:
+                board_relations.replace_node(board, path)
+
         return board_relations
 
     def __call__(self):
