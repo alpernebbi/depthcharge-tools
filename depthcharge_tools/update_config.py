@@ -366,6 +366,14 @@ class update_config(
                 elif rhs == parent:
                     parts = [lhs]
 
+                # Split e.g. unprovisioned_kohaku -> kohaku/unprovisioned
+                elif lhs == "unprovisioned":
+                    parts = ["unprovisioned", rhs]
+
+                # Split volteer2_ti50, helios_diskswap etc.
+                else:
+                    parts = list(reversed(board.split("_")))
+
             while parents:
                 parent = parents.pop()
                 parts.append(parent)
