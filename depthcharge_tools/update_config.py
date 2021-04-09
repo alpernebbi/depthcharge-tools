@@ -354,6 +354,18 @@ class update_config(
             parts = [board]
             parents = board_relations.parents(board)
 
+            # There is at most one parent here
+            for parent in parents:
+                lhs, sep, rhs = board.partition("_")
+
+                # Fixup duplication e.g. veyron/veyron_speedy
+                if sep != "_":
+                    pass
+                elif lhs == parent:
+                    parts = [rhs]
+                elif rhs == parent:
+                    parts = [lhs]
+
             while parents:
                 parent = parents.pop()
                 parts.append(parent)
