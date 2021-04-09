@@ -307,6 +307,10 @@ class update_config(
         for project in projects:
             board_relations.remove_node(project)
 
+        # "snow" is the default, implicit "daisy"
+        if board_relations.nodes().intersection(("snow", "daisy")):
+            board_relations.add_edge("daisy", "snow")
+
         # Some newer board variants are only in this project repo
         for board in iterdir(self.chromiumos_project_repo):
             if not board.is_dir() or board.name.startswith("."):
