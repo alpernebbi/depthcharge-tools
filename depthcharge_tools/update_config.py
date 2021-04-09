@@ -352,6 +352,13 @@ class update_config(
                 .format(multiparents)
             )
 
+        return board_relations
+
+    @property
+    @lru_cache
+    def board_config_sections(self):
+        board_relations = self.board_relations
+
         # Convert the nodes to the path-to-node format we want
         paths = {}
         for board in board_relations.nodes():
@@ -385,14 +392,12 @@ class update_config(
 
             paths[board] = "/".join(reversed(parts))
 
-        for board, path in paths.items():
-            if board != path:
-                board_relations.replace_node(board, path)
-
-        return board_relations
+        return paths
 
     def __call__(self):
-        pass
+        for board, path in self.board_config_sections.items():
+            if board != path:
+                self.board_relations.replace_node(board, path)
 
 
 if __name__ == "__main__":
