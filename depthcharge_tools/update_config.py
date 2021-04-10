@@ -433,7 +433,7 @@ class update_config(
                 parts.append(parent)
                 parent = get_parent(parent)
 
-            paths[board] = "/".join(reversed(parts))
+            paths[board] = "boards/{}".format("/".join(reversed(parts)))
 
         for alias, board in aliases.items():
             if board is not None:
