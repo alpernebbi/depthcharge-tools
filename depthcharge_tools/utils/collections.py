@@ -108,8 +108,8 @@ class DirectedGraph:
         for k, v in self.__edges.items():
             v.discard(node)
 
-    def replace_node(self, node, replacement):
-        if replacement in self.__edges:
+    def replace_node(self, node, replacement, merge=False):
+        if replacement in self.__edges and not merge:
             raise ValueError(
                 "Replacement node '{}' already in graph."
                 .format(replacement)
