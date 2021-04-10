@@ -359,6 +359,20 @@ class update_config(
     def board_config_sections(self):
         board_relations = self.board_relations
 
+        # Pre-set disallowed aliases to None
+        aliases = {
+            "unprovisioned": None,
+            "signed": None,
+            "embedded": None,
+            "legacy": None,
+        }
+
+        def add_alias(alias, board):
+            if alias in aliases:
+                aliases[alias] = None
+            else:
+                aliases[alias] = board
+
         # Convert the nodes to the path-to-node format we want
         paths = {}
         for board in board_relations.nodes():
@@ -369,13 +383,18 @@ class update_config(
             for parent in parents:
                 lhs, sep, rhs = board.partition("_")
 
-                # Fixup duplication e.g. veyron/veyron_speedy
                 if sep != "_":
                     pass
+
+                # Fixup left-duplication e.g. veyron/veyron_speedy
                 elif lhs == parent:
                     parts = [rhs]
+                    add_alias(rhs, board)
+
+                # Fixup right-duplication e.g. hatch/unprovisioned_hatch
                 elif rhs == parent:
                     parts = [lhs]
+                    add_alias(lhs, board)
 
                 # Split e.g. unprovisioned_kohaku -> kohaku/unprovisioned
                 elif lhs == "unprovisioned":
@@ -392,12 +411,16 @@ class update_config(
 
             paths[board] = "/".join(reversed(parts))
 
+        for alias, board in aliases.items():
+            if board is not None:
+                paths.setdefault(alias, paths[board])
+
         return paths
 
     def __call__(self):
         for board, path in self.board_config_sections.items():
             if board != path:
-                self.board_relations.replace_node(board, path)
+                self.board_relations.replace_node(board, path, merge=True)
 
 
 if __name__ == "__main__":
