@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import configparser
 import collections
 import json
 import logging
@@ -21,6 +22,12 @@ from depthcharge_tools.utils.pathlib import (
     iterdir,
     read_lines,
 )
+
+# To write config sections in sort order
+class SortedDict(collections.UserDict):
+    def __iter__(self):
+        return iter(sorted(self.data))
+
 
 class update_config(
     Command,
@@ -331,6 +338,18 @@ class update_config(
 
         return board_relations
 
+    @options.add
+    @Argument("-o", "--output", required=True)
+    def output(self, path):
+        """Write updated config to PATH."""
+
+        if path is None:
+            raise ValueError(
+                "Output argument is required."
+            )
+
+        return Path(path).resolve()
+
     @property
     @lru_cache
     def board_config_sections(self):
@@ -423,10 +442,36 @@ class update_config(
         return paths
 
     def __call__(self):
-        for board, path in self.board_config_sections.items():
-            if board != path:
-                self.board_relations.replace_node(board, path, merge=True)
+        config = configparser.ConfigParser(dict_type=SortedDict)
 
+        for codename, blocks in self.recovery_conf_boards.items():
+            name = self.board_config_sections.get(codename, None)
+
+            if name is None:
+                self.logger.warning(
+                    "Can't figure a section name for board '{}'."
+                    .format(codename)
+                )
+                name = "unknown/{}".format(codename)
+
+            config.add_section(name)
+            board = config[name]
+            board["codename"] = codename
+
+            for i, block in enumerate(blocks):
+                if len(blocks) > 1:
+                    name_i = "{}/{}".format(name, i)
+                    config.add_section(name_i)
+                    board = config[name_i]
+
+                if block.get("hwidmatch", None):
+                    board["hwid-match"] = block["hwidmatch"]
+
+                if block.get("name", None):
+                    board["name"] = block["name"]
+
+        with self.output.open("x") as output_f:
+            config.write(output_f)
 
 if __name__ == "__main__":
     update_config.main()
