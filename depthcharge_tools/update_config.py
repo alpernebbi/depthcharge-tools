@@ -297,16 +297,6 @@ class update_config(
             for parent in layout_conf.get("masters", "").split():
                 add_parent(parent, repo_name)
 
-        # "project-*" overlays don't really look like boards, but they
-        # can be the sole parent of actual boards (e.g. freon was to a
-        # lot of boards) so we can't just remove their descendants.
-        projects = set(
-            overlay.name.partition("-")[2]
-            for overlay in self.board_overlays_repo.glob("project-*")
-        )
-        for project in projects:
-            board_relations.remove_node(project)
-
         # "snow" is the default, implicit "daisy"
         if board_relations.nodes().intersection(("snow", "daisy")):
             board_relations.add_edge("daisy", "snow")
@@ -339,19 +329,6 @@ class update_config(
                     if child != profile.name:
                         board_relations.add_edge(profile.name, child)
 
-        # Right now each node should have a single parent, so we can
-        # turn them into a chipset-x/baseboard-y/z/t form by the parents
-        multiparents = {
-            board: board_relations.parents(board)
-            for board in board_relations.nodes()
-            if len(board_relations.parents(board)) > 1
-        }
-        if multiparents:
-            raise ValueError(
-                "The following boards have multiple parents: '{}'."
-                .format(multiparents)
-            )
-
         return board_relations
 
     @property
@@ -359,28 +336,53 @@ class update_config(
     def board_config_sections(self):
         board_relations = self.board_relations
 
-        # Pre-set disallowed aliases to None
-        aliases = {
-            "unprovisioned": None,
-            "signed": None,
-            "embedded": None,
-            "legacy": None,
-        }
+        # "project-*" overlays don't really look like boards.
+        projects = set(
+            overlay.name.partition("-")[2]
+            for overlay in self.board_overlays_repo.glob("project-*")
+        )
+        nonboards = set((
+            *projects,
+            "unprovisioned",
+            "signed",
+            "embedded",
+            "legacy",
+            "npcx796",
+            "npcx796fc",
+        ))
 
+        def get_parent(board):
+            # Projects can be the sole parent of actual boards (e.g.
+            # freon was to a lot of boards) so don't use them as parents
+            # at all, despite breaking e.g. termina/tael parentage.
+            parents = board_relations.parents(board) - nonboards
+            if len(parents) > 1:
+                raise ValueError(
+                    "Board '{}' has multiple parents: '{}'"
+                    .format(board, parents)
+                )
+
+            for parent in parents:
+                return parent
+
+        aliases = {}
         def add_alias(alias, board):
             if alias in aliases:
                 aliases[alias] = None
             else:
                 aliases[alias] = board
 
+        # Do not alias nonboards to anything
+        for nonboard in nonboards:
+            aliases[nonboard] = None
+
         # Convert the nodes to the path-to-node format we want
         paths = {}
         for board in board_relations.nodes():
             parts = [board]
-            parents = board_relations.parents(board)
+            parent = get_parent(board)
 
-            # There is at most one parent here
-            for parent in parents:
+            if parent is not None:
                 lhs, sep, rhs = board.partition("_")
 
                 if sep != "_":
@@ -397,17 +399,20 @@ class update_config(
                     add_alias(lhs, board)
 
                 # Split e.g. unprovisioned_kohaku -> kohaku/unprovisioned
-                elif lhs == "unprovisioned":
-                    parts = ["unprovisioned", rhs]
+                elif lhs in nonboards:
+                    parts = [lhs, rhs]
+
+                # Split e.g. arcada_signed -> arcada/signed
+                elif lhs in nonboards:
+                    parts = [rhs, lhs]
 
                 # Split volteer2_ti50, helios_diskswap etc.
                 else:
                     parts = list(reversed(board.split("_")))
 
-            while parents:
-                parent = parents.pop()
+            while parent is not None:
                 parts.append(parent)
-                parents = board_relations.parents(parent)
+                parent = get_parent(parent)
 
             paths[board] = "/".join(reversed(parts))
 
