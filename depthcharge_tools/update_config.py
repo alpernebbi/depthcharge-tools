@@ -286,10 +286,59 @@ class update_config(
         """
         return Path(path)
 
+    def parse_kconfig_defaults(self, text):
+        defaults = {}
+
+        clean_text, _ = re.subn("#.*\n", "\n", text)
+        blocks = re.split("\n\n+", clean_text)
+        for block in blocks:
+            config = None
+            type_ = str
+
+            for line in block.splitlines():
+                line = line.strip()
+
+                if not line or line.startswith("help"):
+                    config = None
+                    break
+
+                m = re.match("config ([0-9A-Z_]+)", line)
+                if m:
+                    config = m.group(1)
+                    type_ = str
+                    defaults[config] = {}
+
+                if line.startswith("hex"):
+                    type_ = lambda x: int(x, 16)
+                elif line.startswith("int"):
+                    type_ = int
+                elif line.startswith("bool"):
+                    type_ = bool
+
+                m = re.match("default (\S+)", line)
+                if m:
+                    defaults[config][None] = type_(m.group(1))
+
+                m = re.match("default (.+) if ([0-9A-Z_]+)", line)
+                if m:
+                    cond = m.group(2)
+                    defaults[config][cond] = type_(m.group(1))
+
+        return defaults
+
     @property
     @lru_cache
     def depthcharge_boards(self):
         boards = {}
+        defaults = collections.defaultdict(dict)
+
+        # Provide a limited set of default values to avoid having to
+        # parse all Kconfig files or something
+        image_f = self.depthcharge_repo / "src/image/Kconfig"
+        image_d = self.parse_kconfig_defaults(image_f.read_text())
+
+        for cond, default in image_d.get("KERNEL_SIZE", {}).items():
+            defaults[cond]["KERNEL_SIZE"] = default
 
         for defconfig_f in self.depthcharge_repo.glob("board/*/defconfig"):
             defconfig = self.parse_defconfig(defconfig_f.read_text())
@@ -301,7 +350,14 @@ class update_config(
             if board in boards and board != defconfig_f.parent.name:
                 continue
 
-            boards[board] = defconfig
+            board_d = {}
+            board_d.update(defaults.get(None, {}))
+            for cond, config in defaults.items():
+                if cond and defconfig.get(cond, None):
+                    board_d.update(config)
+
+            board_d.update(defconfig)
+            boards[board] = board_d
 
         return boards
 
@@ -593,6 +649,19 @@ class update_config(
 
                 if block.get("name", None):
                     board["name"] = block["name"]
+
+        for codename, block in self.depthcharge_boards.items():
+            name = self.board_config_sections.get(codename, None)
+            if name is None:
+                name = codename
+            if name not in config:
+                config.add_section(name)
+
+            board = config[name]
+            board["codename"] = codename
+
+            if block.get("KERNEL_SIZE", None):
+                board["image-max-size"] = str(block["KERNEL_SIZE"])
 
         with self.output.open("x") as output_f:
             config.write(output_f)
