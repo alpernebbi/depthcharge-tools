@@ -251,6 +251,60 @@ class update_config(
         """
         return Path(path)
 
+    def parse_defconfig(self, text):
+        values = dict()
+
+        for line in text.splitlines():
+            if line.startswith("#"):
+                continue
+
+            lhs, sep, rhs = line.partition("=")
+            if sep != "=" or not lhs.startswith("CONFIG_"):
+                continue
+
+            if rhs == "y":
+                value = True
+            elif rhs == "n":
+                value = False
+            elif rhs.startswith("0x"):
+                value = int(rhs, 16)
+            else:
+                value = rhs.strip().strip("'\"")
+
+            key = lhs[len("CONFIG_"):]
+            values[key] = value
+
+        return values
+
+    @options.add
+    @Argument("-d", "--depthcharge-repo", required=True)
+    def depthcharge_repo(self, path):
+        """\
+        Chromium OS depthcharge firmware git repository
+
+        https://chromium.googlesource.com/chromiumos/depthcharge
+        """
+        return Path(path)
+
+    @property
+    @lru_cache
+    def depthcharge_boards(self):
+        boards = {}
+
+        for defconfig_f in self.depthcharge_repo.glob("board/*/defconfig"):
+            defconfig = self.parse_defconfig(defconfig_f.read_text())
+
+            # CONFIG_BOARD is removed in master
+            board = defconfig.get("BOARD", defconfig_f.parent.name)
+
+            # kevin, kevin-tpm2 both have BOARD="kevin", prefer former
+            if board in boards and board != defconfig_f.parent.name:
+                continue
+
+            boards[board] = defconfig
+
+        return boards
+
     @property
     @lru_cache
     def board_relations(self):
