@@ -390,6 +390,30 @@ class update_config(
                     if child != profile.name:
                         board_relations.add_edge(profile.name, child)
 
+        # Weird stuff from depthcharge
+        for board, config in self.depthcharge_boards.items():
+            parent = config.get("BOARD_DIR", None)
+            if parent is None:
+                continue
+
+            board_relations.add_node(board)
+
+            # src/board/ and BOARD_DIR has gru (baseboard) and veyron_*
+            # (variants), we can't just always add "baseboard-".
+            if "baseboard-{}".format(parent) in board_relations.nodes():
+                parent = "baseboard-{}".format(parent)
+
+            # This looks incorrect for a few boards, so only add the
+            # relation if we don't know anything about the board
+            if not board_relations.parents(board):
+                if parent != board:
+                    board_relations.add_edge(parent, board)
+
+        # "veyron_rialto" doesn't show up anywhere as a child of veyron
+        # but exists in depthcharge
+        if "veyron_rialto" in board_relations.nodes():
+            board_relations.add_edge("veyron", "veyron_rialto")
+
         return board_relations
 
     @options.add
@@ -422,6 +446,9 @@ class update_config(
             "legacy",
             "npcx796",
             "npcx796fc",
+            "ext_ec",
+            "extec",
+            "alc1015_amp",
         ))
 
         def get_parent(board):
