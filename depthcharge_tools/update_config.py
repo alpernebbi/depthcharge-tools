@@ -453,7 +453,8 @@ class update_config(
 
         # Weird stuff from depthcharge
         for board, config in self.depthcharge_boards.items():
-            parent = config.get("BOARD_DIR", None)
+            parent = config.get("BOARD", None)
+            parent = config.get("BOARD_DIR", parent)
             if parent is None:
                 continue
 
