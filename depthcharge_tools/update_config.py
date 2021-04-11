@@ -446,6 +446,21 @@ class update_config(
             if parent:
                 board_relations.add_edge(parent, board)
 
+        # Add board architectures as root parent
+        for board, config in self.depthcharge_boards.items():
+            if config.get("ARCH_X86"):
+                arch = "x86"
+            elif config.get("ARCH_ARM_V8"):
+                arch = "arm64"
+            elif config.get("ARCH_ARM"):
+                arch = "arm"
+            else:
+                continue
+
+            roots = board_relations.roots(board)
+            for root in roots - {arch}:
+                board_relations.add_edge(arch, root)
+
         return board_relations
 
     @options.add
@@ -552,6 +567,14 @@ class update_config(
 
     def __call__(self):
         config = configparser.ConfigParser(dict_type=SortedDict)
+
+        for arch in ("x86", "arm", "arm64"):
+            name = self.board_config_sections.get(arch, None)
+            if name is None:
+                continue
+
+            config.add_section(name)
+            config[name]["arch"] = arch
 
         for codename, blocks in self.recovery_conf_boards.items():
             name = self.board_config_sections.get(codename, None)
