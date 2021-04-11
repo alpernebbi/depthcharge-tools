@@ -274,6 +274,10 @@ class update_config(
             key = lhs[len("CONFIG_"):]
             values[key] = value
 
+        # Not going to parse Kconfig for this
+        if values.get("ARCH_ARM") and not values.get("ARCH_ARM_V8"):
+            values["ARCH_ARM_V7"] = True
+
         return values
 
     @options.add
