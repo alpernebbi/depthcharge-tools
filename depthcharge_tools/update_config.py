@@ -333,22 +333,18 @@ class update_config(
             repo_names[board_d.name] = repo_name
             board_relations.add_node(repo_name)
 
-        # Get parents after we have a name for every board, so that we can
-        # ignore non-boards like chromiumos, portage-stable, eclass-overlay.
-        def add_parent(parent, child):
-            if parent != child and parent in board_relations.nodes():
-                board_relations.add_edge(parent, child)
-
         for overlay, repo_name in repo_names.items():
             board_d = self.board_overlays_repo / overlay
 
             for parent in self.get_profiles_base_parent_boards(board_d):
-                add_parent(parent, repo_name)
+                if parent != repo_name:
+                    board_relations.add_edge(parent, repo_name)
 
             # Various model/skus of recent boards don't have explicit overlay
             # dirs, but are specified in model.yaml in the base overlay
             for child in self.get_model_yaml_boards(board_d):
-                add_parent(repo_name, child)
+                if repo_name != child:
+                    board_relations.add_edge(repo_name, child)
 
             # Some relations only exists in layout.conf, e.g.
             # - x86-generic -> x86-generic_embedded
@@ -356,7 +352,12 @@ class update_config(
             # - peach -> peach_pit in firmware-gru-8785.B
             layout_conf = self.parse_layout_conf(board_d)
             for parent in layout_conf.get("masters", "").split():
-                add_parent(parent, repo_name)
+                if parent != repo_name and parent not in (
+                    "chromiumos",
+                    "portage-stable",
+                    "eclass-overlay",
+                ):
+                    board_relations.add_edge(parent, repo_name)
 
         # "snow" is the default, implicit "daisy"
         if board_relations.nodes().intersection(("snow", "daisy")):
