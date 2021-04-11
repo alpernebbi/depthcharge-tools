@@ -415,6 +415,37 @@ class update_config(
         if "veyron_rialto" in board_relations.nodes():
             board_relations.add_edge("veyron", "veyron_rialto")
 
+        nodes = {
+            node.replace("_", "-"): node
+            for node in board_relations.nodes()
+        }
+
+        # Recovery.conf heuristics, doesn't have actual parent board info
+        for board, blocks in self.recovery_conf_boards.items():
+            parents = set([b.get("file").split("_")[2] for b in blocks])
+            parents.discard(board)
+            if len(parents) > 1:
+                continue
+            elif len(parents) == 0:
+                parent = None
+            else:
+                parent = parents.pop()
+
+            # This is really inaccurate with underscores replaced with
+            # hyphens, so only use it if we don't know anything else
+            if board in nodes:
+                continue
+
+            # Don't duplicate veyron_speedy as speedy
+            if parent in nodes:
+                parent = nodes[parent]
+            if parent and parent.endswith(board):
+                parent = parent[:-len(board)-1]
+
+            board_relations.add_node(board)
+            if parent:
+                board_relations.add_edge(parent, board)
+
         return board_relations
 
     @options.add
@@ -528,14 +559,6 @@ class update_config(
 
         for codename, blocks in self.recovery_conf_boards.items():
             name = self.board_config_sections.get(codename, None)
-
-            if name is None:
-                self.logger.warning(
-                    "Can't figure a section name for board '{}'."
-                    .format(codename)
-                )
-                name = "unknown/{}".format(codename)
-
             config.add_section(name)
             board = config[name]
             board["codename"] = codename
