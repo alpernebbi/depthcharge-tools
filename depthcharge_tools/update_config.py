@@ -534,13 +534,9 @@ class update_config(
                 elif lhs in nonboards:
                     parts = [lhs, rhs]
 
-                # Split e.g. arcada_signed -> arcada/signed
-                elif lhs in nonboards:
-                    parts = [rhs, lhs]
-
-                # Split volteer2_ti50, helios_diskswap etc.
+                # e.g. arcada_signed, volteer2_ti50, helios_diskswap etc.
                 else:
-                    parts = list(reversed(board.split("_")))
+                    parts = [rhs, lhs]
 
             while parent is not None:
                 parts.append(parent)
