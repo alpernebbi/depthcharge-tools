@@ -399,6 +399,35 @@ class update_config(
 
         return boards
 
+    @options.add
+    @Argument("-c", "--coreboot-repo", required=True)
+    def coreboot_repo(self, path):
+        """\
+        Chromium OS coreboot firmware git repository
+
+        https://chromium.googlesource.com/chromiumos/coreboot
+        """
+        return Path(path)
+
+    @property
+    @lru_cache
+    def coreboot_boards(self):
+        boards = {}
+
+        for kconfig in self.coreboot_repo.glob("src/mainboard/*/*/Kconfig"):
+            board = kconfig.parent.name
+            config = kconfig.read_text()
+            names = kconfig.with_name("Kconfig.name").read_text()
+            if not "select MAINBOARD_HAS_CHROMEOS" in config:
+                continue
+
+            boards[board] = {
+                "boards": list(self.parse_kconfig_defaults(names).keys()),
+                "defaults": self.parse_kconfig_defaults(config)
+            }
+
+        return boards
+
     @property
     @lru_cache
     def board_relations(self):
