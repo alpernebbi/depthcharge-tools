@@ -701,6 +701,34 @@ class update_config(
                 board["boots-lz4-kernel"] = str(arm64_lz4_kernel)
                 board["boots-lzma-kernel"] = str(arm64_lzma_kernel)
 
+            # compatible string
+            board_c = (
+                self.depthcharge_repo / "src/board"
+                / codename / "board.c"
+            )
+            board_c = board_c.read_text() if board_c.is_file() else ""
+            if block.get("KERNEL_FIT", False):
+                m = re.search(
+                    'fit_(?:add|set)_compat(?:_by_rev)?\('
+                    '"([^"]+?)(?:-rev[0-9]+|-sku[0-9]+)*"',
+                    board_c,
+                )
+                if m:
+                    board["dt-compatible"] = m.group(1)
+
+                elif "sprintf(compat, pattern, CONFIG_BOARD," in fit_c:
+                    board["dt-compatible"] = "google,{}".format(
+                        block.get("BOARD", codename).lower()
+                        .replace("_", "-").replace(" ", "-")
+                    )
+
+                elif '"google,%s", mb_part_string' in fit_c:
+                    # Need to get this from coreboot instead
+                    board["dt-compatible"] = "google,{}".format(
+                        codename.lower()
+                        .replace("_", "-").replace(" ", "-")
+                    )
+
         with self.output.open("x") as output_f:
             config.write(output_f)
 
