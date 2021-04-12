@@ -306,36 +306,61 @@ class update_config(
         blocks = re.split("\n\n+", clean_text)
         for block in blocks:
             config = None
-            type_ = str
 
             for line in block.splitlines():
                 line = line.strip()
 
                 if not line or line.startswith("help"):
-                    config = None
-                    break
+                    if config is None:
+                        continue
+                    else:
+                        config = None
+                        break
 
                 m = re.match("config ([0-9A-Z_]+)", line)
                 if m:
                     config = m.group(1)
-                    type_ = str
+                    type_ = lambda s: str.strip(s, "'\"")
                     defaults[config] = {}
+
+                if config is None:
+                    continue
 
                 if line.startswith("hex"):
                     type_ = lambda x: int(x, 16)
                 elif line.startswith("int"):
                     type_ = int
                 elif line.startswith("bool"):
-                    type_ = bool
+                    type_ = lambda b: b in ("y", "Y")
+                elif line.startswith("string"):
+                    type_ = lambda s: str.strip(s, "'\"")
 
-                m = re.match("default (\S+)", line)
-                if m:
-                    defaults[config][None] = type_(m.group(1))
+                m = re.match("default (\S+)$", line)
+                try:
+                    value = type_(m.group(1))
+                except ValueError:
+                    value = m.group(1)
+                except AttributeError:
+                    value = None
+                finally:
+                    if value is not None:
+                        defaults[config][None] = value
+                    value = None
 
                 m = re.match("default (.+) if ([0-9A-Z_]+)", line)
-                if m:
+                try:
+                    value = type_(m.group(1))
                     cond = m.group(2)
-                    defaults[config][cond] = type_(m.group(1))
+                except ValueError:
+                    value = m.group(1)
+                    cond = m.group(2)
+                except AttributeError:
+                    value = None
+                    cond = None
+                finally:
+                    if value is not None and cond is not None:
+                        defaults[config][cond] = value
+                    value = None
 
         return defaults
 
