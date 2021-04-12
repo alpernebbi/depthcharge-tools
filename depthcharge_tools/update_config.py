@@ -539,6 +539,32 @@ class update_config(
         if "veyron_rialto" in board_relations.nodes():
             board_relations.add_edge("veyron", "veyron_rialto")
 
+        # Coreboot boards
+        for board, block in self.coreboot_boards.items():
+            kconfig, bconfigs = block["defaults"], block["boards"]
+
+            board_relations.add_node(board)
+
+            # These look like they could be baseboards as well,
+            # e.g. gru/Kconfig.name lists BOARD_GOOGLE_{KEVIN,GRU} etc
+            if "baseboard-{}".format(board) in board_relations.nodes():
+                board = "baseboard-{}".format(parent)
+
+            if "VARIANT_DIR" in kconfig:
+                children = kconfig["VARIANT_DIR"].values()
+            else:
+                children = [
+                    "_".join(bconfig.split("_")[2:]).lower()
+                    for bconfig in bconfigs
+                ]
+
+            # This also has some conflicts with the board-overlays.
+            # e.g. hatch vs puff, kahlee vs grunt
+            for child in children:
+                if not board_relations.parents(child):
+                    if board != child:
+                        board_relations.add_edge(board, child)
+
         nodes = {
             node.replace("_", "-"): node
             for node in board_relations.nodes()
