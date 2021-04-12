@@ -655,6 +655,21 @@ class update_config(
                 if block.get("name", None):
                     board["name"] = block["name"]
 
+        # Some heuristics for kernel compression
+        arm64_boot_c = (self.depthcharge_repo / "src/arch/arm/boot64.c")
+        arm64_boot_c = arm64_boot_c.read_text()
+        fit_c = (self.depthcharge_repo / "src/boot/fit.c").read_text()
+        fit_h = (self.depthcharge_repo / "src/boot/fit.h").read_text()
+        if "fit_decompress(kernel" in arm64_boot_c:
+            arm64_lz4_kernel = "CompressionLz4" in fit_h + fit_c
+            arm64_lzma_kernel = "CompressionLzma" in fit_h + fit_c
+        elif "switch(kernel->compression)" in arm64_boot_c:
+            arm64_lz4_kernel = "case CompressionLz4" in arm64_boot_c
+            arm64_lzma_kernel = "case CompressionLzma" in arm64_boot_c
+        else:
+            arm64_lz4_kernel = False
+            arm64_lzma_kernel = False
+
         for codename, block in self.depthcharge_boards.items():
             name = self.board_config_sections.get(codename, None)
             if name is None:
@@ -672,6 +687,10 @@ class update_config(
                 board["image-format"] = "fit"
             elif block.get("KERNEL_ZIMAGE", False):
                 board["image-format"] = "zimage"
+
+            if block.get("ARCH_ARM_V8", False):
+                board["boots-lz4-kernel"] = str(arm64_lz4_kernel)
+                board["boots-lzma-kernel"] = str(arm64_lzma_kernel)
 
         with self.output.open("x") as output_f:
             config.write(output_f)
