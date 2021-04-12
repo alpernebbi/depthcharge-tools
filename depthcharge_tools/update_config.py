@@ -34,7 +34,16 @@ class update_config(
     prog="update_config.py",
     add_help=False,
 ):
-    """Maintainer tool to help update depthcharge-tools config.ini"""
+    """
+    Maintainer tool to help update depthcharge-tools config.ini
+
+    ---
+
+    If you're packaging depthcharge-tools, don't use this as a build
+    step. Results from this are intended to be checked and modified
+    manually before they go into the final config.ini, the file
+    committed to the repository is the canonical one.
+    """
 
     logger = logging.getLogger(__name__)
 
