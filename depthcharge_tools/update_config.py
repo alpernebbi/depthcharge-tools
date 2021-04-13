@@ -364,6 +364,49 @@ class update_config(
 
         return defaults
 
+    def parse_kconfig_selects(self, text):
+        selects = {}
+
+        clean_text, _ = re.subn("#.*\n", "\n", text)
+        blocks = re.split("\n\n+", clean_text)
+        for block in blocks:
+            config = None
+
+            for line in block.splitlines():
+                line = line.strip()
+
+                if not line or line.startswith("help"):
+                    if config is None:
+                        continue
+                    else:
+                        config = None
+                        break
+
+                m = re.match("config ([0-9A-Z_]+)", line)
+                if m:
+                    config = m.group(1)
+                    type_ = lambda s: str.strip(s, "'\"")
+                    selects[config] = {}
+                    selects[config][None] = []
+
+                if config is None:
+                    continue
+
+                m = re.match("select (\S+)$", line)
+                if m:
+                    value = m.group(1)
+                    selects[config][None].append(value)
+
+                m = re.match("select (\S+) if ([0-9A-Z_]+)", line)
+                if m:
+                    value = m.group(1)
+                    cond = m.group(2)
+                    if cond not in selects[config]:
+                        selects[config][cond] = []
+                    selects[config][cond].append(value)
+
+        return selects
+
     @property
     @lru_cache
     def depthcharge_boards(self):
@@ -414,17 +457,84 @@ class update_config(
     def coreboot_boards(self):
         boards = {}
 
-        for kconfig in self.coreboot_repo.glob("src/mainboard/*/*/Kconfig"):
-            board = kconfig.parent.name
-            config = kconfig.read_text()
-            names = kconfig.with_name("Kconfig.name").read_text()
-            if not "select MAINBOARD_HAS_CHROMEOS" in config:
-                continue
+        def get_board_name(config):
+            parts = config.split("_")
+            if len(parts) < 2 or parts[0] != "BOARD":
+                return None
 
-            boards[board] = {
-                "boards": list(self.parse_kconfig_defaults(names).keys()),
-                "defaults": self.parse_kconfig_defaults(config)
-            }
+            vendor = parts[1].lower()
+            if not (self.coreboot_repo / "src/mainboard" / vendor).is_dir():
+                return None
+
+            board = "_".join(config.split("_")[2:]).lower()
+            return board
+
+        for kconfig_f in self.coreboot_repo.glob("src/mainboard/*/*/Kconfig"):
+            kconfig_name = kconfig_f.with_name("Kconfig.name").read_text()
+            kconfig = kconfig_f.read_text()
+
+            defaults = self.parse_kconfig_defaults(kconfig)
+            selects = self.parse_kconfig_selects(kconfig)
+            selects.update(self.parse_kconfig_selects(kconfig_name))
+
+            def add_board(config):
+                board = get_board_name(config)
+                if board in boards:
+                    return boards[board]
+
+                boards[board] = {}
+
+                for cond, selectlist in selects.get(config, {}).items():
+                    if cond is None or cond in boards[board]:
+                        for select in selectlist:
+                            if get_board_name(select):
+                                boards[board].update(add_board(select))
+                            boards[board][select] = True
+
+                for key, values in defaults.items():
+                    if get_board_name(key):
+                        continue
+                    value = values.get(config, values.get(None))
+                    if value is not None:
+                        boards[board][key] = value
+
+                board_opts = selects.get("BOARD_SPECIFIC_OPTIONS", {})
+                for cond, selectlist in board_opts.items():
+                    if cond is None or cond in boards[board]:
+                        for select in selectlist:
+                            if get_board_name(select):
+                                boards[board].update(add_board(select))
+                            boards[board][select] = True
+
+                boards[board][config] = True
+
+                return boards[board]
+
+            for config, _ in defaults.items():
+                if get_board_name(config):
+                    add_board(config)
+
+            for select, _ in selects.items():
+                if get_board_name(select):
+                    add_board(select)
+
+        for board, block in list(boards.items()):
+            suffix = "_common"
+            if board.endswith(suffix):
+                actual = board[:-len(suffix)]
+                boards.setdefault(actual, boards.pop(board))
+                board = actual
+
+            prefix = "baseboard_"
+            if board.startswith(prefix):
+                actual = "baseboard-{}".format(board[len(prefix):])
+                boards.setdefault(actual, boards.pop(board))
+                board = actual
+
+            if not block.get("MAINBOARD_HAS_CHROMEOS", False):
+                if board in boards:
+                    boards.pop(board)
+                continue
 
         return boards
 
@@ -539,31 +649,48 @@ class update_config(
         if "veyron_rialto" in board_relations.nodes():
             board_relations.add_edge("veyron", "veyron_rialto")
 
-        # Coreboot boards
-        for board, block in self.coreboot_boards.items():
-            kconfig, bconfigs = block["defaults"], block["boards"]
+        nodes = {
+            node.replace("-", "_"): node
+            for node in board_relations.nodes()
+        }
 
+        def coreboot_board_name(config):
+            if config is None or not config.startswith("BOARD_"):
+                return None
+
+            board = "_".join(config.split("_")[2:]).lower()
+            if board.startswith("baseboard_"):
+                board = "baseboard-{}".format(board[len("baseboard_"):])
+
+            if board not in self.coreboot_boards:
+                return None
+
+            return board
+
+        def add_coreboot_parents(board):
+            if board is None:
+                return None
+
+            board = nodes.get(board.replace("-", "_"), board)
             board_relations.add_node(board)
 
-            # These look like they could be baseboards as well,
-            # e.g. gru/Kconfig.name lists BOARD_GOOGLE_{KEVIN,GRU} etc
-            if "baseboard-{}".format(board) in board_relations.nodes():
-                board = "baseboard-{}".format(parent)
+            block = self.coreboot_boards.get(board, {})
+            parents = set(
+                coreboot_board_name(config)
+                for config, value in block.items()
+                if value
+            )
 
-            if "VARIANT_DIR" in kconfig:
-                children = kconfig["VARIANT_DIR"].values()
-            else:
-                children = [
-                    "_".join(bconfig.split("_")[2:]).lower()
-                    for bconfig in bconfigs
-                ]
+            for parent in parents - {board, None}:
+                add_coreboot_parents(parent)
+                parent = nodes.get(parent.replace("-", "_"), parent)
 
-            # This also has some conflicts with the board-overlays.
-            # e.g. hatch vs puff, kahlee vs grunt
-            for child in children:
-                if not board_relations.parents(child):
-                    if board != child:
-                        board_relations.add_edge(board, child)
+                # This also has conflicts with board-overlays
+                if not board_relations.parents(board):
+                    board_relations.add_edge(parent, board)
+
+        for board, block in self.coreboot_boards.items():
+            add_coreboot_parents(board)
 
         nodes = {
             node.replace("_", "-"): node
