@@ -335,9 +335,9 @@ class update_config(
                 elif line.startswith("string"):
                     type_ = lambda s: str.strip(s, "'\"")
 
-                m = re.match("default (\S+)$", line)
+                m = re.match("default (\S+|\".+\")$", line)
                 try:
-                    value = type_(m.group(1))
+                    value = type_(m.group(1).strip("'\""))
                 except ValueError:
                     value = m.group(1)
                 except AttributeError:
@@ -347,7 +347,7 @@ class update_config(
                         defaults[config][None] = value
                     value = None
 
-                m = re.match("default (.+) if ([0-9A-Z_]+)", line)
+                m = re.match("default (\S+|\".+\") if ([0-9A-Z_]+)", line)
                 try:
                     value = type_(m.group(1))
                     cond = m.group(2)
@@ -392,12 +392,12 @@ class update_config(
                 if config is None:
                     continue
 
-                m = re.match("select (\S+)$", line)
+                m = re.match("select (\S+|\".+\")$", line)
                 if m:
-                    value = m.group(1)
+                    value = m.group(1).strip("'\"")
                     selects[config][None].append(value)
 
-                m = re.match("select (\S+) if ([0-9A-Z_]+)", line)
+                m = re.match("select (\S+|\".+\") if ([0-9A-Z_]+)", line)
                 if m:
                     value = m.group(1)
                     cond = m.group(2)
