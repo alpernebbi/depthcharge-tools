@@ -930,9 +930,13 @@ class update_config(
                     )
 
                 elif '"google,%s", mb_part_string' in fit_c:
-                    # Need to get this from coreboot instead
+                    block = self.coreboot_boards.get(codename, {})
+                    mb_part_string = block.get(
+                        "MAINBOARD_PART_NUMBER",
+                        codename,
+                    )
                     board["dt-compatible"] = "google,{}".format(
-                        codename.lower()
+                        mb_part_string.lower()
                         .replace("_", "-").replace(" ", "-")
                     )
 
