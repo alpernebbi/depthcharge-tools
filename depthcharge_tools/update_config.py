@@ -104,18 +104,21 @@ class update_config(
         return values
 
     @options.add
-    @Argument("-r", "--recovery-conf", required=True)
-    def recovery_conf(self, path):
+    @Argument("-r", "--recovery-conf")
+    def recovery_conf(self, path=None):
         """\
         Chrome OS recovery.conf file for their Linux recovery tool
 
         https://dl.google.com/dl/edgedl/chromeos/recovery/recovery.conf
         """
-        return Path(path)
+        return Path(path) if path else None
 
     @property
     @lru_cache
     def recovery_conf_boards(self):
+        if self.recovery_conf is None:
+            return {}
+
         header, *blocks = [
             self.parse_recovery_conf_block(block)
             for block in re.split("\n\n+", self.recovery_conf.read_text())
@@ -225,14 +228,14 @@ class update_config(
         return children
 
     @options.add
-    @Argument("-b", "--board-overlays-repo", required=True)
-    def board_overlays_repo(self, path):
+    @Argument("-b", "--board-overlays-repo")
+    def board_overlays_repo(self, path=None):
         """\
         Chromium OS board-overlays git repository
 
         https://chromium.googlesource.com/chromiumos/overlays/board-overlays
         """
-        return Path(path)
+        return Path(path) if path else None
 
     def get_project_config_boards(self, d):
         children = set()
@@ -251,14 +254,14 @@ class update_config(
         return children
 
     @options.add
-    @Argument("-p", "--chromiumos-project-repo", required=True)
-    def chromiumos_project_repo(self, path):
+    @Argument("-p", "--chromiumos-project-repo")
+    def chromiumos_project_repo(self, path=None):
         """\
         Chromium OS's chromiumos/project git repository
 
         https://chromium.googlesource.com/chromiumos/project
         """
-        return Path(path)
+        return Path(path) if path else None
 
     def parse_defconfig(self, text):
         values = dict()
@@ -290,14 +293,14 @@ class update_config(
         return values
 
     @options.add
-    @Argument("-d", "--depthcharge-repo", required=True)
-    def depthcharge_repo(self, path):
+    @Argument("-d", "--depthcharge-repo")
+    def depthcharge_repo(self, path=None):
         """\
         Chromium OS depthcharge firmware git repository
 
         https://chromium.googlesource.com/chromiumos/depthcharge
         """
-        return Path(path)
+        return Path(path) if path else None
 
     def parse_kconfig_defaults(self, text):
         defaults = {}
@@ -413,6 +416,9 @@ class update_config(
         boards = {}
         defaults = collections.defaultdict(dict)
 
+        if self.depthcharge_repo is None:
+            return boards
+
         # Provide a limited set of default values to avoid having to
         # parse all Kconfig files or something
         image_f = self.depthcharge_repo / "src/image/Kconfig"
@@ -443,19 +449,22 @@ class update_config(
         return boards
 
     @options.add
-    @Argument("-c", "--coreboot-repo", required=True)
-    def coreboot_repo(self, path):
+    @Argument("-c", "--coreboot-repo")
+    def coreboot_repo(self, path=None):
         """\
         Chromium OS coreboot firmware git repository
 
         https://chromium.googlesource.com/chromiumos/coreboot
         """
-        return Path(path)
+        return Path(path) if path else None
 
     @property
     @lru_cache
     def coreboot_boards(self):
         boards = {}
+
+        if self.coreboot_repo is None:
+            return boards
 
         def get_board_name(config):
             parts = config.split("_")
@@ -758,10 +767,14 @@ class update_config(
         board_relations = self.board_relations
 
         # "project-*" overlays don't really look like boards.
-        projects = set(
-            overlay.name.partition("-")[2]
-            for overlay in self.board_overlays_repo.glob("project-*")
-        )
+        if self.board_overlays_repo is not None:
+            projects = set(
+                overlay.name.partition("-")[2]
+                for overlay in self.board_overlays_repo.glob("project-*")
+            )
+        else:
+            projects = set()
+
         nonboards = set((
             *projects,
             "unprovisioned",
@@ -872,10 +885,16 @@ class update_config(
                     board["name"] = block["name"]
 
         # Some heuristics for kernel compression
-        arm64_boot_c = (self.depthcharge_repo / "src/arch/arm/boot64.c")
-        arm64_boot_c = arm64_boot_c.read_text()
-        fit_c = (self.depthcharge_repo / "src/boot/fit.c").read_text()
-        fit_h = (self.depthcharge_repo / "src/boot/fit.h").read_text()
+        if self.depthcharge_repo is not None:
+            arm64_boot_c = (self.depthcharge_repo / "src/arch/arm/boot64.c")
+            arm64_boot_c = arm64_boot_c.read_text()
+            fit_c = (self.depthcharge_repo / "src/boot/fit.c").read_text()
+            fit_h = (self.depthcharge_repo / "src/boot/fit.h").read_text()
+        else:
+            arm64_boot_c = ""
+            fit_c = ""
+            fit_h = ""
+
         if "fit_decompress(kernel" in arm64_boot_c:
             arm64_lz4_kernel = "CompressionLz4" in fit_h + fit_c
             arm64_lzma_kernel = "CompressionLzma" in fit_h + fit_c
