@@ -47,13 +47,19 @@ def lzma(src, dest=None):
 
 def iterdir(path):
     try:
-        return path.iterdir()
+        if path.is_dir():
+            return path.iterdir()
+        else:
+            return []
     except:
         return []
 
 
 def read_lines(path):
     try:
-        return path.read_text().splitlines()
+        if path.is_file():
+            return path.read_text().splitlines()
+        else:
+            return []
     except:
         return []
