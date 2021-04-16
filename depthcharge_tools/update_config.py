@@ -298,7 +298,7 @@ class update_config(
         """\
         Chromium OS depthcharge firmware git repository
 
-        https://chromium.googlesource.com/chromiumos/depthcharge
+        https://chromium.googlesource.com/chromiumos/platform/depthcharge
         """
         return Path(path) if path else None
 
@@ -454,7 +454,7 @@ class update_config(
         """\
         Chromium OS coreboot firmware git repository
 
-        https://chromium.googlesource.com/chromiumos/coreboot
+        https://chromium.googlesource.com/chromiumos/third_party/coreboot
         """
         return Path(path) if path else None
 
