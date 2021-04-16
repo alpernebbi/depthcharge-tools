@@ -29,9 +29,7 @@ def cros_hwid():
         return hwid_file.read_text().strip("\x00")
 
     # If we booted with e.g. u-boot, we don't have dt/firmware/chromeos
-    proc = crossystem("hwid")
-    if proc.returncode == 0:
-        return proc.stdout.strip("\x00")
+    return crossystem.hwid()
 
 
 def os_release():

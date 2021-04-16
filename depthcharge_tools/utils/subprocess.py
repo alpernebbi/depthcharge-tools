@@ -185,6 +185,14 @@ class CrossystemRunner(ProcessRunner):
     def __init__(self):
         super().__init__("crossystem")
 
+    def hwid(self):
+        proc = self("hwid", check=False)
+
+        if proc.returncode == 0:
+            return proc.stdout
+        else:
+            return None
+
 
 class FdtgetRunner(ProcessRunner):
     def __init__(self):
