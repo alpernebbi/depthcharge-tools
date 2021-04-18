@@ -747,6 +747,22 @@ class update_config(
             for root in roots - {arch}:
                 board_relations.add_edge(arch, root)
 
+        # Baseboards, chipsets shouldn't depend on others in their class
+        for board in board_relations.nodes():
+            if board.startswith("chipset-"):
+                for child in board_relations.children(board):
+                    if child.startswith("chipset-"):
+                        board_relations.remove_edge(board, child)
+                        for parent in board_relations.parents(board):
+                            board_relations.add_edge(parent, child)
+
+            elif board.startswith("baseboard-"):
+                for child in board_relations.children(board):
+                    if child.startswith("baseboard-"):
+                        board_relations.remove_edge(board, child)
+                        for parent in board_relations.parents(board):
+                            board_relations.add_edge(parent, child)
+
         return board_relations
 
     @options.add
