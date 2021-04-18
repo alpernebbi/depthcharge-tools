@@ -794,13 +794,18 @@ class update_config(
             # at all, despite breaking e.g. termina/tael parentage.
             parents = board_relations.parents(board) - nonboards
             if len(parents) > 1:
-                raise ValueError(
+                self.logger.warning(
                     "Board '{}' has multiple parents: '{}'"
                     .format(board, parents)
                 )
+            elif len(parents) == 0:
+                return None
 
-            for parent in parents:
-                return parent
+            # Prefer longer chains
+            return max(
+                parents,
+                key=lambda p: len(board_relations.ancestors(p)),
+            )
 
         aliases = {}
         def add_alias(alias, board):
