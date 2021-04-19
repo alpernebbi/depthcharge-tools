@@ -479,8 +479,12 @@ class update_config(
             return board
 
         for kconfig_f in self.coreboot_repo.glob("src/mainboard/*/*/Kconfig"):
-            kconfig_name = kconfig_f.with_name("Kconfig.name").read_text()
+            kconfig_name = kconfig_f.with_name("Kconfig.name")
             kconfig = kconfig_f.read_text()
+            if kconfig_name.is_file():
+                kconfig_name = kconfig_name.read_text()
+            else:
+                kconfig_name = ""
 
             defaults = self.parse_kconfig_defaults(kconfig)
             selects = self.parse_kconfig_selects(kconfig)
@@ -744,7 +748,7 @@ class update_config(
                 continue
 
             roots = board_relations.roots(board)
-            for root in roots - {arch}:
+            for root in roots - {"x86", "arm64", "arm"}:
                 board_relations.add_edge(arch, root)
 
         # Baseboards, chipsets shouldn't depend on others in their class
@@ -889,6 +893,9 @@ class update_config(
 
         for codename, blocks in self.recovery_conf_boards.items():
             name = self.board_config_sections.get(codename, None)
+            if name is None:
+                continue
+
             config.add_section(name)
             board = config[name]
             board["codename"] = codename
@@ -908,9 +915,23 @@ class update_config(
         # Some heuristics for kernel compression
         if self.depthcharge_repo is not None:
             arm64_boot_c = (self.depthcharge_repo / "src/arch/arm/boot64.c")
-            arm64_boot_c = arm64_boot_c.read_text()
-            fit_c = (self.depthcharge_repo / "src/boot/fit.c").read_text()
-            fit_h = (self.depthcharge_repo / "src/boot/fit.h").read_text()
+            if arm64_boot_c.is_file():
+                arm64_boot_c = arm64_boot_c.read_text()
+            else:
+                arm64_boot_c = ""
+
+            fit_c = (self.depthcharge_repo / "src/boot/fit.c")
+            if fit_c.is_file():
+                fit_c = fit_c.read_text()
+            else:
+                fit_c = ""
+
+            fit_h = (self.depthcharge_repo / "src/boot/fit.h")
+            if fit_h.is_file():
+                fit_h = fit_h.read_text()
+            else:
+                fit_h = ""
+
         else:
             arm64_boot_c = ""
             fit_c = ""
@@ -957,7 +978,7 @@ class update_config(
             if block.get("KERNEL_FIT", False):
                 m = re.search(
                     'fit_(?:add|set)_compat(?:_by_rev)?\('
-                    '"([^"]+?)(?:-rev[0-9]+|-sku[0-9]+)*"',
+                    '"([^"]+?)(?:-rev[^-]+|-sku[^-]+)*"',
                     board_c,
                 )
                 if m:
