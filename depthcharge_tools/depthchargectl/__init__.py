@@ -12,7 +12,12 @@ import tempfile
 
 from pathlib import Path
 
-from depthcharge_tools import __version__, config_ini, config_files
+from depthcharge_tools import (
+    __version__,
+    config_ini,
+    boards_ini,
+    config_files,
+)
 from depthcharge_tools.utils.argparse import (
     Command,
     Argument,
@@ -166,6 +171,7 @@ class depthchargectl(
             )
 
             parser.read_string(config_ini, source="config.ini")
+            parser.read_string(boards_ini, source="boards.ini")
 
             try:
                 for p in parser.read(config_files):

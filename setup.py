@@ -34,7 +34,7 @@ setuptools.setup(
     keywords='ChromeOS ChromiumOS depthcharge vboot vbutil_kernel',
     packages=setuptools.find_packages(),
     package_data={
-        "depthcharge_tools": ["config.ini"],
+        "depthcharge_tools": ["config.ini", "boards.ini"],
     },
     install_requires=[''],
 )

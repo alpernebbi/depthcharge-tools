@@ -51,6 +51,9 @@ __version__ = get_version()
 config_ini = pkg_resources.resource_string(__name__, "config.ini")
 config_ini = config_ini.decode("utf-8")
 
+boards_ini = pkg_resources.resource_string(__name__, "boards.ini")
+boards_ini = boards_ini.decode("utf-8")
+
 config_files = [
     *glob.glob("/etc/depthcharge-tools/config"),
     *glob.glob("/etc/depthcharge-tools/config.d/*"),
