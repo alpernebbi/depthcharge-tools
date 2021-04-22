@@ -215,26 +215,32 @@ class depthchargectl(
             return Board(codename)
 
         boards = {
-            section.get("codename"): Board(section)
-            for name, section in self.config.parser.items()
-            if "codename" in section
+            sectname: Board(section)
+            for sectname, section in self.config.parser.items()
+            if sectname.startswith("boards/")
         }
 
         if codename is None:
             codename = self.config.get("board", None)
 
-        if codename in boards:
-            return boards[codename]
+        if codename is not None:
+            boards = {
+                sectname: board
+                for sectname, board in boards.items()
+                if codename == board.codename
+            }
 
-        elif codename is not None:
-            raise ValueError(
-                "Unknown board codename '{}'."
-                .format(codename)
-            )
+            if not boards:
+                raise ValueError(
+                    "Unknown board codename '{}'."
+                    .format(codename)
+                )
+
+            return boards[min(boards, key=len)]
 
         hwid = cros_hwid()
         def hwid_match(item):
-            codename, board = item
+            sectname, board = item
             try:
                 return bool(re.match(board.hwid_match, hwid))
             except:
@@ -242,7 +248,7 @@ class depthchargectl(
 
         matches = tuple(filter(hwid_match, boards.items()))
         if matches:
-            codename, board = matches[0]
+            sectname, board = matches[0]
             self.logger.info(
                 "Detected board '{}' ('{}') by HWID."
                 .format(board.name, board.codename)
@@ -259,7 +265,7 @@ class depthchargectl(
             if item is None:
                 return len(compatibles)
 
-            codename, board = item
+            sectname, board = item
             try:
                 return compatibles.index(board.dt_compatible)
             except ValueError:
@@ -267,7 +273,7 @@ class depthchargectl(
 
         match = min((None, *boards.items()), key=compat_preference)
         if match is not None:
-            codename, board = match
+            sectname, board = match
             self.logger.info(
                 "Detected board '{}' ('{}') by device-tree compatibles."
                 .format(board.name, board.codename)
@@ -283,14 +289,14 @@ class depthchargectl(
         # detect this system as a proper board
         arch = platform.machine()
         if arch in Architecture.arm_32:
-            codename = "arm-generic"
+            sectname = "boards/arm"
         elif arch in Architecture.arm_64:
-            codename = "arm64-generic"
+            sectname = "boards/arm64"
         elif arch in Architecture.x86_32:
-            codename = "x86-generic"
+            sectname = "boards/x86"
         elif arch in Architecture.x86_64:
-            codename = "amd64-generic"
-        board = boards.get(codename, None)
+            sectname = "boards/x86_64"
+        board = boards.get(sectname, None)
         if board is not None:
             return board
 
