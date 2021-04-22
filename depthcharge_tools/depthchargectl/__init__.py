@@ -286,6 +286,8 @@ class depthchargectl(
             codename = "arm-generic"
         elif arch in Architecture.arm_64:
             codename = "arm64-generic"
+        elif arch in Architecture.x86_32:
+            codename = "x86-generic"
         elif arch in Architecture.x86_64:
             codename = "amd64-generic"
         board = boards.get(codename, None)
