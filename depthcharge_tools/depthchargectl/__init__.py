@@ -41,7 +41,10 @@ class Board:
 
     @property
     def name(self):
-        return self._config.get("name")
+        name = self._config.get("name")
+        if name is None:
+            name = "Unnamed {} board".format(self.codename or 'unknown')
+        return name
 
     @property
     def codename(self):
