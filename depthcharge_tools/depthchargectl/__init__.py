@@ -298,7 +298,7 @@ class depthchargectl(
         elif arch in Architecture.x86_32:
             sectname = "boards/x86"
         elif arch in Architecture.x86_64:
-            sectname = "boards/x86_64"
+            sectname = "boards/amd64"
         board = boards.get(sectname, None)
         if board is not None:
             return board
