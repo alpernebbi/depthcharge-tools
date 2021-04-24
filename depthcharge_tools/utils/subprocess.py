@@ -172,7 +172,15 @@ class CgptRunner(ProcessRunner):
             partnos = [int(shlex.split(line)[2]) for line in lines]
 
         else:
-            proc = self("find", "-n", "-t", type, disk)
+            # Exits with nonzero status if it finds no partitions of
+            # given type even if the disk has a valid partition table
+            try:
+                proc = self("find", "-n", "-t", type, disk)
+            except subprocess.CalledProcessError as err:
+                if err.stderr:
+                    raise
+                return []
+
             partnos = [int(n) for n in proc.stdout.splitlines()]
 
         return partnos
