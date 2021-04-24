@@ -144,5 +144,10 @@ class depthchargectl_check(
             if not head.startswith("FIT description:"):
                 raise ImageFormatError(image, self.board.image_format)
 
+        self.logger.warning(
+            "This command is incomplete, the image might be unbootable "
+            "despite passing currently implemented checks."
+        )
+
     global_options = depthchargectl.global_options
     config_options = depthchargectl.config_options
