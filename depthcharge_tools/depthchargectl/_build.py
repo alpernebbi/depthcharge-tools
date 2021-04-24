@@ -189,6 +189,9 @@ class depthchargectl_build(
                     .format(self.board.dt_compatible, self.fdtdir)
                 )
 
+        else:
+            files = [Path(f) for f in files]
+
         if self.board.image_format == "zimage" and len(files) != 0:
             raise ValueError(
                 "Image format '{}' doesn't support dtb files."
