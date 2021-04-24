@@ -249,7 +249,11 @@ class depthchargectl(
             except:
                 return False
 
-        matches = tuple(filter(hwid_match, boards.items()))
+        if hwid is not None:
+            matches = tuple(filter(hwid_match, boards.items()))
+        else:
+            matches = ()
+
         if matches:
             sectname, board = matches[0]
             self.logger.info(
@@ -274,7 +278,11 @@ class depthchargectl(
             except ValueError:
                 return float("inf")
 
-        match = min((None, *boards.items()), key=compat_preference)
+        if compatibles is not None:
+            match = min((None, *boards.items()), key=compat_preference)
+        else:
+            match = None
+
         if match is not None:
             sectname, board = match
             self.logger.info(
