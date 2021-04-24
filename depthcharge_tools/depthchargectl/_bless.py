@@ -39,14 +39,17 @@ class depthchargectl_bless(
     def partition(self, device=None):
         """ChromeOS Kernel partition to manage"""
         if device is None:
-            try:
-                device = system_disks.by_kern_guid()
-            except:
-                raise ValueError(
-                    "Couldn't figure out the currently booted partition."
-                )
-        else:
-            device = Partition(device)
+            self.logger.info(
+                "No partition given, defaulting to currently booted one."
+            )
+            device = system_disks.by_kern_guid()
+
+        if device is None:
+            raise ValueError(
+                "Couldn't figure out the currently booted partition."
+            )
+
+        device = Partition(device)
 
         if device not in device.disk.cros_partitions():
             raise ValueError(
