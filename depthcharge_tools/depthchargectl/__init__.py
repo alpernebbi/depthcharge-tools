@@ -262,11 +262,6 @@ class depthchargectl(
             )
             return board
 
-        else:
-            self.logger.warning(
-                "Couldn't detect board by HWID."
-            )
-
         compatibles = dt_compatibles()
         def compat_preference(item):
             if item is None:
@@ -291,11 +286,6 @@ class depthchargectl(
             )
             return board
 
-        else:
-            self.logger.warning(
-                "Couldn't detect board by dt-compatibles."
-            )
-
         # Use generic boards per cpu architecture, since we couldn't
         # detect this system as a proper board
         arch = platform.machine()
@@ -309,6 +299,10 @@ class depthchargectl(
             sectname = "boards/amd64"
         board = boards.get(sectname, None)
         if board is not None:
+            self.logger.warning(
+                "Assuming a generic board of architecture '{}'."
+                .format(board.arch)
+            )
             return board
 
         raise ValueError(
