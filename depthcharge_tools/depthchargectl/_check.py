@@ -30,7 +30,7 @@ class SizeTooBigError(CommandExit):
         self.image = image
         self.image_size = image_size
         self.max_size = max_size
-        super().__init__(output=False, returncode=3, message=message)
+        super().__init__(output=False, message=message)
 
 
 class NotADepthchargeImageError(CommandExit):
@@ -41,7 +41,7 @@ class NotADepthchargeImageError(CommandExit):
         )
 
         self.image = image
-        super().__init__(output=False, returncode=4, message=message)
+        super().__init__(output=False, message=message)
 
 
 class VbootSignatureError(CommandExit):
@@ -52,7 +52,7 @@ class VbootSignatureError(CommandExit):
         )
 
         self.image = image
-        super().__init__(output=False, returncode=5, message=message)
+        super().__init__(output=False, message=message)
 
 
 class ImageFormatError(CommandExit):
@@ -64,7 +64,7 @@ class ImageFormatError(CommandExit):
 
         self.image = image
         self.board_format = board_format
-        super().__init__(output=False, returncode=6, message=message)
+        super().__init__(output=False, message=message)
 
 
 @depthchargectl.subcommand("check")
