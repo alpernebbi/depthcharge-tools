@@ -198,8 +198,9 @@ class depthchargectl_target(
             self.logger.info(
                 "Checking if targeted partition is currently booted one."
             )
-            if not self.allow_current and part.path == current.path:
-                raise BootedPartitionError(part)
+            if current is not None and not self.allow_current:
+                if part.path == current.path:
+                    raise BootedPartitionError(part)
 
             self.logger.info(
                 "Checking if targeted partition is bigger than given "
@@ -221,12 +222,13 @@ class depthchargectl_target(
                 )
                 continue
 
-            if not self.allow_current and p.path == current.path:
-                self.logger.info(
-                    "Skipping currently booted partition '{}'."
-                    .format(p)
-                )
-                continue
+            if current is not None and not self.allow_current:
+                if p.path == current.path:
+                    self.logger.info(
+                        "Skipping currently booted partition '{}'."
+                        .format(p)
+                    )
+                    continue
 
             self.logger.info("Partition '{}' is usable.".format(p))
             good_partitions.append(
