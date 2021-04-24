@@ -168,7 +168,7 @@ class depthchargectl_build(
             if self.fdtdir is None:
                 raise ValueError(
                     "No dtb directory found for version '{}', "
-                    "but this machine needs a dtb."
+                    "but this board needs a dtb."
                     .format(self.kernel_release)
                 )
 
