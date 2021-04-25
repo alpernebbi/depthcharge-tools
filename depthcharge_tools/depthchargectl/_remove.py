@@ -130,7 +130,7 @@ class depthchargectl_remove(
                             badparts.append(part)
 
         if not badparts:
-            self.logger.info("No partitions contain the given image.")
+            self.logger.info("No active partitions contain the given image.")
 
         current = system_disks.by_kern_guid()
         if current in badparts:
@@ -138,10 +138,10 @@ class depthchargectl_remove(
                 self.logger.warn(
                     "Deactivating the currently booted partition '{}'. "
                     "This might make your system unbootable."
-                    .format(target)
+                    .format(current)
                 )
             else:
-                raise CurrentlyBootedPartitionError(part)
+                raise BootedPartitionError(current)
 
         for part in badparts:
             self.logger.info("Deactivating '{}'.".format(part))
