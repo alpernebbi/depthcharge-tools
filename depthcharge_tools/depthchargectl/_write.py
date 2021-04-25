@@ -134,6 +134,32 @@ class depthchargectl_write(
             self.logger.info("Using given image '{}'." .format(self.image))
             image = self.image
 
+            try:
+                depthchargectl.check(
+                    image=image,
+                    config=self.config,
+                    board=self.board,
+                    tmpdir=self.tmpdir / "check",
+                    images_dir=self.images_dir,
+                    vboot_keyblock=self.vboot_keyblock,
+                    vboot_public_key=self.vboot_public_key,
+                    vboot_private_key=self.vboot_private_key,
+                    kernel_cmdline=self.kernel_cmdline,
+                    ignore_initramfs=self.ignore_initramfs,
+                    verbosity=self.verbosity,
+                )
+
+            except Exception as err:
+                if self.force:
+                    self.logger.warn(
+                        "Image '{}' is not bootable on this board, "
+                        "continuing due to --force."
+                        .format(image)
+                    )
+
+                else:
+                    raise NotBootableImageError(image) from err
+
         else:
             # No image given, try creating one.
             try:
@@ -153,32 +179,6 @@ class depthchargectl_write(
 
             except Exception as err:
                 raise ImageBuildError(self.kernel_version) from err
-
-        try:
-            depthchargectl.check(
-                image=image,
-                config=self.config,
-                board=self.board,
-                tmpdir=self.tmpdir / "check",
-                images_dir=self.images_dir,
-                vboot_keyblock=self.vboot_keyblock,
-                vboot_public_key=self.vboot_public_key,
-                vboot_private_key=self.vboot_private_key,
-                kernel_cmdline=self.kernel_cmdline,
-                ignore_initramfs=self.ignore_initramfs,
-                verbosity=self.verbosity,
-            )
-
-        except Exception as err:
-            if self.force:
-                self.logger.warn(
-                    "Image '{}' is not bootable on this board, "
-                    "continuing due to --force."
-                    .format(image)
-                )
-
-            else:
-                raise NotBootableImageError(image) from err
 
         # We don't want target to unconditionally avoid the current
         # partition since we will also check that here. But whatever we
