@@ -285,6 +285,10 @@ class Partition:
         if isinstance(path, Disk):
             disk = path
             path = None
+        elif isinstance(path, Partition):
+            disk = path.disk
+            partno = path.partno
+            path = path.path
         else:
             disk = None
             path = Path(path).resolve()
