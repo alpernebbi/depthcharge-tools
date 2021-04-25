@@ -27,7 +27,7 @@ class depthchargectl_bless(
 ):
     """Set the active or given partition as successfully booted."""
 
-    logger = depthchargectl.logger.getChild("list")
+    logger = depthchargectl.logger.getChild("bless")
     config_section = "depthchargectl/bless"
 
     @Group
