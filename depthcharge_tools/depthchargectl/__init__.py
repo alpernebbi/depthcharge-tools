@@ -8,6 +8,7 @@ import logging
 import os
 import platform
 import re
+import shlex
 import tempfile
 
 from pathlib import Path
