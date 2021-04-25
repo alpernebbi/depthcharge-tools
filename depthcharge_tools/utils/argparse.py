@@ -795,6 +795,12 @@ class CommandMeta(type):
         else:
             logging.getLogger(cls.__module__)
 
+        def log_error(err):
+            is_debug_level = logger.isEnabledFor(logging.DEBUG)
+            if not is_debug_level and err.__cause__ is not None:
+                log_error(err.__cause__)
+            logger.error(err, exc_info=is_debug_level)
+
         try:
             output = command(__raise_CommandExit=True, **kwargs)
             if output is not None:
@@ -808,21 +814,14 @@ class CommandMeta(type):
 
         except CommandExit as exit:
             if exit.returncode != 0:
-                logger.error(
-                    exit,
-                    exc_info=logger.isEnabledFor(logging.DEBUG),
-                )
+                log_error(exit)
             else:
                 logger.info(exit)
 
             sys.exit(exit.returncode)
 
         except Exception as err:
-            logger.error(
-                err,
-                exc_info=logger.isEnabledFor(logging.DEBUG),
-            )
-
+            log_error(err)
             sys.exit(1)
 
     def items(cls):
