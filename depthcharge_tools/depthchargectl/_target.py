@@ -164,7 +164,7 @@ class depthchargectl_target(
         elif bytes_.startswith("0b"):
             return int(bytes_, 2)
         else:
-            return int(min_size)
+            return int(bytes_)
 
     @options.add
     @Argument("--allow-current", allow=True)
