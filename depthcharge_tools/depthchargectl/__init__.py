@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import argparse
+import collections
 import configparser
 import copy
 import glob
@@ -162,7 +163,7 @@ class depthchargectl(
     def config(self, file_=None):
         """Additional configuration file to read"""
         if isinstance(file_, configparser.SectionProxy):
-            return file_
+            parser = file_.parser
 
         elif isinstance(file_, configparser.ConfigParser):
             parser = file_
@@ -187,7 +188,13 @@ class depthchargectl(
                     .format(err.filename)
                 )
 
-        if file_ is not None:
+        if self.config_section not in parser.sections():
+            parser.add_section(self.config_section)
+
+        if isinstance(file_, collections.abc.Mapping):
+            parser[self.config_section].update(file_)
+
+        elif file_ is not None:
             try:
                 read = parser.read([file_])
 
@@ -202,9 +209,6 @@ class depthchargectl(
                     "Config file '{}' could not be read."
                     .format(file_)
                 )
-
-        if self.config_section not in parser.sections():
-            parser.add_section(self.config_section)
 
         return parser[self.config_section]
 
