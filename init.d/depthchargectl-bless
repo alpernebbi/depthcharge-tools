@@ -13,6 +13,11 @@ if ! command -v depthchargectl >/dev/null 2>/dev/null; then
     exit 0
 fi
 
+if ! grep "cros_secure" /proc/cmdline >/dev/null 2>/dev/null; then
+    # Not booted by depthcharge.
+    exit 0
+fi
+
 if [ -f /lib/lsb/init-functions ]; then
     . /lib/lsb/init-functions
 fi
