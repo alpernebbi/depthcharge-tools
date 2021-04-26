@@ -359,20 +359,50 @@ class mkdepthcharge(
 
         # We might still not have the vboot keys after all that.
         if self.keyblock is None:
-            raise ValueError("Couldn't find a usable keyblock file.")
+            raise ValueError(
+                "Couldn't find a usable keyblock file."
+            )
+        elif not self.keyblock.is_file():
+            raise ValueError(
+                "Keyblock file '{}' does not exist."
+                .format(self.keyblock)
+            )
         else:
-            self.logger.info("Using keyblock file '{}'.".format(self.keyblock))
+            self.logger.info(
+                "Using keyblock file '{}'."
+                .format(self.keyblock)
+            )
 
         if self.signprivate is None:
-            raise ValueError("Couldn't find a usable signprivate file.")
+            raise ValueError(
+                "Couldn't find a usable signprivate file."
+            )
+        elif not self.signprivate.is_file():
+            raise ValueError(
+                "Signprivate file '{}' does not exist."
+                .format(self.keyblock)
+            )
         else:
-            self.logger.info("Using signprivate file '{}'.".format(self.signprivate))
+            self.logger.info(
+                "Using signprivate file '{}'."
+                .format(self.signprivate)
+            )
 
         if self.signpubkey is None:
-            self.logger.warn("Couldn't find a usable signpubkey file.")
+            self.logger.warn(
+                "Couldn't find a usable signpubkey file."
+            )
+        elif not self.signpubkey.is_file():
+            self.logger.warn(
+                "Signpubkey file '{}' does not exist."
+                .format(self.keyblock)
+            )
+            self.signpubkey = None
         else:
-            self.logger.info("Using signpubkey file '{}'.".format(self.signpubkey))
-
+            self.logger.info(
+                "Using signpubkey file '{}'."
+                .format(self.signpubkey)
+            )
 
     @vboot_options.add
     @Argument("-c", "--cmdline", append=True, nargs="+")
