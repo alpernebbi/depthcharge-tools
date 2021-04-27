@@ -3,29 +3,26 @@ mkdepthcharge
 =============
 
 ---------------------------------------------
-build boot images for the ChromeOS bootloader
+Build boot images for the ChromeOS bootloader
 ---------------------------------------------
 
-.. |PACKAGENAME| replace:: depthcharge-tools
-.. |VERSION| replace:: v0.3.0
-
-:date: 2019-12-05
-:version: |VERSION|
+:date: 2021-04-27
+:version: v0.5.0
 :manual_section: 1
-:manual_group: |PACKAGENAME|
+:manual_group: depthcharge-tools
 
 .. |mkimage| replace:: *mkimage*\ (1)
 .. |vbutil_kernel| replace:: *vbutil_kernel*\ (1)
 .. |futility| replace:: *futility*\ (1)
 
-.. |DEFAULT_VBOOT_DEVKEYS| replace:: /usr/share/vboot/devkeys
-.. |DEFAULT_VBOOT_KEYBLOCK| replace:: |DEFAULT_VBOOT_DEVKEYS|/kernel.keyblock
-.. |DEFAULT_VBOOT_SIGNPUBKEY| replace:: |DEFAULT_VBOOT_DEVKEYS|/kernel_subkey.vbpubk
-.. |DEFAULT_VBOOT_SIGNPRIVATE| replace:: |DEFAULT_VBOOT_DEVKEYS|/kernel_data_key.vbprivk
+.. |VBOOT_DEVKEYS| replace:: /usr/share/vboot/devkeys
+.. |VBOOT_KEYBLOCK| replace:: |VBOOT_DEVKEYS|/kernel.keyblock
+.. |VBOOT_SIGNPUBKEY| replace:: |VBOOT_DEVKEYS|/kernel_subkey.vbpubk
+.. |VBOOT_SIGNPRIVATE| replace:: |VBOOT_DEVKEYS|/kernel_data_key.vbprivk
 
 SYNOPSIS
 ========
-**mkdepthcharge** **-o** *FILE* [options] *vmlinuz* [*initramfs*] [*dtb* ...]
+**mkdepthcharge** **-o** *FILE* [options] [*VMLINUZ*] [*INITRAMFS*] [*DTB* ...]
 
 
 DESCRIPTION
@@ -35,25 +32,33 @@ programs with reasonable defaults to package its inputs into the
 format the ChromeOS bootloader expects. It also automates many actions
 that a user would have to do manually or write a script for.
 
-The *vmlinuz* should be a kernel executable, *initramfs* should be a
+The *VMLINUZ* should be a kernel executable, *INITRAMFS* should be a
 ramdisk image that the kernel should be able to use on its own, and
-*dtb* files should be device-tree binary files appropriate for the
+*DTB* files should be device-tree binary files appropriate for the
 kernel.
 
-File names of the input files are used to determine which file they are.
-**\*vmlinuz***, **\*vmlinux***, **\*linux***, **\*Image*** are used
-as the *vmlinuz*; **\*initramfs***, **\*initrd*** or **\*cpio*** are
-used as the *initramfs*; and **\*dtb*** are used as *dtb* files.
-Files not fitting these patterns are assumed to be whatever is missing
-in the *vmlinuz*, *initramfs*, *dtb* order.
-
-If a gzip-compressed file is given as the *vmlinuz*, it is decompressed
-and its contents are used in its place. The contents of any of the input
-files are not inspected other than this *vmlinuz* decompression step.
+**mkdepthcharge** tries to determine the type of each input file by some
+heuristics on their contents, but failing that it assumes a file is
+whatever is missing in the *VMLINUZ*, *INITRAMFS*, *DTB* order.
+Alternatively, these files can be specified as options instead of
+positional arguments.
 
 
 OPTIONS
 =======
+
+Input files
+-----------
+
+-d VMLINUZ, --vmlinuz VMLINUZ
+    Kernel executable.  If a gzip-compressed file is given here, it is
+    decompressed and its contents are used in its place.
+
+-i INITRAMFS, --initramfs INITRAMFS
+    Ramdisk image
+
+-b *DTB* [*DTB* ...], --dtbs *DTB* [*DTB* ...]
+    Device-tree binary files
 
 Global options
 --------------
@@ -68,15 +73,15 @@ Global options
     given, architecture-specific defaults are used.
 
     fit
-        This is the default on ARM machines. The *vmlinuz* and the
-        optional *initramfs*, *dtb* files are packaged into the
+        This is the default on ARM machines. The *VMLINUZ* and the
+        optional *INITRAMFS*, *DTB* files are packaged into the
         Flattened Image Tree (FIT) format using |mkimage| and that is
         passed to |vbutil_kernel|.
 
     zimage
-        This is the default for x86 machines. The *vmlinuz* is passed
+        This is the default for x86 machines. The *VMLINUZ* is passed
         unmodified (except decompression) to |vbutil_kernel|. It does
-        not support packaging *initramfs* or *dtb* files.
+        not support packaging *INITRAMFS* or *DTB* files.
 
 -h, --help
     Show a help message and exit.
@@ -90,25 +95,25 @@ Global options
     Print info messages, |mkimage| output and |vbutil_kernel| output to
     stderr.
 
---version
+-V, --version
     Print program version and exit.
 
 FIT image options
 -----------------
 -C TYPE, --compress TYPE
-    Compress the *vmlinuz* before packaging it into a FIT image, either
+    Compress the *VMLINUZ* before packaging it into a FIT image, either
     with **lz4** or **lzma**. **none** is also accepted, but does
     nothing.
 
--n NAME, --name NAME
-    Description of the *vmlinuz* to put in the FIT image.
+-n DESC, --name DESC
+    Description of the *VMLINUZ* to put in the FIT image.
 
 Depthcharge image options
 -------------------------
 --bootloader FILE
     Bootloader stub. If not given, an empty file is used.
 
--c CMD, --cmdline CMD
+-c *CMD* [*CMD* ...], --cmdline *CMD* [*CMD* ...]
     Command-line parameters for the kernel. Can be used multiple times
     to append new values. If not given, **--** is used.
 
@@ -122,46 +127,46 @@ Depthcharge image options
     command line parameters to capture it. Use **--no-kern-guid** to
     disable this.
 
---devkeys DIR
+--keydir DIR
     Directory containing developer keys to use. Equivalent to using
-    **--keyblock** "*DIR*\ **/kernel.keyblock**" and **--signprivate**
-    "*DIR*\ **/kernel_data_key.vbprivk**".
+    **--keyblock** "*DIR*\ **/kernel.keyblock**", **--signprivate**
+    "*DIR*\ **/kernel_data_key.vbprivk**", and **--signpubkey**
+    "*DIR*\ **/kernel_subkey.vbpubk**".
 
 --keyblock FILE
-    Kernel key block. If not given, the 'devkeys' files distributed with
-    |vbutil_kernel| are used.
+    Kernel key block file. If not given, the test key files distributed
+    with |vbutil_kernel| are used.
 
 --no-kern-guid
     Don't prepend **kern_guid=%U** to kernel command-line parameters.
 
 --signprivate FILE
-    Private keys in .vbprivk format. If not given, the 'devkeys' files
+    Private keys in .vbprivk format. If not given, the test key files
+    distributed with |vbutil_kernel| are used.
+
+--signpubkey FILE
+    Public keys in .vbpubk format. If not given, the test key files
     distributed with |vbutil_kernel| are used.
 
 
 EXIT STATUS
 ===========
-0
-    An image is successfully built and copied to output (or one of
-    **--help**, **--version** is given).
-
-1
-    An error occurred, no image is written to the output path.
+In general, exits with zero on success and non-zero on failure.
 
 
 FILES
 =====
-|DEFAULT_VBOOT_DEVKEYS|
-    Default devkeys directory which should have been installed by
-    |vbutil_kernel|.
+|VBOOT_DEVKEYS|
+    Default devkeys directory containing test keys which might have
+    been installed by |vbutil_kernel|.
 
-|DEFAULT_VBOOT_KEYBLOCK|
+|VBOOT_KEYBLOCK|
     Default kernel key block file used for signing the image.
 
-|DEFAULT_VBOOT_SIGNPUBKEY|
+|VBOOT_SIGNPUBKEY|
     Default public key used to verify signed images.
 
-|DEFAULT_VBOOT_SIGNPRIVATE|
+|VBOOT_SIGNPRIVATE|
     Default private key used for signing the image.
 
 
