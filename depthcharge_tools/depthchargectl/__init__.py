@@ -394,6 +394,3 @@ import depthcharge_tools.depthchargectl._list
 import depthcharge_tools.depthchargectl._remove
 import depthcharge_tools.depthchargectl._target
 import depthcharge_tools.depthchargectl._write
-
-if __name__ == "__main__":
-    depthchargectl._main()
