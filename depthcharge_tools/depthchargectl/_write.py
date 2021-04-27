@@ -220,12 +220,12 @@ class depthchargectl_write(
             )
 
         self.logger.info(
-            "Writing depthcharge image '{}' to partition '{}'."
+            "Writing image '{}' to partition '{}'."
             .format(image, target)
         )
         target.write_bytes(image.read_bytes())
-        self.logger.info(
-            "Wrote depthcharge image '{}' to partition '{}'."
+        self.logger.warn(
+            "Wrote image '{}' to partition '{}'."
             .format(image, target)
         )
 
@@ -236,7 +236,7 @@ class depthchargectl_write(
             )
             target.attribute = 0x010
             target.prioritize()
-            self.logger.info(
+            self.logger.warn(
                 "Set partition '{}' as next to boot."
                 .format(target)
             )

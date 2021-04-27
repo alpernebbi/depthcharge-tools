@@ -356,8 +356,8 @@ class depthchargectl_build(
         return Path(path)
 
     def __call__(self):
-        self.logger.info(
-            "Building images for board '{}' ('{}')."
+        self.logger.warn(
+            "Building depthcharge image for board '{}' ('{}')."
             .format(self.board.name, self.board.codename)
         )
 
@@ -421,8 +421,8 @@ class depthchargectl_build(
         self.logger.info("Copying newly built image to output.")
         copy(outtmp, self.output)
 
-        self.logger.info(
-            "Built image for kernel version '{}'."
+        self.logger.warn(
+            "Built depthcharge image for kernel version '{}'."
             .format(self.kernel_release)
         )
         return self.output

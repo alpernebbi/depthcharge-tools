@@ -119,10 +119,6 @@ class mkdepthcharge(
             )
 
         vmlinuz = files[0]
-        self.logger.info(
-            "Using vmlinuz: '{}'."
-            .format(vmlinuz)
-        )
 
         return vmlinuz
 
@@ -142,10 +138,6 @@ class mkdepthcharge(
 
         if files:
             initramfs = files[0]
-            self.logger.info(
-                "Using initramfs: '{}'."
-                .format(initramfs)
-            )
         else:
             initramfs = None
 
@@ -161,12 +153,6 @@ class mkdepthcharge(
             dtbs = [Path(dtb).resolve() for dtb in dtbs]
 
         dtbs = [*dtbs, *files]
-
-        for dtb in dtbs:
-            self.logger.info(
-                "Using dtb: '{}'."
-                .format(dtb)
-            )
 
         return dtbs
 
@@ -483,6 +469,22 @@ class mkdepthcharge(
         initramfs = self.initramfs
         dtbs = self.dtbs
         tmpdir = self.tmpdir
+
+        self.logger.info(
+            "Using vmlinuz: '{}'."
+            .format(vmlinuz)
+        )
+        if initramfs is not None:
+            self.logger.info(
+                "Using initramfs: '{}'."
+                .format(initramfs)
+            )
+        for dtb in dtbs:
+            self.logger.info(
+                "Using dtb: '{}'."
+                .format(dtb)
+            )
+
 
         # mkimage can't open files when they are read-only for some
         # reason. Copy them into a temp dir in fear of modifying the

@@ -77,33 +77,33 @@ class depthchargectl_bless(
 
     def __call__(self):
         if self.bad == False:
-            self.logger.info(
-                "Setting '{}' as the highest-priority bootable part."
-                .format(self.partition)
-            )
             self.partition.tries = 1
             self.partition.prioritize()
-
-            if self.oneshot == False:
-                self.logger.info(
-                    "Setting '{}' as successfully booted."
-                    .format(self.partition)
-                )
-                self.partition.successful = 1
-
-            else:
-                self.logger.info(
-                    "Setting '{}' as not yet successfully booted."
-                    .format(self.partition)
-                )
-                self.partition.successful = 0
-
-        else:
             self.logger.info(
-                "Setting '{}' as the zero-priority unbootable part."
+                "Set partition '{}' as the highest-priority bootable part."
                 .format(self.partition)
             )
+
+            if self.oneshot == False:
+                self.partition.successful = 1
+                self.logger.warn(
+                    "Set partition '{}' as successfully booted."
+                    .format(self.partition)
+                )
+
+            else:
+                self.partition.successful = 0
+                self.logger.warn(
+                    "Set partition '{}' as not yet successfully booted."
+                    .format(self.partition)
+                )
+
+        else:
             self.partition.attribute = 0x000
+            self.logger.warn(
+                "Set partition '{}' as the zero-priority unbootable part."
+                .format(self.partition)
+            )
 
     global_options = depthchargectl.global_options
     config_options = depthchargectl.config_options

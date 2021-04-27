@@ -130,7 +130,7 @@ class depthchargectl_remove(
                             badparts.append(part)
 
         if not badparts:
-            self.logger.info("No active partitions contain the given image.")
+            self.logger.warn("No active partitions contain the given image.")
 
         current = system_disks.by_kern_guid()
         if current in badparts:
@@ -146,7 +146,7 @@ class depthchargectl_remove(
         for part in badparts:
             self.logger.info("Deactivating '{}'.".format(part))
             part.attribute = 0x000
-            self.logger.info("Deactivated '{}'.".format(part))
+            self.logger.warn("Deactivated '{}'.".format(part))
 
         if image.parent == self.images_dir:
             self.logger.info(
@@ -154,7 +154,7 @@ class depthchargectl_remove(
                 .format(image)
             )
             image.unlink()
-            self.logger.info("Deleted image '{}'.".format(image))
+            self.logger.warn("Deleted image '{}'.".format(image))
 
         else:
             self.logger.info("Not deleting image file '{}'.")
