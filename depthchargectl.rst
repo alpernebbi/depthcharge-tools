@@ -3,77 +3,85 @@ depthchargectl
 ==============
 
 --------------------------------------------------
-manage the ChromeOS bootloader and its boot images
+Manage the ChromeOS bootloader and its boot images
 --------------------------------------------------
 
-.. |PACKAGENAME| replace:: depthcharge-tools
-.. |VERSION| replace:: v0.3.1-dev
-
-:date: 2020-02-29
-:version: |VERSION|
-:manual_section: 8
-:manual_group: |PACKAGENAME|
+:date: 2021-04-27
+:version: v0.5.0
+:manual_section: 1
+:manual_group: depthcharge-tools
 
 .. |mkdepthcharge| replace:: *mkdepthcharge*\ (1)
 .. |cgpt| replace:: *cgpt*\ (1)
 .. |vbutil_kernel| replace:: *vbutil_kernel*\ (1)
 
-.. |PREFIX| replace:: /usr/local
-.. |DATADIR| replace:: |PREFIX|/share
-.. |SYSCONFDIR| replace:: |PREFIX|/etc
-.. |LOCALSTATEDIR| replace:: |PREFIX|/var
-.. |LIBDIR| replace:: |PREFIX|/lib
-.. |INITDDIR| replace:: |SYSCONFDIR|/init.d
-.. |SYSTEMDDIR| replace:: |LIBDIR|/systemd/system
+.. |CONFIG_FILE| replace:: **/etc/depthcharge-tools/config**
+.. |CONFIGD_DIR| replace:: **/etc/depthcharge-tools/config.d**
+.. |IMAGES_DIR| replace:: **/boot/depthcharge**
+.. |VBOOT_KEYBLOCK| replace:: **/usr/share/vboot/kernel.keyblock**
+.. |VBOOT_PUBLIC_KEY| replace:: **/usr/share/vboot/kernel_subkey.vbpubk**
+.. |VBOOT_PRIVATE_KEY| replace:: **/usr/share/vboot/kernel_data_key.vbprivk**
+.. |KERNEL_CMDLINE| replace:: **"console=tty0 quiet splash"**
+.. |INITD_DIR| replace:: **/etc/init.d**
+.. |SYSTEMD_DIR| replace:: **/usr/lib/systemd/system**
 
 
 SYNOPSIS
 ========
 **depthchargectl** [options] *COMMAND* ...
 
-**depthchargectl build** [options] [*kernel-version*]
+**depthchargectl bless** [options] [*PARTITION*]
 
-**depthchargectl check** [options] *image*
+**depthchargectl build** [options] [*KERNEL_VERSION*]
 
-**depthchargectl partitions** [options] [*disk* ...]
+**depthchargectl check** [options] *IMAGE*
 
-**depthchargectl rm** [options] [*kernel-version* | *image*]
+**depthchargectl list** [options] [*DISK* ...]
 
-**depthchargectl set-good** [options]
+**depthchargectl remove** [options] (*KERNEL_VERSION* | *IMAGE*)
 
-**depthchargectl target** [options] [*partition* | *disk* ...]
+**depthchargectl target** [options] [*PARTITION* | *DISK* ...]
 
-**depthchargectl write** [options] [*kernel-version* | *image*]
+**depthchargectl write** [options] [*KERNEL_VERSION* | *IMAGE*]
 
 
 DESCRIPTION
 ===========
 **depthchargectl** automatically manages the ChromeOS bootloader by
-building images for the current machine and system, writing them to
+building images for the current board and system, writing them to
 appropriate ChromeOS kernel partitions, prioritizing those partitions
 accordingly, and setting them as successful on boot. When you have more
 than one ChromeOS kernel partition, they will be utilized in rotation so
 that an unsuccessful boot attempt can revert to the last good version.
 
-The *kernel-version* argument is a distro-specific representation of a
+The *KERNEL_VERSION* argument is a distro-specific representation of a
 kernel and usually is the latter part of **/boot/vmlinuz-**\ *VERSION*.
-The *image* argument is a boot image for the ChromeOS bootloader, or a
-file suspected to be one. *disk* should be a physical disk containing a
+The *IMAGE* argument is a boot image for the ChromeOS bootloader, or a
+file suspected to be one. *DISK* should be a physical disk containing a
 GPT partition table (e.g. **/dev/mmcblk0**, **/dev/sda**), but virtual
 disks (e.g. **/dev/dm-0**) are resolved to such physical disks if
-possible. *partition* must be one of partition devices of a physical
+possible. *PARTITION* must be one of partition devices of a physical
 disk (e.g **/dev/mmcblk0p1**, **/dev/sda2**). The *vmlinuz*, *initramfs*
 and *dtb* files are as explained in |mkdepthcharge|.
 
 The program's functionality is divided into subcommands:
 
+depthchargectl bless
+--------------------
+Sets bootloader-specific flags for a given partition or the currently
+booted partition as detected from the **kern_guid=**\ *PARTUUID*
+parameter |mkdepthcharge| adds to the kernel command line. By default,
+this marks the partition as successfully booted and the most prefered
+one, but can disable the partition or make it boot only on the next
+attempt as well.
+
 depthchargectl build
 --------------------
-Builds a bootable image from the running system for this machine, using
+Builds a bootable image from the running system for this board, using
 the latest or a specific kernel version. **depthchargectl** keeps a
-database of known ChromeOS machines and how to build bootable images for
+database of known ChromeOS boards and how to build bootable images for
 them. For example, it keeps track of which device-tree file that needs
-to be included for each ARM machine. It also keeps distro-specific
+to be included for each ARM board. It also figures out distro-specific
 information of where the *vmlinuz*, *initramfs* and *dtb* files are
 located. It uses this information and |mkdepthcharge| to build this
 image.
@@ -81,53 +89,46 @@ image.
 It automatically adds an appropriate **root=**\ *ROOT* kernel command
 line parameter deduced from **/etc/fstab**. Higher compression levels
 for the kernel are automatically tried as necessary, when the firmware
-supports them. This subcommand also stores previously built images and
-the inputs used to build them, and avoids rebuilding an image when a
-valid cached version exists.
+supports them.
 
 depthchargectl check
 --------------------
 Checks if a file is a depthcharge image that can be booted on this
-machine. **depthchargectl** also keeps track of restrictions on images
-for each machine. For example, most ChromeOS machines can boot images
+board. **depthchargectl** also keeps track of restrictions on images
+for each board. For example, most ChromeOS board can boot images
 up to a specific size, e.g. 32MiB. It checks if its input is in a format
-the ChromeOS bootloader expects, and satisfies these restrictions.
+the ChromeOS bootloader expects and satisfies these restrictions.
 
-depthchargectl partitions
--------------------------
-Prints a table of ChromeOS kernel partitions and their ChromeOS specific
-GPT flags (i.e. Successful, Priority, Tries). By default, it only
-searches the physical disks on which the boot and root partitions
+depthchargectl list
+-------------------
+Prints a table of ChromeOS kernel partitions and their bootloader
+specific GPT flags (i.e. Successful, Priority, Tries). By default, it
+only searches the physical disks on which the boot and root partitions
 reside.
 
-depthchargectl rm
------------------
+depthchargectl remove
+---------------------
 Disables partitions that contain a specific image or a specific kernel
 version. This is most useful when you are removing a kernel version and
-its modules from your machine, and know images built with this kernel
+its modules from your system, and know images built with this kernel
 will fail to boot from that point on.
-
-depthchargectl set-good
------------------------
-Sets the current partition partition as the highest priority successful
-partition. The currently booted partition is detected from the
-**kern_guid=**\ *PARTUUID* parameter |mkdepthcharge| adds to the kernel
-command line by default.
 
 depthchargectl target
 ---------------------
 Chooses and prints the lowest priority, preferably unsuccessful ChromeOS
 kernel partition to write a boot image to. By default, searches the same
-disks as the **partitions** subcommand. If a partition is given, it
-checks if it is an appropriate for a boot image. Tries to avoid the
-currently booted kernel.
+disks as the **list** subcommand. If a partition is given, it checks if
+it is an appropriate for a boot image. Tries to avoid the currently
+booted kernel.
 
 depthchargectl write
 --------------------
 Writes a specific image or builds and writes a *kernel-version* image to
 a partition the **target** subcommand returns, and marks it as bootable
-once on the next boot. The set-good subcommand must be run after a
-successful boot to make the partiiton permanently bootable.
+once on the next boot. The **bless** subcommand must be run after a
+successful boot to make the partiiton permanently bootable, but that is
+possible to do automatically with the service files provided with this
+package.
 
 
 OPTIONS
@@ -141,31 +142,132 @@ Global options
 -v, --verbose
     Print info messages and |mkdepthcharge| output to stderr.
 
---version
+-V, --version
     Print program version and exit.
+
+--tmpdir DIR
+    Directory to keep temporary files. Normally **depthchargectl**
+    creates a temporary directory by itself and removes it when it
+    quits. However, if a temporary directory is specified with this
+    option any temporary files will be created under it and will not be
+    deleted.
+
+Configuration options
+---------------------
+In addition to its built-in configuration, **depthchargectl** reads
+|CONFIG_FILE| and |CONFIGD_DIR|/*\ ** as configuration files to make it
+adaptable to different boards and systems. The following options allow
+this configuration to be overridden temporarily.
+
+--config FILE
+    Additional configuration file to read. This can include changing
+    board properties or adding new boards, which mostly isn't possible
+    to do with command-line options.
+
+--board CODENAME
+    Assume **depthchargectl** is running on the specified board. Normally
+    it tries to detect which board it's running on primarily based on
+    the HWID of the board set by the vendor, among other things.
+
+--images-dir DIR
+    Directory to store and look for built depthcharge images. By
+    default, set to |IMAGES_DIR|.
+
+--vboot-keyblock KEYBLOCK
+    The kernel keyblock file required to sign and verify images. By
+    default, set to |VBOOT_KEYBLOCK|.
+
+--vboot-public-key SIGNPUBKEY
+    The public key required to verify images, in .vbpubk format. By
+    default, set to |VBOOT_PUBLIC_KEY|.
+
+--vboot-private-key SIGNPRIVATE
+    The private key necessary to sign images, in .vbprivk format. By
+    default, set to |VBOOT_PRIVATE_KEY|.
+
+--kernel-cmdline *CMD* [*CMD* ...]
+    Command-line parameters for the kernel. By default, set to
+    |KERNEL_CMDLINE|.  **depthchargectl** and |mkdepthcharge| append
+    some other values to this: an appropriate **root=**\ *ROOT*, the
+    **kern_guid=%U** parameter required for the **bless** subcommand,
+    **noinitrd** if **--ignore-initramfs** is given.
+
+--ignore-initramfs
+    Do not include *initramfs* in the built images. For some boards,
+    **depthchargectl** cannot build an image that includes an initramfs
+    so it exits with an error if your OS kernel has a corresponding one.
+    If you know that your OS kernel can boot on this board without an
+    initramfs, you can specify this option to build an initramfs-less
+    image.
+
+depthchargectl bless options
+----------------------------
+--bad
+    Set the specified partition as unbootable. This sets all three of
+    the *Successful*, *Priority*, *Tries* flags to 0.
+
+--oneshot
+    Set the specified partition to be tried once in the next boot. This
+    sets the *Successful* flag to 0, *Tries* flag to 1, and makes sure the
+    *Priority* flag is the highest one among all the partitions of the
+    disk the specified one is in.
 
 depthchargectl build options
 ----------------------------
--a, --all
-    Rebuild images for all kernel versions, instead of just the latest
-    version. If this option is used, *kernel-version* must not be given.
+--description DESC
+    Human-readable description for the image. By default, a string that
+    describes your system with the specified kernel release name, like
+    "Debian GNU/Linux, with Linux 5.10.0-6-arm64".
 
--f, --force
-    Rebuild images even if a cached version exists and seems valid.
+--root ROOT
+    Root device to add to kernel cmdline. By default, this is acquired
+    from **/etc/fstab** or **/proc/self/mounts**.
 
---reproducible
-    Try to build a reproducible image. If **SOURCE_DATE_EPOCH** is set
-    externally, it is used and this option is assumed. If it is not set,
-    but this option is given, **SOURCE_DATE_EPOCH** is set to the
-    modification date of the initramfs (or the vmlinuz if no initramfs
-    is used).
+--compress *TYPE* [*TYPE* ...]
+    Compression types to attempt. By default, all compression types that
+    the board supports based on **depthchargectl** configuration are
+    attempted from lowest to highest compression.
+
+--timestamp SECONDS
+    Build timestamp for the image. By default, **SOURCE_DATE_EPOCH** is
+    used if it's set. If not, the modification date of either the
+    *initramfs* or *vmlinuz* is used as an attempt to keep images somewhat
+    reproducible.
+
+--output PATH
+    Output image to path instead of storing it in the images-dir.
+
+The following options allow one to specify the exact files to be used in
+building the image, instead of letting **depthchargectl** deduce them:
+
+--kernel-release NAME
+    Release name for the kernel to be used in image filename under the
+    images-dir (unless **--output** is specified).
+
+--kernel FILE
+    Kernel executable. Usually **/boot/vmlinuz-**\ *VERSION* by default,
+    but depends on your OS.
+
+--initramfs FILE
+    Ramdisk image. Usually **/boot/initrd.img-**\ *VERSION* by default,
+    but depends on your OS.
+
+--fdtdir DIR
+    Directory to search device-tree binaries for the board. Usually
+    **/boot/dtbs** or a directory like **/usr/lib/linux-image-**\
+    *VERSION*, depends on your OS. *dtb* files in this dir are searched
+    to find ones matching your board's device-tree compatible string set
+    in configuration.
+
+--dtbs *FILE* [*FILE* ...]
+    Device-tree binary files to use instead of searching fdtdir.
 
 depthchargectl check options
 ----------------------------
 This subcommand takes no specific options.
 
-depthchargectl partitions options
----------------------------------
+depthchargectl list options
+---------------------------
 -a, --all-disks
     List partitions on all disks.
 
@@ -174,18 +276,16 @@ depthchargectl partitions options
 
 -o COLUMNS, --output COLUMNS
     Comma separated list of columns to output. Supported columns are
-    **SUCCESSFUL** (or **S**), **TRIES** (or **T**), **PRIORITY** (or
-    **P**) for ChromeOS GPT flags, **DEVICE** for the partition device,
-    **SIZE** for the partition size in bytes.
+    **ATTRIBUTE** (or **A**), **SUCCESSFUL** (or **S**), **TRIES** (or
+    **T**), **PRIORITY** (or **P**) for ChromeOS GPT flags, **PATH** for
+    the partition device (if exists), **DISKPATH** (or **DISK**) for the
+    disk device/image the partition is in, **PARTNO** for the partition
+    number, and **SIZE** for the partition size in bytes.
 
-depthchargectl rm options
--------------------------
+depthchargectl remove options
+-----------------------------
 -f, --force
      Allow disabling the currently booted partition.
-
-depthchargectl set-good options
--------------------------------
-This subcommand takes no specific options.
 
 depthchargectl target options
 -----------------------------
@@ -217,122 +317,34 @@ depthchargectl write options
 
 EXIT STATUS
 ===========
-In general, exits with zero on success and non-zero on failure. Some
-subcommands return more specified exit statuses:
-
-depthchargectl build exit status
---------------------------------
-
-0
-    Image built and stored successfully, or a cached valid image exists.
-
-1
-    An error occurred before or during building the image.
-
-2
-    Can build an image, but it cannot be validated according to the
-    **check** subcommand.
-
-3
-    Can build an image with an *initramfs*, but it is too big for this
-    machine despite using maximum allowed kernel compression. This might
-    be solvable by reducing the *initramfs* size.
-
-4
-    Like **3**, but without an *initramfs*. This might be solvable by
-    reducing the *vmlinuz* size, perhaps by building a custom kernel.
-
-depthchargectl check exit status
---------------------------------
-
-0
-    The *image* passes all checks.
-
-1
-    Errors unrelated to image checks.
-
-2
-    The *image* isn't a readable file.
-
-3
-    Size of the *image* is too big for this machine.
-
-4
-    The *image* cannot be interpreted by |vbutil_kernel|.
-
-5
-    The *image* fails the |vbutil_kernel| signature checks.
-
-6
-    The *image* is built with a wrong format for the machine.
-
-depthchargectl target exit status
----------------------------------
-
-0
-    A usable *partition* is given, or a usable partition was chosen from
-    *disk*\ s. The partition passes the checks and is printed to output.
-
-1
-    Errors unrelated to partition checks.
-
-2
-    The *partition* is not a writable block device.
-
-3
-    The disk containing the *partition* is not a writable block device.
-
-4
-    Cannot parse a partition number from the *partition*.
-
-5
-    The *partition* is not a ChromeOS kernel partition.
-
-6
-    The *partition* is the currently booted partition.
-
-7
-    The *partition* is smaller than the **--min-size** argument.
+In general, exits with zero on success and non-zero on failure.
 
 
 FILES
 =====
-|SYSCONFDIR|/|PACKAGENAME|/config
-    Configuration file. The kernel command line can be set here, among
-    other things. See its contents for more information on what can be
-    set.
+|CONFIG_FILE|
+    System configuration file. The "Configuration options" explained
+    above can be set here to have them as long-term defaults. It's also
+    possible to modify board properties or add new boards here.
 
-|SYSCONFDIR|/|PACKAGENAME|/config.d/*\ **
+|CONFIGD_DIR|/*\ **
     These files are considered appended to the **config** file.
 
-|SYSCONFDIR|/|PACKAGENAME|/userdb
-    User-specified machine database file. If you are using a
-    custom-built firmware, you can override settings for your machine.
-    You can also add information about yet unsupported machines to test
-    **depthchargectl** on them.
-
-|SYSCONFDIR|/|PACKAGENAME|/userdb.d/*\ **
-    These files are considered appended to the **userdb** file.
-
-|DATADIR|/|PACKAGENAME|/db
-    Machine database file. Contains information about ChromeOS devices,
-    how to build images for them, and their limitations on images.
-
-|SYSTEMDDIR|/depthchargectl-set-good.service
-    A systemd service that runs the **set-good** subcommand on
+|SYSTEMD_DIR|/depthchargectl-bless.service
+    A systemd service that runs the **depthchargectl bless** on
     successful boots.
 
-|INITDDIR|/depthchargectl-set-good
-    An init service that runs the **set-good** subcommand on
-    successful boots.
+|INITD_DIR|/depthchargectl-bless
+    An init service that runs **depthchargectl bless** on successful
+    boots.
 
-|LOCALSTATEDIR|/|PACKAGENAME|/images/*\ **.img
+|IMAGES_DIR|/*\ **.img
     The most recently built images for each kernel version.
 
 
 EXAMPLES
 ========
-depthchargectl partitions -n -o DEVICE
+depthchargectl list -n -o PATH
     Get a list of partitions **depthchargectl** will act on by default.
 
 depthchargectl write --allow-current
