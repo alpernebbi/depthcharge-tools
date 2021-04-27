@@ -2,19 +2,18 @@
 Depthcharge-Tools
 =================
 This project is a collection of tools that ease and automate interacting
-with depthcharge_, the ChromeOS bootloader.
+with depthcharge_, the Chrome OS bootloader.
 
-Depthcharge is built into the firmware of ChromeOS machines, uses a
+Depthcharge is built into the firmware of Chrome OS boards, uses a
 custom verified boot flow and usually cannot boot other operating
 systems as is. This means someone who wants to use e.g. Debian_ on these
-machines need to either replace the firmware or work their system into
+boards need to either replace the firmware or work their system into
 `the format depthcharge expects`_. These tools are about the latter.
 
-Right now these are developed on and tested with only one arm64 machine,
-so only that is explicitly supported. However, it will probably work
-with ARM machines just by adding an entry in the `machine database`_.
-Support for `x86 machines`_ is very limited at a fundamental level and
-even those parts are untested.
+Right now these are developed on and tested with only one arm64 board,
+but everything will attempt to work on other boards based on my best
+guesses. Support for `x86 boards`_ is very limited at a fundamental
+level due to a lack of understanding on my part.
 
 .. _depthcharge: https://chromium.googlesource.com/chromiumos/platform/depthcharge
 .. _the format depthcharge expects: https://www.chromium.org/chromium-os/chromiumos-design-docs/disk-format#TOC-Google-Chrome-OS-devices
@@ -46,69 +45,99 @@ other arguments while building the partition image.
 depthchargectl
 ==============
 The depthchargectl_ tool goes a step further and aims to fully automate
-bootable image creation and ChromeOS kernel partition management, even
-the machine-specific and distro-specific parts. With proper integration
+bootable image creation and Chrome OS kernel partition management, even
+the board-specific and distro-specific parts. With proper integration
 with your distribution, depthchargectl can keep your system bootable
 across kernel and initramfs changes without any interaction on your
 part. Even without such integration, a single command automates most of
 the work::
 
-    # Use --allow-current if you only have one ChromeOS kernel partition.
+    # Use --allow-current if you only have one Chrome OS kernel partition.
     $ sudo depthchargectl write --allow-current
-    depthchargectl build: Built image for kernel version '5.4.0-1-arm64'.
-    depthchargectl write: Wrote image for kernel version '5.4.0-1-arm64' to '/dev/mmcblk1p1'.
-    depthchargectl write: Set '/dev/mmcblk1p1' as next to boot.
+    Building depthcharge image for board 'Samsung Chromebook Plus' ('kevin').
+    Built depthcharge image for kernel version '5.10.0-6-arm64'.
+    Wrote image '/boot/depthcharge/5.10.0-6-arm64.img' to partition '/dev/mmcblk1p1'.
+    Set partition '/dev/mmcblk1p1' as next to boot.
 
     # After a reboot, you or an init service should run this.
-    $ sudo depthchargectl set-good
-    depthchargectl set-good: Set '/dev/mmcblk1p1' as next to boot, successful.
+    $ sudo depthchargectl bless
+    Set partition '/dev/mmcblk1p1' as successfully booted.
 
 .. _depthchargectl: https://github.com/alpernebbi/depthcharge-tools/blob/master/depthchargectl.rst
 
+
 Installation
 ============
-These tools depend on ``mkimage``, ``vbutil_kernel``, ``cgpt``, and other
-utilities (``util-linux``, ``coreutils``, etc.) that are usually
-installed by default on most Linux systems. You also need ``docutils``
-to build the manual pages with ``rst2man``, but only during the build.
+These tools depend on ``mkimage``, ``vbutil_kernel``, ``cgpt``, and
+other utilities (``util-linux``, ``coreutils``, etc.) that are usually
+installed by default on most Linux systems, so you need to install those
+first. You also need ``docutils`` to build the manual pages with
+``rst2man``, but only for that.
 
-Proper packaging and installation for this project are still under
-development. Things might work if you install it with pip in user mode::
+This project (or at least ``depthchargectl``) is meant to be integrated
+into your operating system by its maintainers, and the best way to
+install it is through your OS' package manager whenever possible.
 
-    $ USER_BASE="$(python3 -c 'import site; print(site.USER_BASE)')"
-    $ echo $USER_BASE
-    /home/alpernebbi/.local
 
-    $ PREFIX="$USER_BASE" pip3 install --user .
+Configuration
+=============
+You can configure depthcharge-tools with the |CONFIG_FILE| file, or by
+putting similar fragments in the |CONFIGD_DIR| directory. See the
+config.ini_ file for the built-in default configuration.
+
+Settings in the ``[depthcharge-tools]`` section are the global defaults
+from which all commands inherit. Other than that, config sections have
+inheritence based on their names i.e. those in the form of ``[a/b/c]``
+inherit from ``[a/b]`` which also inherits from ``[a]``. Each subcommand
+reads its config from such a subsection.
+
+Currently the following configuration options are available::
+
+    [depthcharge-tools]
+    vboot-keyblock: The kernel keyblock file for verifying and signing images
+    vboot-private-key: The private key (.vbprivk) for signing images
+    vboot-public-key: The public key for (.vbpubk) verifying images
+
+    [depthchargectl]
+    board: Codename of a board to build and check images for
+    images-dir: Directory to store built images
+
+    [depthchargectl/build]
+    kernel-cmdline: Kernel commandline parameters to use
+    ignore-initramfs: Do not include an initramfs in the image
+
+For longer explanations check the manual pages of each command for
+options named the same as these.
+
+.. |CONFIG_FILE| replace:: ``/etc/depthcharge-tools/config``
+.. |CONFIGD_DIR| replace:: ``/etc/depthcharge-tools/config.d``
+.. _config.ini: https://github.com/alpernebbi/depthcharge-tools/blob/master/depthcharge_tools/config.ini
+
+
+Installation for development
+============================
+If you want to use development versions, you can clone this repository
+and install using pip::
+
+    $ pip3 install --user -e /path/to/depthcharge-tools
 
 Hopefully, you should be able to use depthchargectl with just that::
 
-    $ sudo depthchargectl partitions /dev/mmcblk0
-    S  P  T  DEVICE
-    1  2  0  /dev/mmcblk0p2
-    1  1  0  /dev/mmcblk0p4
-    0  0  15 /dev/mmcblk0p6
+    $ depthchargectl build --output depthcharge.img
+    Building depthcharge image for board 'Samsung Chromebook Plus' ('kevin').
+    Built depthcharge image for kernel version '5.10.0-6-arm64'.
+    depthchargectl.img
 
-After that, you can edit |CONFIG_FILE|_ to set the kernel command line or
-vboot keys to be used.
+Most ``depthchargectl`` functionality needs root as it handles disks and
+partitions, and you need special care while invoking as root::
 
-.. |CONFIG_FILE| replace:: ``~/.local/etc/depthcharge-tools/config``
-.. _CONFIG_FILE: https://github.com/alpernebbi/depthcharge-tools/blob/master/conf/config
+    $ depthchargectl() {
+        sudo PYTHONPATH=/path/to/depthcharge-tools \
+            python3 -m depthcharge_tools.depthchargectl "$@"
+    }
 
-There is also an optional systemd service to set partitions as
-successful on boot::
-
-    $ sudo cp systemd/depthchargectl-set-good.service /usr/local/lib/systemd/system/
-    $ systemctl daemon-reload
-    $ systemctl --enable depthchargectl-set-good
-
-You can also run the files directly from the repository but you might
-need to add the repository to ``$PYTHONPATH`` first if you're running
-the commands from somewhere else. This is mostly useful for development::
-
-    $ export PYTHONPATH="/path/to/depthcharge-tools:$PYTHONPATH"
-    $ python3 -m depthcharge_tools.depthchargectl.__init__ partitions
-    S  P  T  DEVICE
+    $ depthchargectl list /dev/mmcblk0
+    S  P  T  PATH
     1  2  0  /dev/mmcblk0p2
     1  1  0  /dev/mmcblk0p4
     0  0  15 /dev/mmcblk0p6
@@ -118,16 +147,11 @@ Contributing
 ============
 I only own one chromebook, so I need your help to make it work with all
 others. Pull requests, bug reports, or even pointers in the right
-direction for existing issues are all welcome. The following issues are
-where I need help the most:
+direction for existing issues are all welcome. Currently I need the most
+help with `x86 boards`_.
 
-- |machine database|_
-- |x86 machines|_
+.. _x86 boards: https://github.com/alpernebbi/depthcharge-tools/issues/2
 
-.. |machine database| replace:: More machine database entries
-.. _machine database: https://github.com/alpernebbi/depthcharge-tools/issues/1
-.. |x86 machines| replace:: Support for x86 machines
-.. _x86 machines: https://github.com/alpernebbi/depthcharge-tools/issues/2
 
 License
 =======
