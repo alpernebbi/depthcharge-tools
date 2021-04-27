@@ -272,6 +272,9 @@ class Disk:
             return self.path == other.path
         return False
 
+    def __str__(self):
+        return str(self.path)
+
     def __repr__(self):
         cls = self.__class__.__name__
         return "{}('{}')".format(cls, self.path)
@@ -398,6 +401,12 @@ class Partition:
                 and self.partno == other.partno
             )
         return False
+
+    def __str__(self):
+        if self.path is not None:
+            return str(self.path)
+        else:
+            return "{}#{}".format(self.disk.path, self.partno)
 
     def __repr__(self):
         cls = self.__class__.__name__
