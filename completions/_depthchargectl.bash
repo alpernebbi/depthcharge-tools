@@ -23,21 +23,53 @@ _depthchargectl__kernel() {
     fi
 }
 
+_depthchargectl__boards() {
+    # later
+    local script="import re"
+    script="$script;from depthcharge_tools import boards_ini"
+    script="$script;boards = re.findall(\"codename = (.+)\", boards_ini)"
+    script="$script;print(*sorted(boards))"
+    COMPREPLY+=($(compgen -W "$(python3 -c "$script")" -- "$cur"))
+}
+
 _depthchargectl() {
     COMPREPLY=()
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local global_opts=(-h --help --version -v --verbose)
-    local cmds=(build check partitions rm set-good target write)
+    local global_opts=(-h --help -V --version -v --verbose --tmpdir)
+    local config_opts=(
+        --config --board --images-dir
+        --vboot-keyblock --vboot-public-key --vboot-private-key
+        --kernel-cmdline --ignore-initramfs
+    )
+    local cmds=(bless build check list remove target write)
+
+    case "$prev" in
+        --tmpdir) _depthchargectl__file; return ;;
+        --config) _depthchargectl__file; return ;;
+        --board) _depthchargectl__boards; return ;;
+        --images-dir) _depthchargectl__file; return ;;
+        --vboot-keyblock) _depthchargectl__file; return ;;
+        --vboot-public-key) _depthchargectl__file; return ;;
+        --vboot-private-key) _depthchargectl__file; return ;;
+        --kernel-cmdline)
+            cmdline="$(cat /proc/cmdline | sed -e 's/\(cros_secure\|kern_guid\)[^ ]* //g')"
+            COMPREPLY+=($(compgen -W "$cmdline" -- "$cur"))
+            return
+            ;;
+        --ignore-initramfs) : ;;
+        --) ;;
+        *) ;;
+    esac
 
     local cmd
     for cmd in "${COMP_WORDS[@]}"; do
         case "$cmd" in
+            bless)      _depthchargectl_bless; break ;;
             build)      _depthchargectl_build; break ;;
             check)      _depthchargectl_check; break ;;
-            partitions) _depthchargectl_partitions; break ;;
-            rm)         _depthchargectl_rm; break ;;
-            set-good)   _depthchargectl_set-good; break ;;
+            list)       _depthchargectl_list; break ;;
+            remove)     _depthchargectl_remove; break ;;
             target)     _depthchargectl_target; break ;;
             write)      _depthchargectl_write; break ;;
             *) cmd="" ;;
@@ -47,24 +79,66 @@ _depthchargectl() {
     if [ -z "$cmd" ]; then
         COMPREPLY+=($(compgen -W "${cmds[*]}" -- "$cur"))
         COMPREPLY+=($(compgen -W "${global_opts[*]}" -- "$cur"))
+        COMPREPLY+=($(compgen -W "${config_opts[*]}" -- "$cur"))
     fi
 }
 
-_depthchargectl_build() {
-    local opts=(-f --force -a --all --reproducible)
-    _depthchargectl__kernel
+_depthchargectl_bless() {
+    local opts=(--bad --oneshot)
+    _depthchargectl__disk
     COMPREPLY+=($(compgen -W "${opts[*]}" -- "$cur"))
     COMPREPLY+=($(compgen -W "${global_opts[*]}" -- "$cur"))
+    COMPREPLY+=($(compgen -W "${config_opts[*]}" -- "$cur"))
+}
+
+_depthchargectl_build() {
+    local opts=(
+        --description --root --compress --timestamp --output
+        --kernel-release --kernel --initramfs --fdtdir --dtbs
+)
+    case "$prev" in
+        --description)
+            local name="$(. /etc/os-release; echo "$NAME")"
+            COMPREPLY+=($(compgen -W "$name" -- "$cur"))
+            return
+            ;;
+        --root)
+            local root="$(findmnt --fstab -n -o SOURCE "/")"
+            COMPREPLY+=($(compgen -W "$root" -- "$cur"))
+            _depthchargectl__disk
+            return
+            ;;
+        --compress)
+            local compress=(none lz4 lzma)
+            COMPREPLY+=($(compgen -W "${compress[*]}" -- "$cur"))
+            return
+            ;;
+        --timestamp)
+            COMPREPLY+=($(compgen -W "$(date "+%s")" -- "$cur"))
+            return
+            ;;
+        --output) _depthchargectl__file; return ;;
+        --kernel-release) _depthchargectl__kernel; return ;;
+        --kernel) _depthchargectl__file; return ;;
+        --initramfs) _depthchargectl__file; return ;;
+        --fdtdir) _depthchargectl__file; return ;;
+        --dtbs) _depthchargectl__file; return ;;
+        *) _depthchargectl__kernel;;
+    esac
+    COMPREPLY+=($(compgen -W "${opts[*]}" -- "$cur"))
+    COMPREPLY+=($(compgen -W "${global_opts[*]}" -- "$cur"))
+    COMPREPLY+=($(compgen -W "${config_opts[*]}" -- "$cur"))
 }
 
 _depthchargectl_check() {
     _depthchargectl__file
     COMPREPLY+=($(compgen -W "${global_opts[*]}" -- "$cur"))
+    COMPREPLY+=($(compgen -W "${config_opts[*]}" -- "$cur"))
 }
 
-_depthchargectl_partitions() {
+_depthchargectl_list() {
     local opts=(-a --all-disks -n --noheadings -o --output)
-    local outputs=(S SUCCESSFUL T TRIES P PRIORITY SIZE DEVICE)
+    local outputs=(A ATTRIBUTE S SUCCESSFUL T TRIES P PRIORITY PATH DISK DISKPATH PARTNO SIZE)
     case "$prev" in
         -o|--output)
             compopt -o nospace
@@ -78,24 +152,23 @@ _depthchargectl_partitions() {
             _depthchargectl__disk
             COMPREPLY+=($(compgen -W "${opts[*]}" -- "$cur"))
             COMPREPLY+=($(compgen -W "${global_opts[*]}" -- "$cur"))
+            COMPREPLY+=($(compgen -W "${config_opts[*]}" -- "$cur"))
             ;;
     esac
 }
 
-_depthchargectl_rm() {
+_depthchargectl_remove() {
     local opts=(-f --force)
     _depthchargectl__file
+    _depthchargectl__kernel
     COMPREPLY+=($(compgen -W "${opts[*]}" -- "$cur"))
     COMPREPLY+=($(compgen -W "${global_opts[*]}" -- "$cur"))
-}
-
-_depthchargectl_set-good() {
-    COMPREPLY+=($(compgen -W "${global_opts[*]}" -- "$cur"))
+    COMPREPLY+=($(compgen -W "${config_opts[*]}" -- "$cur"))
 }
 
 _depthchargectl_target() {
     local opts=(-s --min-size --allow-current)
-    local sizes=(16777216 33554432)
+    local sizes=(8388608 16777216 33554432 67108864 134217728 268435456 536870912)
     case "$prev" in
         -s|--min-size)
             COMPREPLY+=($(compgen -W "${sizes[*]}" -- "$cur"))
@@ -104,6 +177,7 @@ _depthchargectl_target() {
             _depthchargectl__disk
             COMPREPLY+=($(compgen -W "${opts[*]}" -- "$cur"))
             COMPREPLY+=($(compgen -W "${global_opts[*]}" -- "$cur"))
+            COMPREPLY+=($(compgen -W "${config_opts[*]}" -- "$cur"))
             ;;
     esac
 }
@@ -119,6 +193,7 @@ _depthchargectl_write() {
             _depthchargectl__file
             COMPREPLY+=($(compgen -W "${opts[*]}" -- "$cur"))
             COMPREPLY+=($(compgen -W "${global_opts[*]}" -- "$cur"))
+            COMPREPLY+=($(compgen -W "${config_opts[*]}" -- "$cur"))
             ;;
     esac
 }
