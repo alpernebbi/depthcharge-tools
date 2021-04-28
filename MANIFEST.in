@@ -1,0 +1,4 @@
+include LICENSE *.rst
+recursive-include completions *
+recursive-include init.d *
+recursive-include systemd *
