@@ -253,6 +253,15 @@ class KernelEntry:
 
         return self._comparable_parts() > other._comparable_parts()
 
+    def __str__(self):
+        return self.description
+
+    def __repr__(self):
+        return (
+            "KernelEntry(release={!r}, kernel={!r}, initrd={!r}, fdtdir={!r})"
+            .format(self.release, self.kernel, self.initrd, self.fdtdir)
+        )
+
 
 class Architecture(str):
     arm_32 = ["arm"]
