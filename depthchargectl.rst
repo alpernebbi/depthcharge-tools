@@ -71,7 +71,7 @@ depthchargectl bless
 Sets bootloader-specific flags for a given partition or the currently
 booted partition as detected from the **kern_guid=**\ *PARTUUID*
 parameter |mkdepthcharge| adds to the kernel command line. By default,
-this marks the partition as successfully booted and the most prefered
+this marks the partition as successfully booted and the most preferred
 one, but can disable the partition or make it boot only on the next
 attempt as well.
 
