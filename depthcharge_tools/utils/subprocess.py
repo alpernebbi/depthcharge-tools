@@ -2,6 +2,7 @@
 
 import contextlib
 import logging
+import re
 import subprocess
 import shlex
 
@@ -205,6 +206,63 @@ class CrossystemRunner(ProcessRunner):
 class FdtgetRunner(ProcessRunner):
     def __init__(self):
         super().__init__("fdtget")
+
+    def get(self, dt_file, node='/', prop='', default=None, type=None):
+        options = []
+
+        if default is not None:
+            options += ["--default", str(default)]
+
+        if type == str:
+            options += ["--type", "s"]
+        elif type == int:
+            options += ["--type", "i"]
+        elif type == bytes:
+            options += ["--type", 'bx']
+        elif type is not None:
+            options += ["--type", str(type)]
+
+        proc = self(*options, str(dt_file), str(node), str(prop))
+
+        # str.split takes too much memory
+        def split(s):
+            for m in re.finditer("(\S*)\s", s):
+                yield m.group()
+
+        if type in (None, int):
+            try:
+                data = [int(i) for i in split(proc.stdout)]
+                return data[0] if len(data) == 1 else data
+            except:
+                pass
+
+        if type in (None, bytes):
+            try:
+                # bytes.fromhex("0") doesn't work
+                data = bytes(int(x, 16) for x in split(proc.stdout))
+                return data
+            except:
+                pass
+
+        data = str(proc.stdout).strip("\n")
+        return data
+
+    def properties(self, dt_file, node='/'):
+        proc = self("--properties", str(dt_file), str(node), check=False)
+
+        if proc.returncode == 0:
+            return proc.stdout.splitlines()
+        else:
+            return []
+
+    def subnodes(self, dt_file, node='/'):
+        proc = self("--list", str(dt_file), str(node), check=False)
+        nodes = proc.stdout.splitlines()
+
+        if proc.returncode == 0:
+            return proc.stdout.splitlines()
+        else:
+            return []
 
 
 gzip = GzipRunner()

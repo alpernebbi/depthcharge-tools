@@ -175,8 +175,8 @@ class depthchargectl_build(
             def is_compatible(dt_file):
                 if self.board.dt_compatible == True:
                     return True
-                proc = fdtget(dt_file, "/", "compatible", check=False)
-                return self.board.dt_compatible in proc.stdout.split()
+                compats = fdtget.get(dt_file, "/", "compatible").split()
+                return self.board.dt_compatible in compats
 
             files = list(filter(
                 is_compatible,
