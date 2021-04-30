@@ -67,6 +67,18 @@ class ImageFormatError(CommandExit):
         super().__init__(output=False, message=message)
 
 
+class MissingDTBError(CommandExit):
+    def __init__(self, image, compat):
+        message = (
+            "Image '{}' must have a device-tree binary compatible with '{}'."
+            .format(image, compat)
+        )
+
+        self.image = image
+        self.compat = compat
+        super().__init__(output=False, message=message)
+
+
 @depthchargectl.subcommand("check")
 class depthchargectl_check(
     depthchargectl,
@@ -139,6 +151,25 @@ class depthchargectl_check(
             nodes = fdtget.subnodes(itb)
             if "images" not in nodes and "configurations" not in nodes:
                 raise ImageFormatError(image, self.board.image_format)
+
+            self.logger.info("Checking included DTB binaries.")
+            for conf in fdtget.subnodes(itb, "/configurations"):
+                conf_path = "/configurations/{}".format(conf)
+                compats = fdtget.get(itb, conf_path, "compatible", default="")
+                if self.board.dt_compatible in compats.split():
+                    break
+
+                dtb = fdtget.get(itb, conf_path, "fdt")
+                dtb_path = "/images/{}".format(dtb)
+                dtb_data = fdtget.get(itb, dtb_path, "data", type=bytes)
+                dtb_file = self.tmpdir / "{}.dtb".format(conf)
+                dtb_file.write_bytes(dtb_data)
+
+                compats = fdtget.get(dtb_file, "/", "compatible")
+                if self.board.dt_compatible in compats.split():
+                    break
+            else:
+                raise MissingDTBError(image, self.board.dt_compatible)
 
         self.logger.warning(
             "This command is incomplete, the image might be unbootable "
