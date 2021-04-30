@@ -13,7 +13,7 @@ from depthcharge_tools.utils.argparse import (
     CommandExit,
 )
 from depthcharge_tools.utils.subprocess import (
-    mkimage,
+    fdtget,
     vbutil_kernel,
 )
 
@@ -136,12 +136,8 @@ class depthchargectl_check(
 
         if self.board.image_format == "fit":
             self.logger.info("Checking FIT image format.")
-            proc = mkimage("-l", itb)
-            if proc.returncode != 0:
-                raise ImageFormatError(image, self.board.image_format)
-
-            head = proc.stdout.splitlines()[0]
-            if not head.startswith("FIT description:"):
+            nodes = fdtget.subnodes(itb)
+            if "images" not in nodes and "configurations" not in nodes:
                 raise ImageFormatError(image, self.board.image_format)
 
         self.logger.warning(
