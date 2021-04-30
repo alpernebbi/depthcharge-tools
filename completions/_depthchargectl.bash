@@ -84,8 +84,11 @@ _depthchargectl() {
 }
 
 _depthchargectl_bless() {
-    local opts=(--bad --oneshot)
-    _depthchargectl__disk
+    local opts=(--bad --oneshot -i --partno)
+    case "$prev" in
+        -i|--partno) return ;;
+        *) _depthchargectl__disk ;;
+    esac
     COMPREPLY+=($(compgen -W "${opts[*]}" -- "$cur"))
     COMPREPLY+=($(compgen -W "${global_opts[*]}" -- "$cur"))
     COMPREPLY+=($(compgen -W "${config_opts[*]}" -- "$cur"))

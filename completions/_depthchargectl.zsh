@@ -23,7 +23,8 @@ function _depthchargectl {
             _arguments -S \
                 --bad'[Set the partition as unbootable]' \
                 --oneshot'[Set the partition to be tried once]' \
-                ':partition:{_depthchargectl__disk}' \
+                {-i,--partno}'[Partition number in the given disk image]:number:()' \
+                ':disk or partition:{_depthchargectl__disk}' \
                 ;
             ;;
         args:build)
