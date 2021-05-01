@@ -239,12 +239,12 @@ class depthchargectl_build(
             if root:
                 self.logger.info("Using root as set in /etc/fstab.")
             else:
+                root = system_disks.by_mountpoint("/")
                 self.logger.warn(
                     "Couldn't figure out a root cmdline parameter from "
                     "/etc/fstab. Will use currently mounted '{}'."
                     .format(root)
                 )
-                root = system_disks.by_mountpoint("/")
 
         if not root:
             raise ValueError(
