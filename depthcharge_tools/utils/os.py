@@ -70,7 +70,7 @@ class Disks(DirectedGraph):
         for line in read_lines(mountinfo):
             if line and not line.startswith("#"):
                 fields = shlex.split(line)
-                device, mount = fields[9], fields[4]
+                device, mount = fields[2], fields[4]
                 mountinfo_mounts[mount] = device
 
         mounts = collections.ChainMap(
