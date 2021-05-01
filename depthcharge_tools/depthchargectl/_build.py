@@ -351,7 +351,8 @@ class depthchargectl_build(
     def output(self, path=None):
         """Output image to path instead of storing in images-dir"""
         if path is None:
-            path = self.images_dir / "{}.img".format(self.kernel_release)
+            image_name = "{}.img".format(self.kernel_release or "default")
+            path = self.images_dir / image_name
 
         return Path(path)
 
