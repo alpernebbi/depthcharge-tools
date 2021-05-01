@@ -174,6 +174,12 @@ class depthchargectl_build(
                     .format(self.kernel_release)
                 )
 
+            if self.board.dt_compatible != True:
+                self.logger.info(
+                    "Searching '{}' for dtbs compatible with '{}'."
+                    .format(self.fdtdir, self.board.dt_compatible)
+                )
+
             def is_compatible(dt_file):
                 if self.board.dt_compatible == True:
                     return True
