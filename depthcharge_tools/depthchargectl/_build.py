@@ -251,7 +251,7 @@ class depthchargectl_build(
                 "Couldn't figure out a root cmdline parameter."
             )
 
-        return root
+        return str(root)
 
     # This should be overriding kernel_cmdline from the parent instead...
     @property
