@@ -33,7 +33,7 @@ function _depthchargectl {
                 --root'[Root device to add to kernel cmdline]:root device:{_depthchargectl__root; _depthchargectl__disk}' \
                 --compress'[Compression types to attempt]:compress:(none lz4 lzma)' \
                 --timestamp'[Build timestamp for the image]:timestamp:($(date "+%s"))' \
-                --output'[Output image to path instead of storing in images-dir]:output path:_files' \
+                {-o,--output}'[Output image to path instead of storing in images-dir]:output path:_files' \
                 --kernel-release'[Release name for the kernel used in image name]:kernel release:{_depthchargectl__kernel;}' \
                 --kernel'[Kernel executable]:kernel:_files' \
                 --initramfs'[Ramdisk image]:initramfs:_files' \

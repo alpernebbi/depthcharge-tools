@@ -96,7 +96,7 @@ _depthchargectl_bless() {
 
 _depthchargectl_build() {
     local opts=(
-        --description --root --compress --timestamp --output
+        --description --root --compress --timestamp -o --output
         --kernel-release --kernel --initramfs --fdtdir --dtbs
 )
     case "$prev" in
@@ -120,7 +120,7 @@ _depthchargectl_build() {
             COMPREPLY+=($(compgen -W "$(date "+%s")" -- "$cur"))
             return
             ;;
-        --output) _depthchargectl__file; return ;;
+        -o|--output) _depthchargectl__file; return ;;
         --kernel-release) _depthchargectl__kernel; return ;;
         --kernel) _depthchargectl__file; return ;;
         --initramfs) _depthchargectl__file; return ;;

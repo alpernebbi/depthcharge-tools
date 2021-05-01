@@ -347,7 +347,7 @@ class depthchargectl_build(
         return seconds
 
     @options.add
-    @Argument("--output", nargs=1)
+    @Argument("-o", "--output", nargs=1)
     def output(self, path=None):
         """Output image to path instead of storing in images-dir"""
         if path is None:
