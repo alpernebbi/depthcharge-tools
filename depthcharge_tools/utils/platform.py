@@ -59,6 +59,9 @@ def root_requires_initramfs(root):
     uuid = "{x}{{8}}-{x}{{4}}-{x}{{4}}-{x}{{4}}-{x}{{12}}".format(x=x)
     ntsig = "{x}{{8}}-{x}{{2}}".format(x=x)
 
+    # Depthcharge replaces %U with an uuid, so we can use that as well.
+    uuid = "({}|%U)".format(uuid)
+
     # Tries to validate the root=* kernel cmdline parameter.
     # See init/do_mounts.c in Linux tree.
     for pat in (
