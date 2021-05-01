@@ -250,16 +250,30 @@ class depthchargectl_build(
     def cmdline(self):
         cmdline = self.kernel_cmdline or []
 
-        # On at least Debian, the root the system should boot from
-        # is included in the initramfs. Custom kernels might still
-        # be able to boot without an initramfs, but we need to
-        # inject a root= parameter for that.
-        if 'root={}'.format(self.root) not in cmdline:
+        bad_rootcmds = []
+        append_root = True
+        for c in list(cmdline):
+            lhs, _, rhs = c.partition("=")
+            if lhs.lower() != "root":
+                continue
+
+            if rhs == self.root:
+                append_root = False
+                continue
+
+            self.logger.warning(
+                "Kernel cmdline already has a root '{}', but it will "
+                "be overridden."
+                .format(rhs)
+            )
+            cmdline.remove(c)
+
+        if append_root:
             self.logger.info(
-                "Prepending 'root={}' to kernel cmdline."
+                "Appending 'root={}' to kernel cmdline."
                 .format(self.root)
             )
-            cmdline.insert(0, "root={}".format(self.root))
+            cmdline.append('root={}'.format(self.root))
 
         if self.ignore_initramfs:
             self.logger.warn(
