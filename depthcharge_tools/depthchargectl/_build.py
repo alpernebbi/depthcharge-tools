@@ -124,7 +124,7 @@ class depthchargectl_build(
                 .format(self.kernel_release)
             )
 
-        return file_
+        return Path(file_)
 
     @custom_kernel_options.add
     @Argument("--initramfs", nargs=1)
@@ -146,8 +146,10 @@ class depthchargectl_build(
                 "No initramfs file found for version '{}'."
                 .format(self.kernel_release)
             )
+            return None
 
-        return file_
+        else:
+            return Path(file_)
 
     @custom_kernel_options.add
     @Argument("--fdtdir", nargs=1)
@@ -156,7 +158,7 @@ class depthchargectl_build(
         if dir_ is None:
             dir_ = self.kernel_version.fdtdir
 
-        return dir_
+        return Path(dir_)
 
     @custom_kernel_options.add
     @Argument("--dtbs", nargs="+", metavar="FILE")
