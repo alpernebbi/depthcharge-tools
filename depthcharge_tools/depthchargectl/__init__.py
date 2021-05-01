@@ -364,7 +364,11 @@ class depthchargectl(
             if cmdline is not None:
                 cmds = shlex.split(cmdline)
 
-        return list(cmds)
+        flat_cmds = []
+        for cmd in cmds:
+            flat_cmds.extend(shlex.split(cmd))
+
+        return flat_cmds
 
     @config_options.add
     @Argument("--ignore-initramfs", ignore=True)
