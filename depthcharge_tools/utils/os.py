@@ -64,14 +64,18 @@ class Disks(DirectedGraph):
             if line and not line.startswith("#"):
                 fields = shlex.split(line)
                 device, mount = fields[0], fields[1]
-                mtab_mounts[mount] = device
+                device = self.evaluate(device)
+                if device is not None:
+                    mtab_mounts[mount] = device
 
         mountinfo_mounts = {}
         for line in read_lines(mountinfo):
             if line and not line.startswith("#"):
                 fields = shlex.split(line)
                 device, mount = fields[2], fields[4]
-                mountinfo_mounts[mount] = device
+                device = self.evaluate(device)
+                if device is not None:
+                    mountinfo_mounts[mount] = device
 
         mounts = collections.ChainMap(
             fstab_mounts,
