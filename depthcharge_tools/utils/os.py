@@ -57,7 +57,8 @@ class Disks(DirectedGraph):
             if line and not line.startswith("#"):
                 fields = shlex.split(line)
                 device, mount = fields[0], fields[1]
-                fstab_mounts[mount] = device
+                if mount != 'none':
+                    fstab_mounts[mount] = device
 
         mtab_mounts = {}
         for line in read_lines(mtab):
