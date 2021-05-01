@@ -121,7 +121,7 @@ class depthchargectl_build(
         if file_ is None:
             raise ValueError(
                 "No vmlinuz file found for version '{}'."
-                .format(self.kernel_release)
+                .format(self.kernel_release or "(unknown)")
             )
 
         return Path(file_)
@@ -144,7 +144,7 @@ class depthchargectl_build(
         if file_ is None:
             self.logger.info(
                 "No initramfs file found for version '{}'."
-                .format(self.kernel_release)
+                .format(self.kernel_release or "(unknown)")
             )
             return None
 
@@ -171,7 +171,7 @@ class depthchargectl_build(
                 raise ValueError(
                     "No dtb directory found for version '{}', "
                     "but this board needs a dtb."
-                    .format(self.kernel_release)
+                    .format(self.kernel_release or "(unknown)")
                 )
 
             if self.board.dt_compatible != True:
@@ -386,7 +386,7 @@ class depthchargectl_build(
 
         self.logger.info(
             "Building for kernel version '{}'."
-            .format(self.kernel_release)
+            .format(self.kernel_release or "(unknown)")
         )
 
         # Images dir might not have been created at install-time
@@ -446,7 +446,7 @@ class depthchargectl_build(
 
         self.logger.warn(
             "Built depthcharge image for kernel version '{}'."
-            .format(self.kernel_release)
+            .format(self.kernel_release or "(unknown)")
         )
         return self.output
 
