@@ -810,7 +810,7 @@ class CommandMeta(type):
             if exit.returncode != 0:
                 log_error(exit)
             else:
-                logger.info(exit)
+                logger.warn(exit)
 
             sys.exit(exit.returncode)
 
