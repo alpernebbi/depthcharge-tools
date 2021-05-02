@@ -67,7 +67,7 @@ class depthchargectl_write(
         """Positional arguments"""
 
         if self.image is not None and self.kernel_version is not None:
-            return ValueError(
+            raise ValueError(
                 "Image and kernel_version arguments are mutually exclusive"
             )
 
