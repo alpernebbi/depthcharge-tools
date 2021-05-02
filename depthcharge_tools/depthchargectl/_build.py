@@ -158,7 +158,10 @@ class depthchargectl_build(
         if dir_ is None:
             dir_ = self.kernel_version.fdtdir
 
-        return Path(dir_)
+        if dir_ is None:
+            return None
+        else:
+            return Path(dir_)
 
     @custom_kernel_options.add
     @Argument("--dtbs", nargs="+", metavar="FILE")
