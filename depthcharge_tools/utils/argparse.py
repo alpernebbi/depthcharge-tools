@@ -806,12 +806,6 @@ class CommandMeta(type):
             if output is not None:
                 print(output)
 
-        except ValueError as err:
-            parser.error(err.args[0])
-
-        except TypeError as err:
-            parser.error(err.args[0])
-
         except CommandExit as exit:
             if exit.returncode != 0:
                 log_error(exit)
