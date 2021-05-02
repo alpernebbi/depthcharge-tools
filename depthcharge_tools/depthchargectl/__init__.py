@@ -214,7 +214,7 @@ class depthchargectl(
 
     @config_options.add
     @Argument("--board", nargs=1)
-    def board(self, codename=None):
+    def board(self, codename=""):
         """Assume we're running on the specified board"""
         if isinstance(codename, Board):
             return codename
@@ -222,16 +222,19 @@ class depthchargectl(
         elif isinstance(codename, configparser.SectionProxy):
             return Board(codename)
 
+        elif codename in (None, "None", "none"):
+            return None
+
         boards = {
             sectname: Board(section)
             for sectname, section in self.config.parser.items()
             if sectname.startswith("boards/")
         }
 
-        if codename is None:
-            codename = self.config.get("board", None)
+        if codename:
+            codename = self.config.get("board", "")
 
-        if codename is not None:
+        if not codename:
             boards = {
                 sectname: board
                 for sectname, board in boards.items()

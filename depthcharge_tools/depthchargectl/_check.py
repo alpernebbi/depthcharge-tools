@@ -106,6 +106,17 @@ class depthchargectl_check(
 
         return image
 
+    @Argument(dest=argparse.SUPPRESS)
+    def board(self, codename=""):
+        board = super().board(codename)
+
+        if board is None:
+            raise ValueError(
+                "Cannot check depthcharge images when no board is specified.",
+            )
+
+        return board
+
     def __call__(self):
         image = self.image
 

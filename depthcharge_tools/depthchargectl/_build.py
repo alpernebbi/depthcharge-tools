@@ -97,6 +97,17 @@ class depthchargectl_build(
     def options(self):
         """Options"""
 
+    @Argument(dest=argparse.SUPPRESS)
+    def board(self, codename=""):
+        board = super().board(codename)
+
+        if board is None:
+            raise ValueError(
+                "Cannot build depthcharge images when no board is specified.",
+            )
+
+        return board
+
     @Group
     def custom_kernel_options(self):
         """Custom kernel specification"""

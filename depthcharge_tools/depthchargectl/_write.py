@@ -89,6 +89,11 @@ class depthchargectl_write(
             self.image = arg
             self.kernel_version = None
 
+        if self.board is None and self.image is None:
+            raise ValueError(
+                "An image file is required when no board is specified."
+            )
+
     @positionals.add
     @Argument(dest=argparse.SUPPRESS, nargs=argparse.SUPPRESS)
     def kernel_version(self, kernel_version):
@@ -130,7 +135,14 @@ class depthchargectl_write(
         return allow
 
     def __call__(self):
-        if self.image is not None:
+        if self.board is None:
+            self.logger.warn(
+                "Using given image '{}' without board-specific checks."
+                .format(self.image)
+            )
+            image = self.image
+
+        elif self.image is not None:
             self.logger.info("Using given image '{}'." .format(self.image))
             image = self.image
 
