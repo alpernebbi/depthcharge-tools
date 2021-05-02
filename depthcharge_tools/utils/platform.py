@@ -162,6 +162,7 @@ def installed_kernels():
     for f in files(
         "/boot/initrd.img",
         "/boot/initrd",
+        "/boot/initramfs-linux.img",
         "/initrd.img",
         "/initrd",
     ):
