@@ -231,10 +231,10 @@ class depthchargectl(
             if sectname.startswith("boards/")
         }
 
-        if codename:
+        if not codename:
             codename = self.config.get("board", "")
 
-        if not codename:
+        if codename:
             boards = {
                 sectname: board
                 for sectname, board in boards.items()
