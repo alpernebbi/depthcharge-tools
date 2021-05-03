@@ -15,6 +15,9 @@ from depthcharge_tools.utils.os import (
     Partition,
     CrosPartition,
 )
+from depthcharge_tools.utils.platform import (
+    is_cros_boot,
+)
 
 from depthcharge_tools.depthchargectl import depthchargectl
 
@@ -79,9 +82,15 @@ class depthchargectl_bless(
             partition = system_disks.by_kern_guid()
 
         if partition is None:
-            raise ValueError(
-                "Couldn't figure out the currently booted partition."
-            )
+            if is_cros_boot():
+                raise ValueError(
+                    "Couldn't figure out the currently booted partition."
+                )
+            else:
+                raise ValueError(
+                    "A disk or partition argument is required when not "
+                    "booted with depthcharge."
+                )
 
         self.logger.info(
             "Working on partition '{}'."
