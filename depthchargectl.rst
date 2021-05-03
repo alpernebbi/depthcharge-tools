@@ -30,7 +30,7 @@ SYNOPSIS
 ========
 **depthchargectl** [options] *COMMAND* ...
 
-**depthchargectl bless** [options] [*PARTITION*]
+**depthchargectl bless** [options] [*PARTITION* | *DISK*]
 
 **depthchargectl build** [options] [*KERNEL_VERSION*]
 
@@ -212,6 +212,10 @@ depthchargectl bless options
     *Priority* flag is the highest one among all the partitions of the
     disk the specified one is in.
 
+-i NUM, --partno NUM
+    Partition number in the given disk image, for when the positional
+    argument is a disk image instead of a partition block device.
+
 depthchargectl build options
 ----------------------------
 --description DESC
@@ -234,7 +238,7 @@ depthchargectl build options
     *initramfs* or *vmlinuz* is used as an attempt to keep images somewhat
     reproducible.
 
---output PATH
+-o PATH, --output PATH
     Output image to path instead of storing it in the images-dir.
 
 The following options allow one to specify the exact files to be used in
