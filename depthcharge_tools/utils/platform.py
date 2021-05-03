@@ -54,6 +54,18 @@ def kernel_cmdline():
     return shlex.split(cmdline)
 
 
+def is_cros_boot():
+    dt_cros_firmware = Path("/proc/device-tree/firmware/chromeos")
+    if dt_cros_firmware.is_dir():
+        return True
+
+    # Chrome OS firmware injects this into the kernel cmdline.
+    if "cros_secure" in kernel_cmdline():
+        return True
+
+    return False
+
+
 def root_requires_initramfs(root):
     x = "[0-9a-fA-F]"
     uuid = "{x}{{8}}-{x}{{4}}-{x}{{4}}-{x}{{4}}-{x}{{12}}".format(x=x)

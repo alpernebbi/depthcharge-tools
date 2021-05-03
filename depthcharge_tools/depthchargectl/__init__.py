@@ -34,6 +34,7 @@ from depthcharge_tools.utils.platform import (
     vboot_keys,
     cros_hwid,
     dt_compatibles,
+    is_cros_boot,
 )
 
 
@@ -293,6 +294,12 @@ class depthchargectl(
                 .format(board.name, board.codename)
             )
             return board
+
+        # This might actually be running on non-ChromeOS hardware.
+        # Check this after the board detection code, because we might
+        # also be running on e.g. RW_LEGACY but still with depthcharge.
+        if not is_cros_boot():
+            return None
 
         # Use generic boards per cpu architecture, since we couldn't
         # detect this system as a proper board
