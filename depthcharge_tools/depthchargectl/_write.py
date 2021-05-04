@@ -175,7 +175,7 @@ class depthchargectl_write(
         else:
             # No image given, try creating one.
             try:
-                image = depthchargectl.build(
+                image = depthchargectl.build_(
                     kernel_version=self.kernel_version,
                     config=self.config,
                     board=self.board,
