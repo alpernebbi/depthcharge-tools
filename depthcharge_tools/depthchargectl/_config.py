@@ -44,10 +44,15 @@ class depthchargectl_config(
     @Argument("--section", nargs=1)
     def section(self, section=None):
         """Config section to work on."""
-        if section is None:
-            section = self.config.parser.default_section
+        parser = self.config.parser
 
-        return self.config.parser[section]
+        if section is None:
+            section = parser.default_section
+
+        if section not in parser.sections():
+            parser.add_section(section)
+
+        return parser[section]
 
     @options.add
     @Argument("--default", nargs=1)
