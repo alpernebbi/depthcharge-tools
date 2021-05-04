@@ -94,6 +94,7 @@ reads its config from such a subsection.
 Currently the following configuration options are available::
 
     [depthcharge-tools]
+    enable-system-hooks: Write/remove images on kernel/initramfs changes
     vboot-keyblock: The kernel keyblock file for verifying and signing images
     vboot-private-key: The private key (.vbprivk) for signing images
     vboot-public-key: The public key for (.vbpubk) verifying images
