@@ -223,7 +223,7 @@ class depthchargectl(
         elif isinstance(codename, configparser.SectionProxy):
             return Board(codename)
 
-        elif codename in (None, "None", "none"):
+        elif codename is None:
             return None
 
         boards = {
@@ -235,7 +235,10 @@ class depthchargectl(
         if not codename:
             codename = self.config.get("board", "")
 
-        if codename:
+        if codename in ("None", "none"):
+            return None
+
+        elif codename:
             boards = {
                 sectname: board
                 for sectname, board in boards.items()
