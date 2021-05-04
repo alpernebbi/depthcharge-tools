@@ -190,7 +190,8 @@ class depthchargectl(
                 )
 
         if self.config_section not in parser.sections():
-            parser.add_section(self.config_section)
+            if self.config_section != parser.default_section:
+                parser.add_section(self.config_section)
 
         if isinstance(file_, collections.abc.Mapping):
             parser[self.config_section].update(file_)

@@ -50,7 +50,8 @@ class depthchargectl_config(
             section = parser.default_section
 
         if section not in parser.sections():
-            parser.add_section(section)
+            if section != parser.default_section:
+                parser.add_section(section)
 
         return parser[section]
 
