@@ -14,7 +14,7 @@ function _depthchargectl {
         --vboot-private-key'[Private key file to include in images]:vbprivk file:_files' \
         --kernel-cmdline'[Command line options for the kernel]:kernel cmdline:{_depthchargectl__cmdline;}' \
         --ignore-initramfs'[Do not include initramfs in images]' \
-        '1:command:(bless build check list remove target write)' \
+        '1:command:(bless build config check list remove target write)' \
         '*::arg:->args' \
         ;
 
@@ -40,6 +40,13 @@ function _depthchargectl {
                 --fdtdir'[Directory to search device-tree binaries for the board]:fdtdir:_directories' \
                 --dtbs'[Device-tree binary files to use instead of searching fdtdir]:dtb files:_files' \
                 ':kernel version:{_depthchargectl__kernel}' \
+                ;
+            ;;
+        args:config)
+            _arguments -S \
+                --section'[Config section to work on.]' \
+                --default'[Value to return if key does not exist in section.]' \
+                ':config key:' \
                 ;
             ;;
         args:check)

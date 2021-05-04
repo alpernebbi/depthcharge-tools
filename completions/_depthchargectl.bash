@@ -42,7 +42,7 @@ _depthchargectl() {
         --vboot-keyblock --vboot-public-key --vboot-private-key
         --kernel-cmdline --ignore-initramfs
     )
-    local cmds=(bless build check list remove target write)
+    local cmds=(bless build config check list remove target write)
 
     case "$prev" in
         --tmpdir) _depthchargectl__file; return ;;
@@ -67,6 +67,7 @@ _depthchargectl() {
         case "$cmd" in
             bless)      _depthchargectl_bless; break ;;
             build)      _depthchargectl_build; break ;;
+            config)     _depthchargectl_config; break ;;
             check)      _depthchargectl_check; break ;;
             list)       _depthchargectl_list; break ;;
             remove)     _depthchargectl_remove; break ;;
@@ -127,6 +128,18 @@ _depthchargectl_build() {
         --fdtdir) _depthchargectl__file; return ;;
         --dtbs) _depthchargectl__file; return ;;
         *) _depthchargectl__kernel;;
+    esac
+    COMPREPLY+=($(compgen -W "${opts[*]}" -- "$cur"))
+    COMPREPLY+=($(compgen -W "${global_opts[*]}" -- "$cur"))
+    COMPREPLY+=($(compgen -W "${config_opts[*]}" -- "$cur"))
+}
+
+_depthchargectl_config() {
+    local opts=(--section --default)
+    case "$prev" in
+        --section) return ;;
+        --default) return ;;
+        *) ;;
     esac
     COMPREPLY+=($(compgen -W "${opts[*]}" -- "$cur"))
     COMPREPLY+=($(compgen -W "${global_opts[*]}" -- "$cur"))

@@ -36,6 +36,8 @@ SYNOPSIS
 
 **depthchargectl check** [options] *IMAGE*
 
+**depthchargectl config** [options] *KEY*
+
 **depthchargectl list** [options] [*DISK* ...]
 
 **depthchargectl remove** [options] (*KERNEL_VERSION* | *IMAGE*)
@@ -90,6 +92,12 @@ It automatically adds an appropriate **root=**\ *ROOT* kernel command
 line parameter deduced from **/etc/fstab**. Higher compression levels
 for the kernel are automatically tried as necessary, when the firmware
 supports them.
+
+depthchargectl config
+---------------------
+Retrieves the configured value for a given configuration key, primarily
+for use in scripts that integrate **depthchargectl** with the system
+upgrade process.
 
 depthchargectl check
 --------------------
@@ -265,6 +273,18 @@ building the image, instead of letting **depthchargectl** deduce them:
 
 --dtbs *FILE* [*FILE* ...]
     Device-tree binary files to use instead of searching fdtdir.
+
+depthchargectl config options
+-----------------------------
+--section SECTION
+    Config section to retrieve configured values from. By default, this
+    is the globally default section: **depthcharge-tools**.
+
+--default DEFAULT
+    A default value to return if the given config key doesn't exist in
+    the given config section. If a default value is not given, this
+    subcommand prints an error message and exits with nonzero status
+    when the key is missing.
 
 depthchargectl check options
 ----------------------------

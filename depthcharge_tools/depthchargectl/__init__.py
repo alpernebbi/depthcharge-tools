@@ -407,6 +407,7 @@ class depthchargectl(
 import depthcharge_tools.depthchargectl._bless
 import depthcharge_tools.depthchargectl._build
 import depthcharge_tools.depthchargectl._check
+import depthcharge_tools.depthchargectl._config
 import depthcharge_tools.depthchargectl._list
 import depthcharge_tools.depthchargectl._remove
 import depthcharge_tools.depthchargectl._target
