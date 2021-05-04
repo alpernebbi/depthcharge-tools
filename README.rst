@@ -101,11 +101,9 @@ Currently the following configuration options are available::
 
     [depthchargectl]
     board: Codename of a board to build and check images for
-    images-dir: Directory to store built images
-
-    [depthchargectl/build]
-    kernel-cmdline: Kernel commandline parameters to use
     ignore-initramfs: Do not include an initramfs in the image
+    images-dir: Directory to store built images
+    kernel-cmdline: Kernel commandline parameters to use
 
 For longer explanations check the manual pages of each command for
 options named the same as these.
