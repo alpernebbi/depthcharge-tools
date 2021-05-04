@@ -859,11 +859,17 @@ class CommandMeta(type):
 
     def subcommand(cls, arg):
         if isinstance(arg, CommandMeta):
-            setattr(cls, arg.__name__, arg)
+            name = arg.__name__
+            while hasattr(cls, name):
+                name = "{}_".format(name)
+            setattr(cls, name, arg)
             return arg
 
         def add_subcommand(cmd):
-            setattr(cls, arg.replace("-", "_"), cmd)
+            name = arg.replace("-", "_")
+            while hasattr(cls, name):
+                name = "{}_".format(name)
+            setattr(cls, name, cmd)
             cmd.__name__ = arg
             return cmd
 
