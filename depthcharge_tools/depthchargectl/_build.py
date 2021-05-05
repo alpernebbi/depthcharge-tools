@@ -91,6 +91,12 @@ class depthchargectl_build(
         elif kernels:
             kernel = max(kernels)
 
+        else:
+            self.logger.warn(
+                "Could not find any installed kernel."
+            )
+            kernel = None
+
         return kernel
 
     @Group
@@ -116,7 +122,7 @@ class depthchargectl_build(
     @Argument("--kernel-release", nargs=1)
     def kernel_release(self, name=None):
         """Release name for the kernel used in image name"""
-        if name is None:
+        if name is None and self.kernel_version is not None:
             name = self.kernel_version.release
 
         return name
@@ -125,7 +131,7 @@ class depthchargectl_build(
     @Argument("--kernel", nargs=1)
     def kernel(self, file_=None):
         """Kernel executable"""
-        if file_ is None:
+        if file_ is None and self.kernel_version is not None:
             file_ = self.kernel_version.kernel
 
         # vmlinuz is always mandatory
@@ -141,7 +147,7 @@ class depthchargectl_build(
     @Argument("--initramfs", nargs=1)
     def initrd(self, file_=None):
         """Ramdisk image"""
-        if file_ is None:
+        if file_ is None and self.kernel_version is not None:
             file_ = self.kernel_version.initrd
 
         if self.ignore_initramfs:
@@ -166,7 +172,7 @@ class depthchargectl_build(
     @Argument("--fdtdir", nargs=1)
     def fdtdir(self, dir_=None):
         """Directory to search device-tree binaries for the board"""
-        if dir_ is None:
+        if dir_ is None and self.kernel_version is not None:
             dir_ = self.kernel_version.fdtdir
 
         if dir_ is None:
@@ -226,7 +232,7 @@ class depthchargectl_build(
     @Argument("--description", nargs=1)
     def description(self, desc=None):
         """Human-readable description for the image"""
-        if desc is None:
+        if desc is None and self.kernel_version is not None:
             if self.board.image_format != "zimage":
                 desc = self.kernel_version.description
 
