@@ -250,7 +250,8 @@ class depthchargectl_build(
                     root = rhs
             if root:
                 self.logger.info(
-                    "Using root as set in user configured cmdline."
+                    "Using root '{}' as set in user configured cmdline."
+                    .format(root)
                 )
 
         if root is None:
@@ -258,7 +259,10 @@ class depthchargectl_build(
             root = system_disks.by_mountpoint("/", fstab_only=True)
 
             if root:
-                self.logger.info("Using root as set in /etc/fstab.")
+                self.logger.info(
+                    "Using root '{}' as set in /etc/fstab."
+                    .format(root)
+                )
             else:
                 root = system_disks.by_mountpoint("/")
                 self.logger.warn(
