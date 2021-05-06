@@ -248,9 +248,10 @@ class depthchargectl_build(
                 lhs, _, rhs = c.partition("=")
                 if lhs.lower() == "root":
                     root = rhs
-                    self.logger.info(
-                        "Using root as set in user configured cmdline."
-                    )
+            if root:
+                self.logger.info(
+                    "Using root as set in user configured cmdline."
+                )
 
         if root is None:
             self.logger.info("Trying to figure out a root for cmdline.")
