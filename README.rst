@@ -78,6 +78,35 @@ This project (or at least ``depthchargectl``) is meant to be integrated
 into your operating system by its maintainers, and the best way to
 install it is through your OS' package manager whenever possible.
 
+Debian
+------
+An unofficial Debian package is available in the releases_ page, with
+it's packaging source tracked in salsa_. After downloading, you can
+install with::
+
+    $ sudo apt install ./depthcharge-tools_*.deb
+
+.. _releases: https://github.com/alpernebbi/depthcharge-tools/releases
+.. _salsa: https://salsa.debian.org/alpernebbi/depthcharge-tools
+
+Pip
+---
+Python binary wheels are uploaded to PyPI_, and it should be possible to
+install the python package using `pip`. However, this does not install
+the manual pages, bash/zsh completions, systemd/init.d service files,
+and OS-specific kernel/initramfs hooks.
+
+You can install in `--user` mode, but this makes it quite hard to use
+`depthchargectl` as root. As root privileges are necessary to manipulate
+system block devices this limits you a bit::
+
+    $ pip install --user depthcharge-tools
+
+Although inadvisable, you can install as root to overcome that caveat.
+Alternatively, see the `PYTHONPATH` hack in one of the later sections.
+
+.. _PyPI: https://pypi.org/project/depthcharge-tools/
+
 
 Configuration
 =============
