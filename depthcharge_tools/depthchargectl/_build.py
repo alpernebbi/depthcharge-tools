@@ -7,6 +7,7 @@ import shlex
 import textwrap
 
 from pathlib import Path
+from functools import lru_cache
 
 from depthcharge_tools import __version__
 from depthcharge_tools.mkdepthcharge import mkdepthcharge
@@ -287,6 +288,7 @@ class depthchargectl_build(
 
     # This should be overriding kernel_cmdline from the parent instead...
     @property
+    @lru_cache
     def cmdline(self):
         cmdline = self.kernel_cmdline or []
 
