@@ -233,7 +233,8 @@ depthchargectl build options
 
 --root ROOT
     Root device to add to kernel cmdline. By default, this is acquired
-    from **/etc/fstab** or **/proc/self/mounts**.
+    from **/etc/fstab** or **/proc/self/mounts**. If "none" is passed,
+    no root parameter is added.
 
 --compress *TYPE* [*TYPE* ...]
     Compression types to attempt. By default, all compression types that
