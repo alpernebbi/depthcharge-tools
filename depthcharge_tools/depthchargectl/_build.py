@@ -266,10 +266,17 @@ class depthchargectl_build(
                     .format(root)
                 )
 
-        if not root:
-            raise ValueError(
+        if root is None:
+            self.logger.warning(
                 "Couldn't figure out a root cmdline parameter."
             )
+            return None
+
+        elif root in ("", "None", "none"):
+            self.logger.warning(
+                "Will not set a root cmdline parameter."
+            )
+            return None
 
         return str(root)
 
@@ -278,8 +285,7 @@ class depthchargectl_build(
     def cmdline(self):
         cmdline = self.kernel_cmdline or []
 
-        bad_rootcmds = []
-        append_root = True
+        append_root = self.root is not None
         for c in list(cmdline):
             lhs, _, rhs = c.partition("=")
             if lhs.lower() != "root":
@@ -290,8 +296,7 @@ class depthchargectl_build(
                 continue
 
             self.logger.warning(
-                "Kernel cmdline already has a root '{}', but it will "
-                "be overridden."
+                "Kernel cmdline has a different root '{}', removing it."
                 .format(rhs)
             )
             cmdline.remove(c)
@@ -313,11 +318,12 @@ class depthchargectl_build(
 
         # Linux kernel without an initramfs only supports certain
         # types of root parameters, check for them.
-        if self.initrd is None and root_requires_initramfs(self.root):
-            raise ValueError(
-                "An initramfs is required for root '{}'."
-                .format(self.root)
-            )
+        if self.initrd is None and self.root is not None:
+            if root_requires_initramfs(self.root):
+                raise ValueError(
+                    "An initramfs is required for root '{}'."
+                    .format(self.root)
+                )
 
         return cmdline
 
