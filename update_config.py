@@ -746,7 +746,7 @@ class update_config(
         # Add board architectures as root parent
         for board, config in self.depthcharge_boards.items():
             if config.get("ARCH_X86"):
-                arch = "x86"
+                arch = "amd64"
             elif config.get("ARCH_ARM_V8"):
                 arch = "arm64"
             elif config.get("ARCH_ARM"):
@@ -755,7 +755,7 @@ class update_config(
                 continue
 
             roots = board_relations.roots(board)
-            for root in roots - {"x86", "arm64", "arm"}:
+            for root in roots - {"x86", "amd64", "arm64", "arm"}:
                 board_relations.add_edge(arch, root)
 
         # Baseboards, chipsets shouldn't depend on others in their class
@@ -937,7 +937,7 @@ class update_config(
     def __call__(self):
         config = configparser.ConfigParser(dict_type=SortedDict)
 
-        for arch in ("x86", "arm", "arm64"):
+        for arch in ("x86", "amd64", "arm", "arm64"):
             name = self.board_config_sections.get(arch, None)
             if name is None:
                 continue
