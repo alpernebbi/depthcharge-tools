@@ -940,6 +940,7 @@ class update_config(
 
             config.add_section(name)
             config[name]["arch"] = arch
+            config[name]["codename"] = "{}-generic".format(arch)
 
         for codename, blocks in self.recovery_conf_boards.items():
             name = self.board_config_sections.get(codename, None)
