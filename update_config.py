@@ -660,11 +660,6 @@ class update_config(
                 if parent != board:
                     board_relations.add_edge(parent, board)
 
-        # "veyron_rialto" doesn't show up anywhere as a child of veyron
-        # but exists in depthcharge
-        if "veyron_rialto" in board_relations.nodes():
-            board_relations.add_edge("veyron", "veyron_rialto")
-
         nodes = {
             node.replace("-", "_"): node
             for node in board_relations.nodes()
@@ -769,6 +764,46 @@ class update_config(
                         board_relations.remove_edge(board, child)
                         for parent in board_relations.parents(board):
                             board_relations.add_edge(parent, child)
+
+        # Relations from older versions no longer in main branches,
+        # coreboot Kconfigs I'm too lazy to parse, etc.
+        for parent, children in [
+            ("amd64", ["chipset-pinetrail", "chipset-snb", "chipset-ivb",
+                       "chipset-hsw", "chipset-cnl", "chipset-icl",
+                       "chipset-rpl", "reven"]),
+            ("chipset-adl", ["adlrvp", "shadowmountain"]),
+            ("chipset-bdw", ["baseboard-auron"]),
+            ("chipset-cml", ["cmlrvp"]),
+            ("chipset-cnl", ["cnlrvp"]),
+            ("chipset-glk", ["glkrvp"]),
+            ("chipset-hsw", ["baseboard-slippy", "baseboard-beltino"]),
+            ("chipset-icl", ["iclrvp", "dragonegg"]),
+            ("chipset-ivb", ["stout"]),
+            ("chipset-kbl", ["kblrvp"]),
+            ("chipset-pinetrail", ["x86-alex-he", "x86-mario", "x86-zgb-he"]),
+            ("chipset-snb", ["butterfly", "lumpy", "stumpy"]),
+            ("chipset-tgl", ["tglrvp", "deltaur", "deltan", ]),
+            ("chipset-whl", ["whlrvp"]),
+            ("chipset-mendocino", ["chausie"]),
+            ("baseboard-auron", ["auron"]),
+            ("baseboard-slippy", ["slippy"]),
+            ("baseboard-beltino", ["beltino"]),
+            ("arm", ["chipset-tegra124", "chipset-exynos5", "chipset-cygnus",
+                     "chipset-ipq4019", "chipset-ipq8064", "chipset-rk3288"]),
+            ("chipset-cygnus", ["purin"]),
+            ("chipset-exynos5", ["daisy", "peach"]),
+            ("chipset-ipq4019", ["gale"]),
+            ("chipset-ipq8064", ["storm"]),
+            ("chipset-rk3288", ["veyron"]),
+            ("chipset-tegra124", ["nyan"]),
+            ("storm", ["arkham", "whirlwind"]),
+            ("veyron", ["veyron_mickey", "veyron_rialto"]),
+            ("arm64", ["chipset-tegra210", "chipset-qcs404", "chipset-mt8188g"]),
+            ("chipset-qcs404", ["mistral"]),
+            ("chipset-tegra210", ["foster", "smaug"]),
+        ]:
+            for child in children:
+                board_relations.add_edge(parent, child)
 
         return board_relations
 
