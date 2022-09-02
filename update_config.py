@@ -931,7 +931,9 @@ class update_config(
         return paths
 
     def __call__(self):
-        config = configparser.ConfigParser(dict_type=SortedDict())
+        config = configparser.ConfigParser(
+            dict_type=SortedDict(lambda s: s.split('/')),
+        )
 
         for arch in ("x86", "amd64", "arm", "arm64"):
             name = self.board_config_sections.get(arch, None)
