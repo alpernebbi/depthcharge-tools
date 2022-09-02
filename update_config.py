@@ -815,6 +815,30 @@ class update_config(
             "alc1015_amp",
         ))
 
+        chipsets = {
+            "chipset-adl": "alderlake",
+            "chipset-adln": "alderlake-n",
+            "chipset-apl": "apollolake",
+            "chipset-bdw": "broadwell",
+            "chipset-bsw": "braswell",
+            "chipset-byt": "baytrail",
+            "chipset-cml": "cometlake",
+            "chipset-cnl": "cannonlake",
+            "chipset-glk": "geminilake",
+            "chipset-hsw": "haswell",
+            "chipset-icl": "icelake",
+            "chipset-ivb": "ivybridge",
+            "chipset-jsl": "jasperlake",
+            "chipset-kbl": "kabylake",
+            "chipset-mtl": "meteorlake",
+            "chipset-rpl": "raptorlake",
+            "chipset-skl": "skylake",
+            "chipset-snb": "sandybridge",
+            "chipset-tgl": "tigerlake",
+            "chipset-whl": "whiskeylake",
+            "chipset-stnyridge": "stoneyridge",
+        }
+
         def get_parent(board):
             # Projects can be the sole parent of actual boards (e.g.
             # freon was to a lot of boards) so don't use them as parents
@@ -851,6 +875,16 @@ class update_config(
             parts = [board]
             parent = get_parent(board)
 
+            # Prefer full names for chipsets
+            if board.startswith("chipset-"):
+                chipset = chipsets.get(board, board[len("chipset-"):])
+                parts = [chipset]
+
+            # Don't keep baseboard prefix
+            if board.startswith("baseboard-"):
+                baseboard = board[len("baseboard-"):]
+                parts = [baseboard]
+
             if parent is not None:
                 lhs, sep, rhs = board.partition("_")
 
@@ -876,7 +910,20 @@ class update_config(
                     parts = [rhs, lhs]
 
             while parent is not None:
-                parts.append(parent)
+                # Prefer full names for chipsets
+                if parent.startswith("chipset-"):
+                    chipset = chipsets.get(parent, parent[len("chipset-"):])
+                    parts.append(chipset)
+
+                # Normalize boards with the same name as baseboard
+                elif parent.startswith("baseboard-"):
+                    baseboard = parent[len("baseboard-"):]
+                    if parts[-1] != baseboard:
+                        parts.append(baseboard)
+
+                else:
+                    parts.append(parent)
+
                 parent = get_parent(parent)
 
             paths[board] = "boards/{}".format("/".join(reversed(parts)))
