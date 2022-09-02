@@ -942,6 +942,11 @@ class update_config(
             config[name]["arch"] = arch
             config[name]["codename"] = "{}-generic".format(arch)
 
+        for board, name in self.board_config_sections.items():
+            if board.startswith("chipset-"):
+                config.add_section(name)
+                config[name]["codename"] = board
+
         for codename, blocks in self.recovery_conf_boards.items():
             name = self.board_config_sections.get(codename, None)
             if name is None:
