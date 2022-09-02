@@ -1059,7 +1059,7 @@ class update_config(
                         .replace("_", "-").replace(" ", "-")
                     )
 
-        with self.output.open("x") as output_f:
+        with self.output.open("w") as output_f:
             config.write(output_f)
 
 if __name__ == "__main__":
