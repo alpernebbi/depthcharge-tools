@@ -17,16 +17,12 @@ from depthcharge_tools.utils.argparse import (
 )
 from depthcharge_tools.utils.collections import (
     DirectedGraph,
+    SortedDict,
 )
 from depthcharge_tools.utils.pathlib import (
     iterdir,
     read_lines,
 )
-
-# To write config sections in sort order
-class SortedDict(collections.UserDict):
-    def __iter__(self):
-        return iter(sorted(self.data))
 
 
 class update_config(

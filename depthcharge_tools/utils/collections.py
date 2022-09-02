@@ -37,6 +37,12 @@ class ConfigDict(collections.OrderedDict):
         raise KeyError(key)
 
 
+# To write config sections in sort order
+class SortedDict(collections.UserDict):
+    def __iter__(self):
+        return iter(sorted(self.data))
+
+
 def TypedList(T):
     if not isinstance(T, type):
         raise TypeError(
