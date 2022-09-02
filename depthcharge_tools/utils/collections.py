@@ -38,9 +38,20 @@ class ConfigDict(collections.OrderedDict):
 
 
 # To write config sections in sort order
-class SortedDict(collections.UserDict):
-    def __iter__(self):
-        return iter(sorted(self.data))
+def SortedDict(key=None):
+    if not callable(key):
+        raise TypeError(
+            "SortedDict argument must be a callable, not {}"
+            .format(type(key).__name__)
+        )
+
+    class SortedDict(collections.UserDict):
+        __key = key
+
+        def __iter__(self):
+            yield from sorted(super().__iter__(), key=type(self).__key)
+
+    return SortedDict
 
 
 def TypedList(T):
