@@ -637,6 +637,13 @@ class update_config(
                     if child != profile.name:
                         board_relations.add_edge(profile.name, child)
 
+        # Project repo lists all "veyron" boards under "veyron-pinky"
+        if "veyron-pinky" in board_relations.nodes():
+            board_relations.add_edge("veyron", "veyron-pinky")
+            for child in board_relations.children("veyron-pinky"):
+                board_relations.add_edge("veyron", child)
+                board_relations.remove_edge("veyron-pinky", child)
+
         # Weird stuff from depthcharge
         for board, config in self.depthcharge_boards.items():
             parent = config.get("BOARD", None)
