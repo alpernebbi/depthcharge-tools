@@ -1094,6 +1094,36 @@ class update_config(
                         .replace("_", "-").replace(" ", "-")
                     )
 
+        def graph(config):
+            graph = DirectedGraph()
+            for section in config.sections():
+                parts = section.split('/')
+                for i, part in enumerate(parts):
+                    parent = str.join("/", parts[:i])
+                    child = str.join("/", (*parts[:i], part))
+                    graph.add_node(child)
+                    if parent:
+                        graph.add_edge(parent, child)
+            return graph
+
+        # Trim unreleased boards that don't have names, hwid-matches
+        max_depth = max(b.count('/') for b in config.sections())
+        for _ in range(0, max_depth):
+            deleted = False
+
+            for section in graph(config).leaves():
+                c = config[section]
+                if "hwid-match" not in c and "name" not in c:
+                    self.logger.warning(
+                        "Skipping unreleased board '{}'."
+                        .format(section)
+                    )
+                    del config[section]
+                    deleted = True
+
+            if not deleted:
+                break
+
         with self.output.open("w") as output_f:
             config.write(output_f)
 
