@@ -1106,6 +1106,42 @@ class update_config(
                         graph.add_edge(parent, child)
             return graph
 
+        # Propagate config values upwards
+        def propagate_configs(graph, config, section, keys):
+            commons = {}
+
+            for child in graph.children(section):
+                propagate_configs(graph, config, child, keys)
+
+            if section not in config:
+                config.add_section(section)
+
+            for k in keys:
+                values = set(
+                    config[child].get(k, None)
+                    for child in graph.children(section)
+                )
+                if len(values) == 1:
+                    value = values.pop()
+                    if value is not None:
+                        config[section].setdefault(k, value)
+
+            for child in graph.children(section):
+                for k in keys:
+                    if k in config[section] and k in config[child]:
+                        if config[section][k] == config[child][k]:
+                            config[child].pop(k)
+
+        # Don't propagate up to the root, only up to baseboard nodes.
+        g = graph(config)
+        for arch in g.children("boards"):
+            for chipset in g.children(arch):
+                for baseboard in g.children(chipset):
+                    propagate_configs(g, config, baseboard, {
+                        "image-format", "image-max-size",
+                        "boots-lz4-kernel", "boots-lzma-kernel",
+                    })
+
         # Trim unreleased boards that don't have names, hwid-matches
         max_depth = max(b.count('/') for b in config.sections())
         for _ in range(0, max_depth):
