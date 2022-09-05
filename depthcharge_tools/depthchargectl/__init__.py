@@ -59,13 +59,24 @@ class Board:
 
     @property
     def dt_compatible(self):
-        compat = self._config.get("dt-compatible", "False")
-        if compat == "True":
-            return True
-        elif compat == "False":
-            return False
-        else:
-            return compat
+        pattern = self._config.get("dt-compatible")
+
+        # Try to detect non-regex values and extend them to match any
+        # rev/sku, but if a rev/sku is given match only the given one.
+        if pattern and re.fullmatch("[\w,-]+", pattern):
+            prefix, rev, sku = re.fullmatch(
+                "(.*?)(-rev\d+)?(-sku\d+)?",
+                pattern,
+            ).groups()
+
+            pattern = "{}{}{}".format(
+                prefix,
+                rev or "(-rev\d+)?",
+                sku or "(-sku\d+)?",
+            )
+
+        if pattern:
+            return re.compile(pattern)
 
     @property
     def hwid_match(self):
@@ -281,9 +292,10 @@ class depthchargectl(
                 return len(compatibles)
 
             sectname, board = item
-            try:
-                return compatibles.index(board.dt_compatible)
-            except ValueError:
+            for i, c in enumerate(compatibles):
+                if board.dt_compatible.fullmatch(c):
+                    return i
+            else:
                 return float("inf")
 
         if compatibles is not None:

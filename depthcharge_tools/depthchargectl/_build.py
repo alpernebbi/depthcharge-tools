@@ -195,17 +195,18 @@ class depthchargectl_build(
                     .format(self.kernel_release or "(unknown)")
                 )
 
-            if self.board.dt_compatible != True:
-                self.logger.info(
-                    "Searching '{}' for dtbs compatible with '{}'."
-                    .format(self.fdtdir, self.board.dt_compatible)
-                )
+            self.logger.info(
+                "Searching '{}' for dtbs compatible with pattern '{}'."
+                .format(self.fdtdir, self.board.dt_compatible.pattern)
+            )
 
             def is_compatible(dt_file):
-                if self.board.dt_compatible == True:
-                    return True
-                compats = fdtget.get(dt_file, "/", "compatible").split()
-                return self.board.dt_compatible in compats
+                return any(
+                    self.board.dt_compatible.fullmatch(compat)
+                    for compat in fdtget.get(
+                        dt_file, "/", "compatible", default="",
+                    ).split()
+                )
 
             files = list(filter(
                 is_compatible,
@@ -214,8 +215,8 @@ class depthchargectl_build(
 
             if len(files) == 0:
                 raise ValueError(
-                    "No dtb file compatible with '{}' found in '{}'."
-                    .format(self.board.dt_compatible, self.fdtdir)
+                    "No dtb file compatible with pattern '{}' found in '{}'."
+                    .format(self.board.dt_compatible.pattern, self.fdtdir)
                 )
 
         else:
