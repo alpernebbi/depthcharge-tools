@@ -15,6 +15,7 @@ function _mkdepthcharge {
         {-C,--compress}'[Compress vmlinuz with lz4 or lzma.]:compression:(none lz4 lzma)' \
         {-n,--name}'[Description of vmlinuz to put in the FIT.]:description:($(source /etc/os-release; echo "$NAME"))' \
         '*'{-c,--cmdline}'[Command-line parameters for the kernel.]:kernel cmdline:{_mkdepthcharge__cmdline}' \
+        --no-force-gpt'[Do not prepend gpt to the cmdline.]' \
         --no-kern-guid'[Do not prepend kern_guid=%U to the cmdline.]' \
         --bootloader'[Bootloader stub binary to use.]:bootloader file:_files' \
         --keydir'[Directory containing vboot keys to use.]:keys dir:_directories' \

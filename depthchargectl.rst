@@ -198,7 +198,8 @@ this configuration to be overridden temporarily.
     |KERNEL_CMDLINE|.  **depthchargectl** and |mkdepthcharge| append
     some other values to this: an appropriate **root=**\ *ROOT*, the
     **kern_guid=%U** parameter required for the **bless** subcommand,
-    **noinitrd** if **--ignore-initramfs** is given.
+    **noinitrd** if **--ignore-initramfs** is given, and **gpt** to make
+    Linux use the backup partition table if the primary GPT is broken.
 
 --ignore-initramfs
     Do not include *initramfs* in the built images. For some boards,
