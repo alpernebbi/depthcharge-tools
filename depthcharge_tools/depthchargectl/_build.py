@@ -40,6 +40,7 @@ class SizeTooBigError(CommandExit):
     def __init__(self):
         super().__init__(
             "Couldn't build a small enough image for this board.",
+            returncode=4,
         )
 
 
@@ -48,7 +49,8 @@ class InitramfsSizeTooBigError(SizeTooBigError):
         super(SizeTooBigError, self).__init__(
             "Couldn't build a small enough image for this board. "
             "This is usually solvable by making the initramfs smaller, "
-            "check your OS's documentation on how to do so."
+            "check your OS's documentation on how to do so.",
+            returncode=3,
         )
 
 

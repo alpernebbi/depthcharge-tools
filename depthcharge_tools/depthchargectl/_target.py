@@ -30,7 +30,7 @@ class NotABlockDeviceError(CommandExit):
         )
 
         self.device = device
-        super().__init__(message=message)
+        super().__init__(message=message, returncode=2)
 
 
 class NotCrosPartitionError(CommandExit):
@@ -41,7 +41,7 @@ class NotCrosPartitionError(CommandExit):
         )
 
         self.partition = partition
-        super().__init__(message=message)
+        super().__init__(message=message, returncode=5)
 
 
 class BootedPartitionError(CommandExit):
@@ -52,7 +52,7 @@ class BootedPartitionError(CommandExit):
         )
 
         self.partition = partition
-        super().__init__(message=message)
+        super().__init__(message=message, returncode=6)
 
 
 class PartitionSizeTooSmallError(CommandExit):
@@ -65,7 +65,7 @@ class PartitionSizeTooSmallError(CommandExit):
         self.partition = partition
         self.part_size = part_size
         self.min_size = min_size
-        super().__init__(message=message)
+        super().__init__(message=message, returncode=7)
 
 
 class NoUsableCrosPartition(CommandExit):
