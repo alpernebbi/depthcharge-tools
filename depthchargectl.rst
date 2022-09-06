@@ -342,7 +342,78 @@ depthchargectl write options
 
 EXIT STATUS
 ===========
-In general, exits with zero on success and non-zero on failure.
+In general, exits with zero on success and non-zero on failure. Some
+subcommands return more specified exit statuses:
+
+depthchargectl build exit status
+--------------------------------
+
+0
+    Image built and stored successfully, or a cached valid image exists.
+
+1
+    An error occurred before or during building the image.
+
+3
+    Can build an image with an *initramfs*, but it is too big for the
+    board despite using maximum allowed kernel compression. This might
+    be solvable by reducing the *initramfs* size.
+
+4
+    Like **3**, but without an *initramfs*. This might be solvable by
+    reducing the *vmlinuz* size, perhaps by building a custom kernel.
+
+depthchargectl check exit status
+--------------------------------
+
+0
+    The *image* passes all checks.
+
+1
+    Errors unrelated to image checks.
+
+2
+    The *image* isn't a readable file.
+
+3
+    Size of the *image* is too big for the board.
+
+4
+    The *image* cannot be interpreted by |vbutil_kernel|.
+
+5
+    The *image* fails the |vbutil_kernel| signature checks.
+
+6
+    The *image* is built with a wrong format for the board.
+
+depthchargectl target exit status
+---------------------------------
+
+0
+    A usable *partition* is given, or a usable partition was chosen from
+    *disk*\ s. The partition passes the checks and is printed to output.
+
+1
+    Errors unrelated to partition checks.
+
+2
+    The *partition* is not a writable block device.
+
+3
+    The disk containing the *partition* is not a writable block device.
+
+4
+    Cannot parse a partition number from the *partition*.
+
+5
+    The *partition* is not a ChromeOS kernel partition.
+
+6
+    The *partition* is the currently booted partition.
+
+7
+    The *partition* is smaller than the **--min-size** argument.
 
 
 FILES
