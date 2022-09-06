@@ -251,19 +251,60 @@ class depthchargectl(
             return None
 
         elif codename:
-            boards = {
-                sectname: board
-                for sectname, board in boards.items()
-                if codename == board.codename
-            }
+            parts = str(codename).lower().replace('-', '_').split('_')
 
-            if not boards:
+            def codename_match(item):
+                if item is None:
+                    return (len(parts) - 1, 0)
+
+                sectname, board = item
+                matchparts = sectname.split("/") + (
+                    [] if board.codename is None else
+                    board.codename.lower().replace('-', '_').split('_')
+                )
+
+                # Don't match sections without explicit codenames
+                parent, _, _ = sectname.rpartition('/')
+                if parent in boards and boards[parent].codename == board.codename:
+                    return (len(parts) - 1, float("inf"))
+
+                # Some kind of a fuzzy match, how many parts of the
+                # given codename exist in the parts of this config
+                idx = len(parts) - 1
+                while parts and matchparts and idx >= 0:
+                    if parts[idx] == matchparts[-1]:
+                        idx -= 1
+                    # Oldest boards have x86-alex_he etc.
+                    elif (parts[idx], matchparts[-1]) == ("x86", "amd64"):
+                        idx -= 1
+                    matchparts.pop()
+
+                return (idx, len(sectname.split("/")))
+
+            match_groups = collections.defaultdict(list)
+            for item in (None, *boards.items()):
+                match_groups[codename_match(item)].append(item)
+
+            score, matches = min(match_groups.items())
+            if not matches or None in matches:
                 raise ValueError(
                     "Unknown board codename '{}'."
                     .format(codename)
                 )
 
-            return boards[min(boards, key=len)]
+            elif len(matches) > 1:
+                raise ValueError(
+                    "Ambiguous board codename '{}' matches {}."
+                    .format(codename, [b.codename for s, b in matches])
+                )
+
+            sectname, board = matches[0]
+            self.logger.info(
+                "Assuming board '{}' ('{}') by codename argument or config."
+                .format(board.name, board.codename)
+            )
+
+            return board
 
         hwid = cros_hwid()
         def hwid_match(item):
