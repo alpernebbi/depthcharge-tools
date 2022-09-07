@@ -97,8 +97,14 @@ class Board:
         max_size = self._config.get("image-max-size")
         if max_size in (None, "None", "none"):
             return float("inf")
-
-        return int(max_size)
+        elif max_size.startswith("0x"):
+            return int(max_size, 16)
+        elif max_size.startswith("0o"):
+            return int(max_size, 8)
+        elif max_size.startswith("0b"):
+            return int(max_size, 2)
+        else:
+            return int(max_size)
 
     @property
     def image_format(self):
