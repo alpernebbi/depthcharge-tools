@@ -94,7 +94,11 @@ class Board:
 
     @property
     def image_max_size(self):
-        return self._config.getint("image-max-size", float("inf"))
+        max_size = self._config.get("image-max-size")
+        if max_size in (None, "None", "none"):
+            return float("inf")
+
+        return int(max_size)
 
     @property
     def image_format(self):
