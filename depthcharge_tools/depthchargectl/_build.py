@@ -126,7 +126,8 @@ class depthchargectl_build(
     def kernel_release(self, name=None):
         """Release name for the kernel used in image name"""
         if name is None and self.kernel_version is not None:
-            name = self.kernel_version.release
+            if self.kernel == self.kernel_version.kernel:
+                name = self.kernel_version.release
 
         return name
 
@@ -151,7 +152,8 @@ class depthchargectl_build(
     def initrd(self, file_=None):
         """Ramdisk image"""
         if file_ is None and self.kernel_version is not None:
-            file_ = self.kernel_version.initrd
+            if self.kernel == self.kernel_version.kernel:
+                file_ = self.kernel_version.initrd
 
         if self.ignore_initramfs:
             self.logger.warn(
@@ -176,7 +178,8 @@ class depthchargectl_build(
     def fdtdir(self, dir_=None):
         """Directory to search device-tree binaries for the board"""
         if dir_ is None and self.kernel_version is not None:
-            dir_ = self.kernel_version.fdtdir
+            if self.kernel == self.kernel_version.kernel:
+                dir_ = self.kernel_version.fdtdir
 
         if dir_ is None:
             return None
