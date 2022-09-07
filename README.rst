@@ -68,11 +68,11 @@ the work::
 
 Installation
 ============
-These tools depend on ``mkimage``, ``vbutil_kernel``, ``cgpt``, and
-other utilities (``util-linux``, ``coreutils``, etc.) that are usually
-installed by default on most Linux systems, so you need to install those
-first. You also need ``docutils`` to build the manual pages with
-``rst2man``, but only for that.
+These tools depend on ``mkimage``, ``vbutil_kernel``, ``cgpt``,
+``crossystem``, ``fdtget``, ``gzip``, ``lz4``, and ``lzma``
+executables, so you need to install those first. You also need
+``docutils`` to build the manual pages with ``rst2man``, but only for
+that.
 
 This project (or at least ``depthchargectl``) is meant to be integrated
 into your operating system by its maintainers, and the best way to
