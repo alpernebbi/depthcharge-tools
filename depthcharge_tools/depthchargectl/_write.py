@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import subprocess
 
 from pathlib import Path
 
@@ -246,8 +247,23 @@ class depthchargectl_write(
                 "Setting '{}' as the highest-priority bootable part."
                 .format(target)
             )
-            target.attribute = 0x010
-            target.prioritize()
+
+            try:
+                target.attribute = 0x010
+            except subprocess.CalledProcessError as err:
+                raise CommandExit(
+                    "Failed to set attributes for partition '{}'."
+                    .format(target)
+                ) from err
+
+            try:
+                target.prioritize()
+            except subprocess.CalledProcessError as err:
+                raise CommandExit(
+                    "Failed to prioritize partition '{}'."
+                    .format(target)
+                ) from err
+
             self.logger.warn(
                 "Set partition '{}' as next to boot."
                 .format(target)
