@@ -76,7 +76,7 @@ class MissingDTBError(CommandExit):
 
         self.image = image
         self.compat = compat
-        super().__init__(output=False, message=message)
+        super().__init__(output=False, returncode=7, message=message)
 
 
 @depthchargectl.subcommand("check")

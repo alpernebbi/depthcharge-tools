@@ -388,6 +388,9 @@ depthchargectl check exit status
 6
     The *image* is built with a wrong format for the board.
 
+7
+    The *image* is missing device-tree files compatible with the board.
+
 depthchargectl target exit status
 ---------------------------------
 
