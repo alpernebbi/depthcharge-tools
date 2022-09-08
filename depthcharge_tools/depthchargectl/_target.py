@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import subprocess
 import sys
 import types
 
@@ -128,7 +129,17 @@ class depthchargectl_target(
 
             for d in (*system_disks.roots(*disks), *images):
                 self.logger.info("Using '{}' as a disk.".format(d))
-                partitions.extend(d.cros_partitions())
+                try:
+                    partitions.extend(d.cros_partitions())
+                except subprocess.CalledProcessError as err:
+                    self.logger.warning(
+                        "Couldn't get partitions for disk '{}'."
+                        .format(d)
+                    )
+                    self.logger.debug(
+                        err,
+                        exc_info=self.logger.isEnabledFor(logging.DEBUG),
+                    )
 
         self.disks = disks
         self.partitions = partitions
