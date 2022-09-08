@@ -121,11 +121,16 @@ class depthchargectl_target(
         # For arguments which are disks, search all their partitions.
         if disks:
             self.logger.info("Finding disks for targets '{}'.".format(disks))
-            images = [
-                Disk(d)
-                for d in disks
-                if system_disks.evaluate(d) is None
-            ]
+            images = []
+            for d in disks:
+                if system_disks.evaluate(d) is None:
+                    try:
+                        images.append(Disk(d))
+                    except ValueError as err:
+                        self.logger.warning(
+                            err,
+                            exc_info=self.logger.isEnabledFor(logging.DEBUG),
+                        )
 
             for d in (*system_disks.roots(*disks), *images):
                 self.logger.info("Using '{}' as a disk.".format(d))
