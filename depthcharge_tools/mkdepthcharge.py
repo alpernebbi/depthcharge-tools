@@ -404,13 +404,6 @@ class mkdepthcharge(
         elif isinstance(cmd, (list, tuple)):
             cmdline = " ".join(cmd)
 
-        # Some veyron boards have a permanently write-protected eMMC
-        # with a defective primary GPT. Linux doesn't treat the disk
-        # as GPT and fails to boot. To let it use the backup GPT table
-        # in these cases we have to use a "gpt" command line argument.
-        if (self.force_gpt is None) or self.force_gpt:
-            cmdline = " ".join(("gpt", cmdline))
-
         # The firmware replaces any '%U' in the kernel cmdline with the
         # PARTUUID of the partition it booted from. Chrome OS uses
         # kern_guid=%U in their cmdline and it's useful information, so
@@ -419,12 +412,6 @@ class mkdepthcharge(
             cmdline = " ".join(("kern_guid=%U", cmdline))
 
         return cmdline
-
-    @vboot_options.add
-    @Argument("--no-force-gpt", force_gpt=False)
-    def force_gpt(self, force_gpt=True):
-        """Don't prepend gpt to the cmdline."""
-        return force_gpt
 
     @vboot_options.add
     @Argument("--no-kern-guid", kern_guid=False)

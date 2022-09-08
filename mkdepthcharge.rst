@@ -127,11 +127,6 @@ Depthcharge image options
     command line parameters to capture it. Use **--no-kern-guid** to
     disable this.
 
-    Some boards have a permanently-write protected faulty primary GPT.
-    To make Linux use the backup partition table for these boards,
-    **mkdepthcharge** also prepends **gpt** to the given command line.
-    Use **--no-force-gpt** to disable this.
-
 --keydir DIR
     Directory containing developer keys to use. Equivalent to using
     **--keyblock** "*DIR*\ **/kernel.keyblock**", **--signprivate**
@@ -141,9 +136,6 @@ Depthcharge image options
 --keyblock FILE
     Kernel key block file. If not given, the test key files distributed
     with |vbutil_kernel| are used.
-
---no-force-gpt
-    Don't prepend **gpt** to kernel command-line parameters.
 
 --no-kern-guid
     Don't prepend **kern_guid=%U** to kernel command-line parameters.

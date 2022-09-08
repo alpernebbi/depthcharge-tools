@@ -22,7 +22,7 @@ _mkdepthcharge() {
         -d --vmlinuz -i --initramfs -b --dtbs
         -o --output --tmpdir -A --arch --format
         -C --compress -n --name
-        -c --cmdline --no-force-gpt --no-kern-guid --bootloader
+        -c --cmdline --no-kern-guid --bootloader
         --keydir --keyblock --signprivate --signpubkey
     )
 
