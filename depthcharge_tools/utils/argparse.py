@@ -716,12 +716,6 @@ class CommandExit(Exception):
         returncode=1,
         errno=None,
     ):
-        if message is None:
-            if output is not None:
-                message = str(output)
-            else:
-                message = ""
-
         if errno is not None:
             if message:
                 errmsg = "[Errno {}] {}".format(errno, message)
@@ -811,6 +805,9 @@ class CommandMeta(type):
                 log_error(exit)
             else:
                 logger.warn(exit)
+
+            if exit.output is not None:
+                print(exit.output)
 
             sys.exit(exit.returncode)
 
