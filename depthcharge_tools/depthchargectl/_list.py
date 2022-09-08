@@ -2,12 +2,14 @@
 
 import argparse
 import logging
+import subprocess
 
 from depthcharge_tools import __version__
 from depthcharge_tools.utils.argparse import (
     Command,
     Argument,
     Group,
+    CommandExit,
 )
 from depthcharge_tools.utils.collections import (
     TypedList
@@ -186,14 +188,39 @@ class depthchargectl_list(
 
     def __call__(self):
         parts = []
-        for disk in self.disks:
-            parts.extend(disk.cros_partitions())
+        error_disks = []
 
-        return CrosPartitions(
+        for disk in self.disks:
+            try:
+                parts.extend(disk.cros_partitions())
+            except subprocess.CalledProcessError as err:
+                error_disks.append(disk)
+                self.logger.debug(
+                    "Couldn't get partitions for disk '{}'."
+                    .format(disk)
+                )
+                self.logger.debug(
+                    err,
+                    exc_info=self.logger.isEnabledFor(logging.DEBUG),
+                )
+
+        output = CrosPartitions(
             parts,
             headings=self.headings,
             columns=self.output,
         )
+
+        if error_disks:
+            return CommandExit(
+                message=(
+                    "Couldn't get partitions for disks {}."
+                    .format(error_disks)
+                ),
+                output=output,
+                returncode=1,
+            )
+
+        return output
 
     global_options = depthchargectl.global_options
     config_options = depthchargectl.config_options
