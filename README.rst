@@ -69,8 +69,9 @@ the work::
 Installation
 ============
 These tools depend on ``mkimage``, ``vbutil_kernel``, ``cgpt``,
-``crossystem``, ``fdtget``, ``gzip``, ``lz4``, and ``lzma``
-executables, so you need to install those first. You also need
+``crossystem``, ``fdtget``, ``gzip``, ``lz4``, and ``lzma`` executables
+and the ``pkg_resources`` python package usually distributed with
+``setuptools``, so you need to install those first. You also need
 ``docutils`` to build the manual pages with ``rst2man``, but only for
 that.
 
