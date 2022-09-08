@@ -113,11 +113,16 @@ class depthchargectl_list(
             disks = system_disks.roots()
         elif disks:
             self.logger.info("Searching real disks for {}.".format(disks))
-            images = [
-                Disk(d)
-                for d in disks
-                if system_disks.evaluate(d) is None
-            ]
+            images = []
+            for d in disks:
+                if system_disks.evaluate(d) is None:
+                    try:
+                        images.append(Disk(d))
+                    except ValueError as err:
+                        self.logger.warning(
+                            err,
+                            exc_info=self.logger.isEnabledFor(logging.DEBUG),
+                        )
             disks = [*system_disks.roots(*disks), *images]
         else:
             self.logger.info("Searching bootable disks.")
