@@ -167,6 +167,7 @@ def installed_kernels():
     for f in files(
         "/boot/initrd-*",
         "/boot/initrd.img-*",
+        "/boot/initramfs-*",
     ):
         _, _, release = f.name.partition("-")
         initrds[release] = f
@@ -175,6 +176,7 @@ def installed_kernels():
         "/boot/initrd.img",
         "/boot/initrd",
         "/boot/initramfs-linux.img",
+        "/boot/initramfs-vanilla",
         "/initrd.img",
         "/initrd",
     ):
@@ -188,13 +190,21 @@ def installed_kernels():
         fdtdirs[release] = d
 
     for d in dirs(
+        "/boot/dtbs-*",
+    ):
+        _, _, release = d.name.partition("-")
+        fdtdirs[release] = d
+
+    for d in dirs(
         "/boot/dtbs/*",
     ):
         if d.name in kernels:
             fdtdirs[d.name] = d
 
+
     for d in dirs(
         "/boot/dtbs",
+        "/usr/share/dtb",
     ):
         # Duplicate dtb files means that the directory is split by
         # kernel release and we can't use it for a single release.
