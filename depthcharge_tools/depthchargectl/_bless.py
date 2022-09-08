@@ -2,12 +2,14 @@
 
 import argparse
 import logging
+import subprocess
 
 from depthcharge_tools import __version__
 from depthcharge_tools.utils.argparse import (
     Command,
     Argument,
     Group,
+    CommandExit,
 )
 from depthcharge_tools.utils.os import (
     system_disks,
@@ -157,29 +159,64 @@ class depthchargectl_bless(
 
     def __call__(self):
         if self.bad == False:
-            self.partition.tries = 1
-            self.partition.prioritize()
+            try:
+                self.partition.tries = 1
+            except subprocess.CalledProcessError as err:
+                raise CommandExit(
+                    "Failed to set remaining tries for partition '{}'."
+                    .format(self.partition)
+                ) from err
+
+            try:
+                self.partition.prioritize()
+            except subprocess.CalledProcessError as err:
+                raise CommandExit(
+                    "Failed to prioritize partition '{}'."
+                    .format(self.partition)
+                ) from err
+
             self.logger.info(
                 "Set partition '{}' as the highest-priority bootable part."
                 .format(self.partition)
             )
 
             if self.oneshot == False:
-                self.partition.successful = 1
+                try:
+                    self.partition.successful = 1
+                except subprocess.CalledProcessError as err:
+                    raise CommandExit(
+                        "Failed to set success flag for partition '{}'."
+                        .format(self.partition)
+                    ) from err
+
                 self.logger.warn(
                     "Set partition '{}' as successfully booted."
                     .format(self.partition)
                 )
 
             else:
-                self.partition.successful = 0
+                try:
+                    self.partition.successful = 0
+                except subprocess.CalledProcessError as err:
+                    raise CommandExit(
+                        "Failed to unset successful flag for partition '{}'."
+                        .format(self.partition)
+                    ) from err
+
                 self.logger.warn(
                     "Set partition '{}' as not yet successfully booted."
                     .format(self.partition)
                 )
 
         else:
-            self.partition.attribute = 0x000
+            try:
+                self.partition.attribute = 0x000
+            except subprocess.CalledProcessError as err:
+                raise CommandExit(
+                    "Failed to zero attributes for partition '{}'."
+                    .format(self.partition)
+                ) from err
+
             self.logger.warn(
                 "Set partition '{}' as the zero-priority unbootable part."
                 .format(self.partition)
