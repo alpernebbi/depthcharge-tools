@@ -170,7 +170,7 @@ class depthchargectl_target(
     def min_size(self, bytes_):
         """Target partitions larger than this size."""
         if bytes_ is None:
-            return None
+            return 0x10000
         elif isinstance(bytes_, int):
             return bytes_
         elif bytes_.startswith("0x"):
