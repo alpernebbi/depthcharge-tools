@@ -111,7 +111,7 @@ class depthchargectl_bless(
         self.partno = partition.partno
 
     @positionals.add
-    @Argument(nargs=argparse.SUPPRESS)
+    @Argument(nargs=0)
     def disk(self, disk=None):
         """Disk image to manage partitions of"""
         return disk

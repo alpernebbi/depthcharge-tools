@@ -150,7 +150,7 @@ class depthchargectl_target(
         self.partitions = partitions
 
     @positionals.add
-    @Argument(metavar="PARTITION", nargs=argparse.SUPPRESS)
+    @Argument(metavar="PARTITION", nargs=0)
     def partitions(self, *partitions):
         """Chrome OS kernel partition to validate."""
         return partitions

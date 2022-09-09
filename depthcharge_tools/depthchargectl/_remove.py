@@ -84,7 +84,7 @@ class depthchargectl_remove(
             )
 
     @positionals.add
-    @Argument(dest=argparse.SUPPRESS, nargs=argparse.SUPPRESS)
+    @Argument(dest=argparse.SUPPRESS, nargs=0)
     def kernel_version(self, kernel_version):
         """Installed kernel version to disable."""
         return kernel_version

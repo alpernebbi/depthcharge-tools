@@ -96,7 +96,7 @@ class depthchargectl_write(
             )
 
     @positionals.add
-    @Argument(dest=argparse.SUPPRESS, nargs=argparse.SUPPRESS)
+    @Argument(dest=argparse.SUPPRESS, nargs=0)
     def kernel_version(self, kernel_version):
         """Installed kernel version to write to disk."""
         return kernel_version
