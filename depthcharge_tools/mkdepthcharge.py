@@ -375,11 +375,11 @@ class mkdepthcharge(
             )
 
         if self.signpubkey is None:
-            self.logger.warn(
+            self.logger.warning(
                 "Couldn't find a usable signpubkey file."
             )
         elif not self.signpubkey.is_file():
-            self.logger.warn(
+            self.logger.warning(
                 "Signpubkey file '{}' does not exist."
                 .format(self.keyblock)
             )

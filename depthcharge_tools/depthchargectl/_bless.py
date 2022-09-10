@@ -189,7 +189,7 @@ class depthchargectl_bless(
                         .format(self.partition)
                     ) from err
 
-                self.logger.warn(
+                self.logger.warning(
                     "Set partition '{}' as successfully booted."
                     .format(self.partition)
                 )
@@ -203,7 +203,7 @@ class depthchargectl_bless(
                         .format(self.partition)
                     ) from err
 
-                self.logger.warn(
+                self.logger.warning(
                     "Set partition '{}' as not yet successfully booted."
                     .format(self.partition)
                 )
@@ -217,7 +217,7 @@ class depthchargectl_bless(
                     .format(self.partition)
                 ) from err
 
-            self.logger.warn(
+            self.logger.warning(
                 "Set partition '{}' as the zero-priority unbootable part."
                 .format(self.partition)
             )

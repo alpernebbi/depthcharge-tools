@@ -95,7 +95,7 @@ class depthchargectl_build(
             kernel = max(kernels)
 
         else:
-            self.logger.warn(
+            self.logger.warning(
                 "Could not find any installed kernel."
             )
             kernel = None
@@ -156,7 +156,7 @@ class depthchargectl_build(
                 file_ = self.kernel_version.initrd
 
         if self.ignore_initramfs:
-            self.logger.warn(
+            self.logger.warning(
                 "Ignoring initramfs '{}' as configured."
                 .format(file_)
             )
@@ -272,7 +272,7 @@ class depthchargectl_build(
                 )
             else:
                 root = system_disks.by_mountpoint("/")
-                self.logger.warn(
+                self.logger.warning(
                     "Couldn't figure out a root cmdline parameter from "
                     "/etc/fstab. Will use currently mounted '{}'."
                     .format(root)
@@ -322,7 +322,7 @@ class depthchargectl_build(
             cmdline.append('root={}'.format(self.root))
 
         if self.ignore_initramfs:
-            self.logger.warn(
+            self.logger.warning(
                 "Ignoring initramfs as configured, "
                 "appending 'noinitrd' to the kernel cmdline."
                 .format(self.initrd)
@@ -418,7 +418,7 @@ class depthchargectl_build(
         return Path(path)
 
     def __call__(self):
-        self.logger.warn(
+        self.logger.warning(
             "Building depthcharge image for board '{}' ('{}')."
             .format(self.board.name, self.board.codename)
         )
@@ -469,7 +469,7 @@ class depthchargectl_build(
             if outtmp.stat().st_size < self.board.image_max_size:
                 break
 
-            self.logger.warn(
+            self.logger.warning(
                 "Image with compression '{}' is too big for this board."
                 .format(compress)
             )
@@ -483,7 +483,7 @@ class depthchargectl_build(
         self.logger.info("Copying newly built image to output.")
         copy(outtmp, self.output)
 
-        self.logger.warn(
+        self.logger.warning(
             "Built depthcharge image for kernel version '{}'."
             .format(self.kernel_release or "(unknown)")
         )

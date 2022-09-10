@@ -807,7 +807,7 @@ class CommandMeta(type):
             if exit.returncode != 0:
                 log_error(exit)
             else:
-                logger.warn(exit)
+                logger.warning(exit)
 
             if exit.output is not None:
                 print(exit.output)

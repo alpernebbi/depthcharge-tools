@@ -160,7 +160,7 @@ class depthchargectl_remove(
         current = system_disks.by_kern_guid()
         if current in badparts:
             if self.force:
-                self.logger.warn(
+                self.logger.warning(
                     "Deactivating the currently booted partition '{}'. "
                     "This might make your system unbootable."
                     .format(current)
@@ -187,7 +187,7 @@ class depthchargectl_remove(
                 continue
 
             done_parts.append(part)
-            self.logger.warn("Deactivated '{}'.".format(part))
+            self.logger.warning("Deactivated '{}'.".format(part))
 
         if image.parent == self.images_dir:
             self.logger.info(
@@ -195,7 +195,7 @@ class depthchargectl_remove(
                 .format(image)
             )
             image.unlink()
-            self.logger.warn("Deleted image '{}'.".format(image))
+            self.logger.warning("Deleted image '{}'.".format(image))
 
         else:
             self.logger.info("Not deleting image file '{}'.")

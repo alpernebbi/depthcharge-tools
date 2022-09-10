@@ -120,7 +120,7 @@ class depthchargectl_check(
     def __call__(self):
         image = self.image
 
-        self.logger.warn(
+        self.logger.warning(
             "Verifying depthcharge image for board '{}' ('{}')."
             .format(self.board.name, self.board.codename)
         )

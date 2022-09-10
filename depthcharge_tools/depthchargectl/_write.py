@@ -137,7 +137,7 @@ class depthchargectl_write(
 
     def __call__(self):
         if self.board is None:
-            self.logger.warn(
+            self.logger.warning(
                 "Using given image '{}' without board-specific checks."
                 .format(self.image)
             )
@@ -164,7 +164,7 @@ class depthchargectl_write(
 
             except Exception as err:
                 if self.force:
-                    self.logger.warn(
+                    self.logger.warning(
                         "Image '{}' is not bootable on this board, "
                         "continuing due to --force."
                         .format(image)
@@ -226,7 +226,7 @@ class depthchargectl_write(
         # as that usually means it's the only partition.
         current = system_disks.by_kern_guid()
         if self.allow_current and target.path == current.path:
-            self.logger.warn(
+            self.logger.warning(
                 "Overwriting the currently booted partition '{}'. "
                 "This might make your system unbootable."
                 .format(target)
@@ -237,7 +237,7 @@ class depthchargectl_write(
             .format(image, target)
         )
         target.write_bytes(image.read_bytes())
-        self.logger.warn(
+        self.logger.warning(
             "Wrote image '{}' to partition '{}'."
             .format(image, target)
         )
@@ -264,7 +264,7 @@ class depthchargectl_write(
                     .format(target)
                 ) from err
 
-            self.logger.warn(
+            self.logger.warning(
                 "Set partition '{}' as next to boot."
                 .format(target)
             )
