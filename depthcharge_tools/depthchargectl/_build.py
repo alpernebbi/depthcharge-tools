@@ -376,7 +376,7 @@ class depthchargectl_build(
             ])
 
             if inputs_size > self.board.image_max_size:
-                self.logger.warn(
+                self.logger.info(
                     "Inputs are too big, skipping uncompressed build."
                 )
                 compress = [c for c in compress if c != "none"]
