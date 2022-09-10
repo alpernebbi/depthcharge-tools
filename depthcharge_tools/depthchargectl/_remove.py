@@ -198,7 +198,10 @@ class depthchargectl_remove(
             self.logger.warning("Deleted image '{}'.".format(image))
 
         else:
-            self.logger.info("Not deleting image file '{}'.")
+            self.logger.info(
+                "Not deleting image file '{}'."
+                .format(image)
+            )
 
         output = badparts or None
 
