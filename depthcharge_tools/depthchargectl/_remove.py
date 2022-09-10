@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import subprocess
 
 from pathlib import Path
 
@@ -117,8 +118,23 @@ class depthchargectl_remove(
             .format(image)
         )
         badparts = []
+        error_disks = []
         for disk in system_disks.bootable_disks():
-            for part in disk.cros_partitions():
+            try:
+                parts = disk.cros_partitions()
+            except subprocess.CalledProcessError as err:
+                error_disks.append(disk)
+                self.logger.debug(
+                    "Couldn't get partitions for disk '{}'."
+                    .format(disk)
+                )
+                self.logger.debug(
+                    err,
+                    exc_info=self.logger.isEnabledFor(logging.DEBUG),
+                )
+                continue
+
+            for part in parts:
                 self.logger.info("Checking partition '{}'.".format(part))
 
                 # It's OK to check only the vblock header, as that
@@ -126,11 +142,20 @@ class depthchargectl_remove(
                 # different if the content is different.
                 with part.path.open("rb") as p:
                     if p.read(0x10000) == image_vblock:
-                        if part.attribute:
-                            badparts.append(part)
-
-        if not badparts:
-            self.logger.warn("No active partitions contain the given image.")
+                        try:
+                            if part.attribute:
+                                badparts.append(part)
+                        except subprocess.CalledProcessError as err:
+                            self.logger.warning(
+                                "Couldn't get attribute for partition '{}'."
+                                .format(part)
+                            )
+                            self.logger.debug(
+                                err,
+                                exc_info=self.logger.isEnabledFor(
+                                    logging.DEBUG,
+                                ),
+                            )
 
         current = system_disks.by_kern_guid()
         if current in badparts:
@@ -143,9 +168,25 @@ class depthchargectl_remove(
             else:
                 raise BootedPartitionError(current)
 
+        done_parts = []
+        error_parts = []
         for part in badparts:
             self.logger.info("Deactivating '{}'.".format(part))
-            part.attribute = 0x000
+            try:
+                part.attribute = 0x000
+            except subprocess.CalledProcessError as err:
+                error_parts.append(part)
+                self.logger.debug(
+                    "Couldn't zero attributes for partition '{}'."
+                    .format(part)
+                )
+                self.logger.debug(
+                    err,
+                    exc_info=self.logger.isEnabledFor(logging.DEBUG),
+                )
+                continue
+
+            done_parts.append(part)
             self.logger.warn("Deactivated '{}'.".format(part))
 
         if image.parent == self.images_dir:
@@ -159,8 +200,34 @@ class depthchargectl_remove(
         else:
             self.logger.info("Not deleting image file '{}'.")
 
-        if badparts:
-            return badparts
+        output = badparts or None
+
+        error_msg = []
+        if error_disks:
+            error_msg.append(
+                "Couldn't disable partitions for disks {}."
+                .format(error_disks)
+            )
+
+        if error_parts:
+            error_msg.append(
+                "Couldn't disable partitions {}."
+                .format(error_parts)
+            )
+
+        if error_msg:
+            return CommandExit(
+                message="\n".join(error_msg),
+                output=done_parts,
+                returncode=1,
+            )
+
+        if not output:
+            self.logger.warning(
+                "No active partitions contain the given image."
+            )
+
+        return output
 
     global_options = depthchargectl.global_options
     config_options = depthchargectl.config_options
