@@ -343,6 +343,9 @@ class depthchargectl(
                 return len(compatibles)
 
             sectname, board = item
+            if board.dt_compatible is None:
+                return float("inf")
+
             for i, c in enumerate(compatibles):
                 if board.dt_compatible.fullmatch(c):
                     return i
