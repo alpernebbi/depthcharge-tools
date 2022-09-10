@@ -106,7 +106,7 @@ class depthchargectl_check(
 
         return image
 
-    @Argument(dest=argparse.SUPPRESS)
+    @Argument(dest=argparse.SUPPRESS, help=argparse.SUPPRESS, nargs=0)
     def board(self, codename=""):
         board = super().board(codename)
 
