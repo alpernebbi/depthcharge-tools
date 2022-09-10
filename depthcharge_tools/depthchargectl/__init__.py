@@ -340,17 +340,17 @@ class depthchargectl(
         compatibles = dt_compatibles()
         def compat_preference(item):
             if item is None:
-                return len(compatibles)
+                return (len(compatibles), 0)
 
             sectname, board = item
             if board.dt_compatible is None:
-                return float("inf")
+                return (float("inf"), 0)
 
             for i, c in enumerate(compatibles):
                 if board.dt_compatible.fullmatch(c):
-                    return i
+                    return (i, -len(sectname.split("/")))
             else:
-                return float("inf")
+                return (float("inf"), -1)
 
         if compatibles is not None:
             match = min((None, *boards.items()), key=compat_preference)
