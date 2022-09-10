@@ -115,6 +115,9 @@ class FunctionBindAction(argparse.Action):
         super().__init__(option_strings, dest, **super_kwargs)
 
     def __call__(self, parser, namespace, values, option_string=None):
+        if self.dest in (None, argparse.SUPPRESS):
+            return
+
         current = getattr(namespace, self.dest, None)
 
         if self.nargs in ("?", None):
