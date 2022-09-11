@@ -138,6 +138,10 @@ class depthchargectl_list(
     @Group
     def options(self):
         """Options"""
+        if self.count and self.output:
+            raise ValueError(
+                "Count and Output arguments are mutually exclusive."
+            )
 
     @options.add
     @Argument("-n", "--noheadings", headings=False)
@@ -191,6 +195,12 @@ class depthchargectl_list(
 
         return columns
 
+    @options.add
+    @Argument("-c", "--count", count=True)
+    def count(self, count=False):
+        """Print only the count of partitions."""
+        return count
+
     def __call__(self):
         parts = []
         error_disks = []
@@ -209,11 +219,15 @@ class depthchargectl_list(
                     exc_info=self.logger.isEnabledFor(logging.DEBUG),
                 )
 
-        output = CrosPartitions(
-            parts,
-            headings=self.headings,
-            columns=self.output,
-        )
+        if self.count:
+            output = len(parts)
+
+        else:
+            output = CrosPartitions(
+                parts,
+                headings=self.headings,
+                columns=self.output,
+            )
 
         if error_disks:
             return CommandExit(

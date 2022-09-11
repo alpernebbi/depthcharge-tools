@@ -153,7 +153,7 @@ _depthchargectl_check() {
 }
 
 _depthchargectl_list() {
-    local opts=(-a --all-disks -n --noheadings -o --output)
+    local opts=(-a --all-disks -c --count -n --noheadings -o --output)
     local outputs=(A ATTRIBUTE S SUCCESSFUL T TRIES P PRIORITY PATH DISK DISKPATH PARTNO SIZE)
     case "$prev" in
         -o|--output)

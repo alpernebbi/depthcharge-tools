@@ -59,6 +59,7 @@ function _depthchargectl {
             _arguments -S \
                 {-n,--noheadings}'[Do not print column headings.]' \
                 {-a,--all-disks}'[list partitions on all disks.]' \
+                {-c,--count}'[Print only the count of partitions.]' \
                 {-o,--output}'[Comma separated list of columns to output.]:columns:'"$outputspec" \
                 '*::disk or partition:{_depthchargectl__disk}' \
                 ;

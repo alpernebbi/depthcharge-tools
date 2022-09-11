@@ -296,6 +296,9 @@ depthchargectl list options
 -a, --all-disks
     List partitions on all disks.
 
+-c, --count
+    Print only the count of partitions.
+
 -n, --noheadings
     Don't print column headings.
 
