@@ -321,27 +321,28 @@ class mkdepthcharge(
         if self.signpubkey is not None:
             keydirs += [self.signpubkey.parent]
 
-        for d in sorted(set(keydirs), key=keydirs.index):
-            self.logger.info(
-                "Searching '{}' for vboot keys."
-                .format(d)
-            )
+        if None in (self.keyblock, self.signprivate, self.signpubkey):
+            for d in sorted(set(keydirs), key=keydirs.index):
+                self.logger.info(
+                    "Searching '{}' for vboot keys."
+                    .format(d)
+                )
 
-        # Defaults to distro-specific paths for necessary files.
-        keydir, keyblock, signprivate, signpubkey = vboot_keys(*keydirs)
+            # Defaults to distro-specific paths for necessary files.
+            keydir, keyblock, signprivate, signpubkey = vboot_keys(*keydirs)
 
-        if keydir:
-            self.logger.info(
-                "Defaulting to keys from '{}' for missing arguments."
-                .format(keydir)
-            )
+            if keydir:
+                self.logger.info(
+                    "Defaulting to keys from '{}' for missing arguments."
+                    .format(keydir)
+                )
 
-        if self.keyblock is None:
-            self.keyblock = keyblock
-        if self.signprivate is None:
-            self.signprivate = signprivate
-        if self.signpubkey is None:
-            self.signpubkey = signpubkey
+            if self.keyblock is None:
+                self.keyblock = keyblock
+            if self.signprivate is None:
+                self.signprivate = signprivate
+            if self.signpubkey is None:
+                self.signpubkey = signpubkey
 
         # We might still not have the vboot keys after all that.
         if self.keyblock is None:
