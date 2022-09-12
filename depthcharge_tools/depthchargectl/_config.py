@@ -47,7 +47,7 @@ class depthchargectl_config(
         parser = self.config.parser
 
         if section is None:
-            section = parser.default_section
+            section = self.config.name
 
         if section not in parser.sections():
             if section != parser.default_section:
