@@ -180,6 +180,18 @@ class depthchargectl(
         if self.vboot_public_key is None:
             self.vboot_public_key = signpubkey
 
+        # Update the values in the configparser object so that the
+        # config subcommand can query e.g. the autodetected board.
+        self.config.update({
+            'board': self.board.codename if self.board else "none",
+            'images-dir': str(self.images_dir),
+            'vboot-keyblock': str(self.vboot_keyblock),
+            'vboot-public-key': str(self.vboot_public_key),
+            'vboot-private-key': str(self.vboot_private_key),
+            'kernel-cmdline': " ".join(self.kernel_cmdline),
+            'ignore-initramfs': str(self.ignore_initramfs),
+        })
+
     @config_options.add
     @Argument("--config", nargs=1)
     def config(self, file_=None):
