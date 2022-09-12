@@ -668,6 +668,7 @@ def command_call(call):
                 continue
 
             for arg_name, arg in cmd.arguments():
+                arg.__self__ = None
                 try:
                     func = arg.__func__.__get__(object(), object)
                     sig = inspect.signature(func)
@@ -676,7 +677,9 @@ def command_call(call):
                     self.__dict__.setdefault(arg_name, None)
 
             for grp_name, grp in cmd.groups():
+                grp.__self__ = None
                 for arg in grp._arguments:
+                    arg.__self__ = None
                     if arg.dest == argparse.SUPPRESS:
                         continue
                     try:
