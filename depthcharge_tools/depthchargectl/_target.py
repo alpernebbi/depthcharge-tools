@@ -91,6 +91,15 @@ class depthchargectl_target(
     logger = depthchargectl.logger.getChild("target")
     config_section = "depthchargectl/target"
 
+    @Argument(dest=argparse.SUPPRESS, help=argparse.SUPPRESS, nargs=0)
+    def board(self, codename=""):
+        # We can target partitions without knowing the board.
+        try:
+            return super().board(codename)
+        except Exception as err:
+            self.logger.warning(err)
+            return None
+
     @Group
     def positionals(self):
         """Positional arguments"""

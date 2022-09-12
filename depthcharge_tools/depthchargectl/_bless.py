@@ -36,6 +36,15 @@ class depthchargectl_bless(
     logger = depthchargectl.logger.getChild("bless")
     config_section = "depthchargectl/bless"
 
+    @Argument(dest=argparse.SUPPRESS, help=argparse.SUPPRESS, nargs=0)
+    def board(self, codename=""):
+        # We can bless partitions without knowing the board.
+        try:
+            return super().board(codename)
+        except Exception as err:
+            self.logger.warning(err)
+            return None
+
     @Group
     def positionals(self):
         """Positional arguments"""
