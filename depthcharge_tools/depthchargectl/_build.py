@@ -423,11 +423,23 @@ class depthchargectl_build(
         if self.timestamp is not None:
             os.environ["SOURCE_DATE_EPOCH"] = str(self.timestamp)
 
+        # Error early if initramfs is absolutely too big to fit
+        initrd_size = (
+            self.initrd.stat().st_size
+            if self.initrd is not None
+            else 0
+        )
+        if initrd_size >= self.board.image_max_size:
+            self.logger.error(
+                "Initramfs alone is larger than the maximum image size."
+            )
+            raise InitramfsSizeTooBigError()
+
         # Skip compress="none" if inputs wouldn't fit max image size
         compress_list = self.compress
         inputs_size = sum([
             self.kernel.stat().st_size,
-            self.initrd.stat().st_size if self.initrd is not None else 0,
+            initrd_size,
             *(dtb.stat().st_size for dtb in self.dtbs),
         ])
 
