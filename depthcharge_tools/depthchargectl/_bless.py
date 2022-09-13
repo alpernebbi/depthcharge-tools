@@ -227,7 +227,7 @@ class depthchargectl_bless(
                 ) from err
 
             self.logger.warning(
-                "Set partition '{}' as the zero-priority unbootable part."
+                "Set partition '{}' as a zero-priority unbootable part."
                 .format(self.partition)
             )
 
