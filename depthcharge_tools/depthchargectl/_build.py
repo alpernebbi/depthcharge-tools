@@ -365,23 +365,7 @@ class depthchargectl_build(
             if self.board.image_format == "zimage":
                 compress = ["none"]
 
-        compress = sorted(set(compress), key=compress.index)
-
-        # Skip compress="none" if inputs wouldn't fit max image size
-        if "none" in compress:
-            inputs_size = sum([
-                self.kernel.stat().st_size,
-                self.initrd.stat().st_size if self.initrd is not None else 0,
-                *(dtb.stat().st_size for dtb in self.dtbs),
-            ])
-
-            if inputs_size > self.board.image_max_size:
-                self.logger.info(
-                    "Inputs are too big, skipping uncompressed build."
-                )
-                compress = [c for c in compress if c != "none"]
-
-        return compress
+        return sorted(set(compress), key=compress.index)
 
     @options.add
     @Argument("--timestamp", nargs=1)
@@ -439,7 +423,21 @@ class depthchargectl_build(
         if self.timestamp is not None:
             os.environ["SOURCE_DATE_EPOCH"] = str(self.timestamp)
 
-        for compress in self.compress:
+        # Skip compress="none" if inputs wouldn't fit max image size
+        compress_list = self.compress
+        inputs_size = sum([
+            self.kernel.stat().st_size,
+            self.initrd.stat().st_size if self.initrd is not None else 0,
+            *(dtb.stat().st_size for dtb in self.dtbs),
+        ])
+
+        if inputs_size > self.board.image_max_size and "none" in compress_list:
+            self.logger.info(
+                "Inputs are too big, skipping uncompressed build."
+            )
+            compress_list.remove("none")
+
+        for compress in compress_list:
             self.logger.info("Trying with compression '{}'.".format(compress))
             tmpdir = self.tmpdir / "mkdepthcharge-{}".format(compress)
 
