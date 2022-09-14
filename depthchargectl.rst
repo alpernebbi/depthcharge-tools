@@ -352,7 +352,7 @@ depthchargectl build exit status
 --------------------------------
 
 0
-    Image built and stored successfully, or a cached valid image exists.
+    Image built and stored successfully.
 
 1
     An error occurred before or during building the image.
