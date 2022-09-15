@@ -106,7 +106,7 @@ class depthchargectl_build(
     def options(self):
         """Options"""
 
-    @Argument(dest=argparse.SUPPRESS, help=argparse.SUPPRESS, nargs=0)
+    @depthchargectl.board.copy()
     def board(self, codename=""):
         board = super().board(codename)
 

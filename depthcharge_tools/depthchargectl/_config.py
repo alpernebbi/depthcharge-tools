@@ -26,7 +26,7 @@ class depthchargectl_config(
     logger = depthchargectl.logger.getChild("config")
     config_section = "depthchargectl/config"
 
-    @Argument(dest=argparse.SUPPRESS, help=argparse.SUPPRESS, nargs=0)
+    @depthchargectl.board.copy()
     def board(self, codename=""):
         # We can query configs without knowing the board.
         try:

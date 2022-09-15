@@ -91,7 +91,7 @@ class depthchargectl_target(
     logger = depthchargectl.logger.getChild("target")
     config_section = "depthchargectl/target"
 
-    @Argument(dest=argparse.SUPPRESS, help=argparse.SUPPRESS, nargs=0)
+    @depthchargectl.board.copy()
     def board(self, codename=""):
         # We can target partitions without knowing the board.
         try:

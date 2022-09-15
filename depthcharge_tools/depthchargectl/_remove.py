@@ -43,7 +43,7 @@ class depthchargectl_remove(
     logger = depthchargectl.logger.getChild("remove")
     config_section = "depthchargectl/remove"
 
-    @Argument(dest=argparse.SUPPRESS, help=argparse.SUPPRESS, nargs=0)
+    @depthchargectl.board.copy()
     def board(self, codename=""):
         # We can disable partitions without knowing the board.
         try:
