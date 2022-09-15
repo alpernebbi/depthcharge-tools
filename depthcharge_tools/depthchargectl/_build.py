@@ -108,7 +108,7 @@ class depthchargectl_build(
 
     @depthchargectl.board.copy()
     def board(self, codename=""):
-        board = super().board(codename)
+        board = super().board
 
         if board is None:
             raise ValueError(

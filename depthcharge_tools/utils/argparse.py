@@ -263,6 +263,7 @@ class Argument(_MethodDecorator):
         if isinstance(arg, inspect.BoundArguments):
             inputs = instance.__dict__.pop(self.__name__)
             func = super().__get__(instance, owner)
+            instance.__dict__[self.__name__] = inputs
 
             if callable(func):
                 try:
@@ -274,9 +275,7 @@ class Argument(_MethodDecorator):
                 instance.__dict__[self.__name__] = outputs
                 return outputs
 
-            else:
-                instance.__dict__[self.__name__] = inputs
-                return inputs
+            return inputs
 
         return arg
 

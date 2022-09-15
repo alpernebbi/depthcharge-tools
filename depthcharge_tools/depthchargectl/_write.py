@@ -75,7 +75,7 @@ class depthchargectl_write(
         # We can write images to partitions without knowing the board.
         # The image argument will become required if this returns None.
         try:
-            return super().board(codename)
+            return super().board
         except Exception as err:
             self.logger.warning(err)
             return None

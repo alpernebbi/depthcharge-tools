@@ -103,7 +103,7 @@ class depthchargectl_list(
     def board(self, codename=""):
         # We can list partitions without knowing the board.
         try:
-            return super().board(codename)
+            return super().board
         except Exception as err:
             self.logger.warning(err)
             return None
