@@ -27,12 +27,19 @@ from depthcharge_tools.depthchargectl import depthchargectl
 
 
 class ImageBuildError(CommandExit):
-    def __init__(self, kernel_version):
+    def __init__(self, kernel_version=None):
         self.kernel_version = kernel_version
-        super().__init__(
-            "Failed to build depthcharge image for kernel version '{}'."
-            .format(kernel_version)
-        )
+
+        if kernel_version is None:
+            message = "Failed to build depthcharge image."
+
+        else:
+            message = (
+                "Failed to build depthcharge image for kernel version '{}'."
+                .format(kernel_version)
+            )
+
+        super().__init__(message=message)
 
 
 class NotBootableImageError(CommandExit):
