@@ -200,6 +200,23 @@ class _MethodDecorator:
 
         return self
 
+    def copy(self, *args, **kwargs):
+        # Non-call decorator form
+        if len(args) == 1 and callable(args[0]) and not kwargs:
+            func, *args = args
+        else:
+            func = None
+
+        args = tuple(*self._args, *args)
+        kwargs = {**self._kwargs, **kwargs}
+        obj = type(self)(*args, **kwargs)
+        obj.__func__ = None
+
+        if func:
+            obj.wrap(func)
+
+        return obj
+
 
 class Argument(_MethodDecorator):
     def __init__(self, *args, **kwargs):
@@ -233,6 +250,12 @@ class Argument(_MethodDecorator):
             return group
 
         return super().wrap(wrapped)
+
+    def copy(self, *args, **kwargs):
+        arg = super().copy(*args, **kwargs)
+        arg.group = self.group
+
+        return arg
 
     def __get__(self, instance, owner):
         arg = super().__get__(instance, owner)
@@ -454,6 +477,14 @@ class Group(_MethodDecorator):
             return self
 
         return super().wrap(func)
+
+    def copy(self, *args, **kwargs):
+        grp = super().copy(*args, **kwargs)
+
+        for arg in self._arguments:
+            group.add(arg)
+
+        return grp
 
     def __get__(self, instance, owner):
         grp = super().__get__(instance, owner)
