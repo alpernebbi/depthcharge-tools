@@ -45,6 +45,7 @@ class depthchargectl_remove(
 
     @depthchargectl.board.copy()
     def board(self, codename=""):
+        """Assume we're running on the specified board"""
         # We can disable partitions without knowing the board.
         try:
             return super().board

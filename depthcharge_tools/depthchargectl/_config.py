@@ -28,6 +28,7 @@ class depthchargectl_config(
 
     @depthchargectl.board.copy()
     def board(self, codename=""):
+        """Assume we're running on the specified board"""
         # We can query configs without knowing the board.
         try:
             return super().board

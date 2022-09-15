@@ -93,6 +93,7 @@ class depthchargectl_target(
 
     @depthchargectl.board.copy()
     def board(self, codename=""):
+        """Assume we're running on the specified board"""
         # We can target partitions without knowing the board.
         try:
             return super().board

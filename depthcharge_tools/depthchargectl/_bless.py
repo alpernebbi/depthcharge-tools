@@ -38,6 +38,7 @@ class depthchargectl_bless(
 
     @depthchargectl.board.copy()
     def board(self, codename=""):
+        """Assume we're running on the specified board"""
         # We can bless partitions without knowing the board.
         try:
             return super().board

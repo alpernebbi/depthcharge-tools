@@ -72,6 +72,7 @@ class depthchargectl_write(
 
     @depthchargectl.board.copy()
     def board(self, codename=""):
+        """Assume we're running on the specified board"""
         # We can write images to partitions without knowing the board.
         # The image argument will become required if this returns None.
         try:

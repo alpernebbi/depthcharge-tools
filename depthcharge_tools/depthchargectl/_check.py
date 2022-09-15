@@ -108,6 +108,7 @@ class depthchargectl_check(
 
     @depthchargectl.board.copy()
     def board(self, codename=""):
+        """Assume we're running on the specified board"""
         board = super().board
 
         if board is None:

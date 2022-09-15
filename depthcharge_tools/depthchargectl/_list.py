@@ -101,6 +101,7 @@ class depthchargectl_list(
 
     @depthchargectl.board.copy()
     def board(self, codename=""):
+        """Assume we're running on the specified board"""
         # We can list partitions without knowing the board.
         try:
             return super().board
