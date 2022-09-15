@@ -250,7 +250,7 @@ class depthchargectl_build(
     def root(self, root=None):
         """Root device to add to kernel cmdline"""
         if root is None:
-            cmdline = self.kernel_cmdline or []
+            cmdline = self.kernel_cmdline
             for c in cmdline:
                 lhs, _, rhs = c.partition("=")
                 if lhs.lower() == "root":
@@ -292,13 +292,16 @@ class depthchargectl_build(
 
         return str(root)
 
-    # This should be overriding kernel_cmdline from the parent instead...
-    @property
-    @lru_cache()
-    def cmdline(self):
-        cmdline = self.kernel_cmdline or []
+    @depthchargectl.kernel_cmdline.copy()
+    def kernel_cmdline(self, *cmds):
+        # This is some deep magic that evaluates self.kernel_cmdline
+        # according to the parent definition and sets it in self.
+        cmdline = super().kernel_cmdline
 
+        # This evaluates self.root with the above self.kernel_cmdline,
+        # then continues here to set self.kernel_cmdline a second time.
         append_root = self.root is not None
+
         for c in list(cmdline):
             lhs, _, rhs = c.partition("=")
             if lhs.lower() != "root":
@@ -456,7 +459,7 @@ class depthchargectl_build(
             try:
                 mkdepthcharge(
                     arch=self.board.arch,
-                    cmdline=self.cmdline,
+                    cmdline=self.kernel_cmdline,
                     compress=compress,
                     dtbs=self.dtbs,
                     image_format=self.board.image_format,
