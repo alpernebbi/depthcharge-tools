@@ -898,6 +898,7 @@ class CommandMeta(type):
 
         kwargs["argument_default"] = argparse.SUPPRESS
         kwargs["formatter_class"] = argparse.RawDescriptionHelpFormatter
+        kwargs["conflict_handler"] = "resolve"
 
         return kwargs
 
