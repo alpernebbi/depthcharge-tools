@@ -28,6 +28,7 @@ class Disks(DirectedGraph):
         dev="/dev",
         fstab="/etc/fstab",
         mtab="/etc/mtab",
+        procmounts="/proc/self/mounts",
         mountinfo="/proc/self/mountinfo",
         crypttab="/etc/crypttab",
     ):
@@ -36,6 +37,7 @@ class Disks(DirectedGraph):
         self._sys = sys = Path(sys)
         self._dev = dev = Path(dev)
         self._fstab = fstab = Path(fstab)
+        self._procmounts = procmounts = Path(procmounts)
         self._mtab = mtab = Path(mtab)
         self._mountinfo = mountinfo = Path(mountinfo)
         self._crypttab = crypttab = Path(crypttab)
@@ -70,6 +72,15 @@ class Disks(DirectedGraph):
                 if mount != 'none':
                     fstab_mounts[mount] = device
 
+        procmounts_mounts = {}
+        for line in read_lines(procmounts):
+            if line and not line.startswith("#"):
+                fields = shlex.split(line)
+                device, mount = fields[0], fields[1]
+                device = self.evaluate(device)
+                if device is not None:
+                    procmounts_mounts[mount] = device
+
         mtab_mounts = {}
         for line in read_lines(mtab):
             if line and not line.startswith("#"):
@@ -91,10 +102,12 @@ class Disks(DirectedGraph):
         mounts = collections.ChainMap(
             fstab_mounts,
             mountinfo_mounts,
+            procmounts_mounts,
             mtab_mounts,
         )
 
         self._fstab_mounts = fstab_mounts
+        self._procmounts_mounts = procmounts_mounts
         self._mtab_mounts = mtab_mounts
         self._mountinfo_mounts = mountinfo_mounts
         self._mounts = mounts
