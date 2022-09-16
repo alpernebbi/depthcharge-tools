@@ -19,6 +19,7 @@ from depthcharge_tools.utils.argparse import (
 )
 from depthcharge_tools.utils.os import (
     system_disks,
+    Disks,
     Partition,
 )
 from depthcharge_tools.utils.pathlib import (
@@ -262,27 +263,9 @@ class depthchargectl_build(
                 )
 
         if root is None:
-            self.logger.info("Trying to figure out a root for cmdline.")
-            root = system_disks.by_mountpoint("/", fstab_only=True)
-
-            if root:
-                self.logger.info(
-                    "Using root '{}' as set in /etc/fstab."
-                    .format(root)
-                )
-            else:
-                root = system_disks.by_mountpoint("/")
-                self.logger.warning(
-                    "Couldn't figure out a root cmdline parameter from "
-                    "/etc/fstab. Will use currently mounted '{}'."
-                    .format(root)
-                )
-
-        if root is None:
-            self.logger.warning(
-                "Couldn't figure out a root cmdline parameter."
-            )
-            return None
+            root = "/"
+            mnt = Path(root).resolve()
+            disks = system_disks
 
         elif root in ("", "None", "none"):
             self.logger.warning(
@@ -290,7 +273,45 @@ class depthchargectl_build(
             )
             return None
 
-        return str(root)
+        elif system_disks.evaluate(root) is None:
+            mnt = Path(root).resolve()
+            if not mnt.exists():
+                self.logger.warning(
+                    "Using root '{}' but it's not a partition or mountpoint."
+                    .format(root)
+                )
+                return str(root)
+
+            self.logger.info(
+                "Using root argument '{}' as the system to build for."
+                .format(root)
+            )
+            disks = Disks(
+                fstab=(mnt / "etc" / "fstab"),
+                crypttab=(mnt / "etc" / "crypttab"),
+            )
+
+        root = disks.by_mountpoint("/", fstab_only=True)
+        if root:
+            self.logger.info(
+                "Using root '{}' as set in '{}'."
+                .format(root, (mnt / "etc" / "fstab"))
+            )
+            return str(root)
+
+        root = disks.by_mountpoint("/")
+        if root:
+            self.logger.warning(
+                "Couldn't figure out a root cmdline parameter from {}. "
+                "Will use currently mounted '{}'."
+                .format((mnt / "etc" / "fstab"), root)
+            )
+            return str(root)
+
+        self.logger.warning(
+            "Couldn't figure out a root cmdline parameter."
+        )
+        return None
 
     @depthchargectl.kernel_cmdline.copy()
     def kernel_cmdline(self, *cmds):
