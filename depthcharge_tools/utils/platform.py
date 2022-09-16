@@ -32,10 +32,14 @@ def cros_hwid():
     return crossystem.hwid()
 
 
-def os_release():
+def os_release(root=None):
     os_release = {}
 
-    os_release_f = Path("/etc/os-release")
+    if root is None:
+        root = "/"
+    root = Path(root).resolve()
+
+    os_release_f = root / "etc" / "os-release"
     if os_release_f.exists():
         for line in os_release_f.read_text().splitlines():
             lhs, _, rhs = line.partition("=")
@@ -96,12 +100,16 @@ def root_requires_initramfs(root):
     return True
 
 
-def vboot_keys(*keydirs, system=True):
+def vboot_keys(*keydirs, system=True, root=None):
     if len(keydirs) == 0 or system:
+        if root is None:
+            root = "/"
+        root = Path(root).resolve()
+
         keydirs = (
             *keydirs,
-            "/usr/share/vboot/devkeys",
-            "/usr/local/share/vboot/devkeys",
+            root / "usr" / "share" / "vboot" / "devkeys",
+            root / "usr" / "local" / "share" / "vboot" / "devkeys",
         )
 
     for keydir in keydirs:
@@ -126,86 +134,95 @@ def vboot_keys(*keydirs, system=True):
     return None, None, None, None
 
 
-def installed_kernels():
+def installed_kernels(root=None, boot=None):
     kernels = {}
     initrds = {}
     fdtdirs = {}
 
-    def files(*patterns):
-        for pattern in patterns:
-            for path in glob.glob(pattern, recursive=True):
-                path = Path(path)
-                if path.is_file():
-                    yield path
+    if root is None:
+        root = "/"
+    root = Path(root).resolve()
 
-    def dirs(*patterns):
-        for pattern in patterns:
-            for path in glob.glob(pattern, recursive=True):
-                path = Path(path)
-                if path.is_dir():
-                    yield path
+    if boot is None:
+        boot = root / "boot"
+    boot = Path(boot).resolve()
 
-    for f in files(
-        "/boot/vmlinuz-*",
-        "/boot/vmlinux-*",
+    for f in (
+        *boot.glob("vmlinuz-*"),
+        *boot.glob("vmlinux-*"),
     ):
+        if not f.is_file():
+            continue
         _, _, release = f.name.partition("-")
         kernels[release] = f
 
-    for f in files(
-        "/boot/vmlinuz",
-        "/boot/vmlinux",
-        "/vmlinuz",
-        "/vmlinux",
-        "/boot/Image",
-        "/boot/zImage",
-        "/boot/bzImage",
+    for f in (
+        *boot.glob("vmlinuz"),
+        *boot.glob("vmlinux"),
+        *root.glob("vmlinuz"),
+        *root.glob("vmlinux"),
+        *boot.glob("Image"),
+        *boot.glob("zImage"),
+        *boot.glob("bzImage"),
     ):
+        if not f.is_file():
+            continue
         kernels[None] = f
         break
 
-    for f in files(
-        "/boot/initrd-*",
-        "/boot/initrd.img-*",
-        "/boot/initramfs-*",
+    for f in (
+        *boot.glob("initrd-*"),
+        *boot.glob("initrd.img-*"),
+        *boot.glob("initramfs-*"),
     ):
+        if not f.is_file():
+            continue
         _, _, release = f.name.partition("-")
         initrds[release] = f
 
-    for f in files(
-        "/boot/initrd.img",
-        "/boot/initrd",
-        "/boot/initramfs-linux.img",
-        "/boot/initramfs-vanilla",
-        "/initrd.img",
-        "/initrd",
+    for f in (
+        *boot.glob("initrd.img"),
+        *boot.glob("initrd"),
+        *boot.glob("initramfs-linux.img"),
+        *boot.glob("initramfs-vanilla"),
+        *root.glob("initrd.img"),
+        *root.glob("initrd"),
     ):
+        if not f.is_file():
+            continue
         initrds[None] = f
         break
 
-    for d in dirs(
-        "/usr/lib/linux-image-*",
+    for d in (
+        *root.glob("usr/lib/linux-image-*"),
     ):
+        if not d.is_dir():
+            continue
         _, _, release = d.name.partition("linux-image-")
         fdtdirs[release] = d
 
-    for d in dirs(
-        "/boot/dtbs-*",
+    for d in (
+        *boot.glob("dtbs-*"),
     ):
+        if not d.is_dir():
+            continue
         _, _, release = d.name.partition("-")
         fdtdirs[release] = d
 
-    for d in dirs(
-        "/boot/dtbs/*",
+    for d in (
+        *boot.glob("dtbs/*"),
     ):
+        if not d.is_dir():
+            continue
         if d.name in kernels:
             fdtdirs[d.name] = d
 
-
-    for d in dirs(
-        "/boot/dtbs",
-        "/usr/share/dtb",
+    for d in (
+        *boot.glob("dtbs"),
+        *root.glob("usr/share/dtb"),
     ):
+        if not d.is_dir():
+            continue
         # Duplicate dtb files means that the directory is split by
         # kernel release and we can't use it for a single release.
         dtbs = d.glob("**/*.dtb")
@@ -220,25 +237,25 @@ def installed_kernels():
             kernel=kernels[release],
             initrd=initrds.get(release, None),
             fdtdir=fdtdirs.get(release, None),
+            os_name=os_release(root=root).get("NAME", None),
         ) for release in kernels.keys()
     ]
 
 
 class KernelEntry:
-    def __init__(self, release, kernel, initrd=None, fdtdir=None):
+    def __init__(self, release, kernel, initrd=None, fdtdir=None, os_name=None):
         self.release = release
         self.kernel = kernel
         self.initrd = initrd
         self.fdtdir = fdtdir
+        self.os_name = os_name
 
     @property
     def description(self):
-        os_name = os_release().get("NAME", None)
-
-        if os_name is None:
+        if self.os_name is None:
             return "Linux {}".format(self.release)
         else:
-            return "{}, with Linux {}".format(os_name, self.release)
+            return "{}, with Linux {}".format(self.os_name, self.release)
 
     def _comparable_parts(self):
         pattern = "([^a-zA-Z0-9]?)([a-zA-Z]*)([0-9]*)"
@@ -284,8 +301,8 @@ class KernelEntry:
 
     def __repr__(self):
         return (
-            "KernelEntry(release={!r}, kernel={!r}, initrd={!r}, fdtdir={!r})"
-            .format(self.release, self.kernel, self.initrd, self.fdtdir)
+            "KernelEntry(release={!r}, kernel={!r}, initrd={!r}, fdtdir={!r}, os_name={!r})"
+            .format(self.release, self.kernel, self.initrd, self.fdtdir, self.os_name)
         )
 
 
