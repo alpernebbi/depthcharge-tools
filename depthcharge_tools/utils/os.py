@@ -226,6 +226,31 @@ class Disks(DirectedGraph):
             device = self._mounts.get(mountpoint)
             return self.evaluate(device)
 
+    def mountpoints(self, device, include_fstab=False):
+        device = self.evaluate(device)
+        if device is None:
+            return set()
+
+        # Exclude fstab whose entries are not necessarily mounted
+        if not include_fstab:
+            mounts = collections.ChainMap(
+                self._mountinfo_mounts,
+                self._procmounts_mounts,
+                self._mtab_mounts,
+            )
+        else:
+            mounts = self._mounts
+
+        mountpoints = set()
+        for mnt, dev in mounts.items():
+            dev = self.evaluate(dev)
+            if dev == device:
+                mnt = Path(mnt).resolve()
+                if mnt.exists() or include_fstab:
+                    mountpoints.add(mnt)
+
+        return mountpoints
+
     def by_id(self, id_):
         return self.evaluate("ID={}".format(id_))
 
