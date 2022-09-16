@@ -29,6 +29,7 @@ class Disks(DirectedGraph):
         fstab="/etc/fstab",
         mtab="/etc/mtab",
         mountinfo="/proc/self/mountinfo",
+        crypttab="/etc/crypttab",
     ):
         super().__init__()
 
@@ -37,6 +38,7 @@ class Disks(DirectedGraph):
         self._fstab = fstab = Path(fstab)
         self._mtab = mtab = Path(mtab)
         self._mountinfo = mountinfo = Path(mountinfo)
+        self._crypttab = crypttab = Path(crypttab)
 
         for sysdir in iterdir(sys / "class" / "block"):
             for device in read_lines(sysdir / "dm" / "name"):
@@ -51,6 +53,14 @@ class Disks(DirectedGraph):
             for device in iterdir(sysdir):
                 if device.name.startswith(sysdir.name):
                     self.add_edge(dev / sysdir.name, dev / device.name)
+
+        for line in read_lines(crypttab):
+            if line and not line.startswith("#"):
+                fields = shlex.split(line)
+                cryptdev, device = fields[0], fields[1]
+                if device != 'none':
+                    cryptdev = dev / "mapper" / cryptdev
+                    self.add_edge(device, cryptdev)
 
         fstab_mounts = {}
         for line in read_lines(fstab):
@@ -157,6 +167,30 @@ class Disks(DirectedGraph):
 
         elif re.match("[0-9]+:[0-9]+", device):
             device = dev / "block" / device
+
+        # Encrypted devices may currently be set up with names different
+        # than in the crypttab file, so check that as well.
+        elif device.startswith(str(dev / "mapper")):
+            if not Path(device).resolve().exists():
+                for line in read_lines(self._crypttab):
+                    if not line or line.startswith("#"):
+                        continue
+
+                    fields = shlex.split(line)
+                    parentdev, cryptdev = fields[1], fields[0]
+                    if cryptdev != device.split("/")[-1]:
+                        continue
+
+                    parentdev = self.evaluate(parentdev)
+                    siblings = self.children(parentdev)
+                    if len(siblings) == 1:
+                        device = str(siblings.pop())
+
+                    # This is actually wrong, but we can't really decide
+                    # which to use. The parent's good enough for us since
+                    # we usually only care about going up the tree.
+                    else:
+                        device = str(parentdev)
 
         device = Path(device).resolve()
         if not device.exists() or dev not in device.parents:
