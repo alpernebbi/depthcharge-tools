@@ -285,6 +285,11 @@ class depthchargectl_build(
                 rootstr = disks.by_mountpoint("/", fstab_only=True)
                 if rootstr:
                     rootset.add(rootstr)
+                else:
+                    self.logger.warning(
+                        "Couldn't find a root cmdline parameter in '{}'."
+                        .format(mnt / "etc" / "fstab")
+                    )
 
             if len(rootset) > 1:
                 raise ValueError(
@@ -304,7 +309,6 @@ class depthchargectl_build(
             if rootuuid:
                 rootstr = "UUID={}".format(rootuuid.upper())
                 self.logger.warning(
-                    "Couldn't figure out a root cmdline parameter from /etc/fstab."
                     "Using '{}' as root from currently mounted '{}'."
                     .format(rootstr, dev)
                 )
