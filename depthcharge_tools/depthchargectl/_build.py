@@ -67,6 +67,10 @@ class depthchargectl_build(
     logger = depthchargectl.logger.getChild("build")
     config_section = "depthchargectl/build"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__chroot = None
+
     @Group
     def positionals(self):
         """Positional arguments"""
@@ -78,7 +82,28 @@ class depthchargectl_build(
         if isinstance(kernel_version, KernelEntry):
             return kernel_version
 
-        kernels = installed_kernels()
+        if self.chroot is not None:
+            disk = system_disks.by_mountpoint(self.chroot)
+        else:
+            disk = system_disks.evaluate(self.root)
+
+        if disk is None:
+            disk = system_disks.by_mountpoint("/")
+
+        kernels = []
+        for mnt in system_disks.mountpoints(disk):
+            mnt = Path(mnt).resolve()
+            disks = Disks(
+                fstab=(mnt / "etc" / "fstab"),
+                crypttab=(mnt / "etc" / "crypttab"),
+            )
+            root = disks.by_mountpoint("/")
+            boot = disks.by_mountpoint("/boot")
+            for rootmnt in disks.mountpoints(root):
+                for bootmnt in disks.mountpoints(boot):
+                    kernels.extend(
+                        installed_kernels(root=rootmnt, boot=bootmnt)
+                    )
 
         if isinstance(kernel_version, str):
             kernel = max(
@@ -290,6 +315,7 @@ class depthchargectl_build(
                 fstab=(mnt / "etc" / "fstab"),
                 crypttab=(mnt / "etc" / "crypttab"),
             )
+            self.__chroot = root
 
         root = disks.by_mountpoint("/", fstab_only=True)
         if root:
@@ -312,6 +338,11 @@ class depthchargectl_build(
             "Couldn't figure out a root cmdline parameter."
         )
         return None
+
+    @property
+    def chroot(self):
+        self.root
+        return self.__chroot
 
     @depthchargectl.kernel_cmdline.copy()
     def kernel_cmdline(self, *cmds):
