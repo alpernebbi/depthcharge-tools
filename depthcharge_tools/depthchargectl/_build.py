@@ -274,70 +274,114 @@ class depthchargectl_build(
     @options.add
     @Argument("--root", nargs=1)
     def root(self, root=None):
-        """Root device to add to kernel cmdline"""
+        """Root device or mountpoint of the system to build for"""
         if root is None:
             cmdline = self.kernel_cmdline
+
             for c in cmdline:
                 lhs, _, rhs = c.partition("=")
                 if lhs.lower() == "root":
                     root = rhs
+
             if root:
                 self.logger.info(
-                    "Using root '{}' as set in user configured cmdline."
+                    "Defaulting to root '{}' set in user configured cmdline."
                     .format(root)
                 )
 
+        def get_root_str(*mounts):
+            rootset = set()
+
+            for mnt in mounts:
+                disks = Disks(
+                    fstab=(mnt / "etc" / "fstab"),
+                    crypttab=(mnt / "etc" / "crypttab"),
+                )
+                rootstr = disks.by_mountpoint("/", fstab_only=True)
+                if rootstr:
+                    rootset.add(rootstr)
+
+            if len(rootset) > 1:
+                raise ValueError(
+                    "Conflicting root specs {} in multiple /etc/fstab files: {}"
+                    .format(roots, [mnt / "etc" / "fstab" for mnt in mounts])
+                )
+
+            elif rootset:
+                rootstr = rootset.pop()
+                self.logger.info(
+                    "Using root '{}' as set in /etc/fstab."
+                    .format(rootstr)
+                )
+                return rootstr
+
+            elif Path("/").resolve() in mounts:
+                rootstr = system_disks.by_mountpoint("/")
+                self.logger.warning(
+                    "Couldn't figure out a root cmdline parameter from /etc/fstab."
+                    "Will use currently mounted '{}'."
+                    .format(rootstr)
+                )
+                return rootstr
+
+            self.logger.warning(
+                "Couldn't figure out a root cmdline parameter for '{}'. "
+                "Using as-is."
+                .format(root)
+            )
+            return root
+
         if root is None:
-            root = "/"
-            mnt = Path(root).resolve()
-            disks = system_disks
+            self.logger.info(
+                "Defaulting to current system root '/'."
+                .format(root)
+            )
+            root_dev = system_disks.by_mountpoint("/")
+            root_mnt = {Path("/").resolve()}
+            root_str = get_root_str(*root_mnt)
 
         elif root in ("", "None", "none"):
             self.logger.warning(
                 "Will not set a root cmdline parameter."
             )
-            return None
+            root_dev = system_disks.by_mountpoint("/")
+            root_mnt = {Path("/").resolve()}
+            root_str = None
 
-        elif system_disks.evaluate(root) is None:
-            mnt = Path(root).resolve()
-            if not mnt.exists():
-                self.logger.warning(
-                    "Using root '{}' but it's not a partition or mountpoint."
-                    .format(root)
-                )
-                return str(root)
-
+        elif os.path.ismount(Path(root).resolve()):
             self.logger.info(
-                "Using root argument '{}' as the system to build for."
+                "Using root '{}' as the system to build for."
                 .format(root)
             )
-            disks = Disks(
-                fstab=(mnt / "etc" / "fstab"),
-                crypttab=(mnt / "etc" / "crypttab"),
-            )
-            self.__chroot = root
+            root_dev = system_disks.by_mountpoint(root)
+            root_mnt = {Path(root).resolve()}
+            root_str = get_root_str(*root_mnt)
 
-        root = disks.by_mountpoint("/", fstab_only=True)
-        if root:
+        elif system_disks.evaluate(root):
             self.logger.info(
-                "Using root '{}' as set in '{}'."
-                .format(root, (mnt / "etc" / "fstab"))
+                "Using root '{}' as a device description."
+                .format(root)
             )
-            return str(root)
+            root_dev = system_disks.evaluate(root)
+            root_mnt = system_disks.mountpoints(root) or {Path("/").resolve()}
+            root_str = get_root_str(*root_mnt)
 
-        root = disks.by_mountpoint("/")
-        if root:
+        else:
             self.logger.warning(
-                "Couldn't figure out a root cmdline parameter from {}. "
-                "Will use currently mounted '{}'."
-                .format((mnt / "etc" / "fstab"), root)
+                "Using root '{}' but it's not a device or mountpoint."
+                .format(root)
             )
-            return str(root)
+            root_dev = system_disks.by_mountpoint("/")
+            root_mnt = {Path("/").resolve()}
+            root_str = str(root)
 
-        self.logger.warning(
-            "Couldn't figure out a root cmdline parameter."
-        )
-        return None
+        chroot = set(root_mnt).pop()
+        if chroot == Path("/").resolve():
+            self.__chroot = None
+        else:
+            self.__chroot = chroot
+
+        return root_str
 
     @property
     def chroot(self):
