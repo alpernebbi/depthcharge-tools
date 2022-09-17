@@ -29,6 +29,7 @@ from depthcharge_tools.utils.pathlib import (
 )
 from depthcharge_tools.utils.platform import (
     KernelEntry,
+    vboot_keys,
     installed_kernels,
     root_requires_initramfs,
 )
@@ -739,5 +740,23 @@ class depthchargectl_build(
         return self.output
 
     global_options = depthchargectl.global_options
-    config_options = depthchargectl.config_options
+
+    @depthchargectl.config_options.copy()
+    def config_options(self):
+        """Configuration options"""
+        root = self.root_mountpoint
+
+        if root == Path("/").resolve():
+            return super().config_options()
+
+        # Autodetect OS-distributed keys if custom values not given.
+        keydir, keyblock, signprivate, signpubkey = vboot_keys(root=root)
+        if self.vboot_keyblock is None:
+            self.vboot_keyblock = keyblock
+        if self.vboot_private_key is None:
+            self.vboot_private_key = signprivate
+        if self.vboot_public_key is None:
+            self.vboot_public_key = signpubkey
+
+        return super().config_options()
 
