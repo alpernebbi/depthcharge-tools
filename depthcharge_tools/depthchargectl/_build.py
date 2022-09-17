@@ -274,7 +274,7 @@ class depthchargectl_build(
                     .format(root)
                 )
 
-        def get_root_str(*mounts):
+        def get_root_str(dev, mounts):
             rootset = set()
 
             for mnt in mounts:
@@ -300,12 +300,13 @@ class depthchargectl_build(
                 )
                 return rootstr
 
-            elif Path("/").resolve() in mounts:
-                rootstr = system_disks.by_mountpoint("/")
+            rootuuid = system_disks.get_uuid(dev)
+            if rootuuid:
+                rootstr = "UUID={}".format(rootuuid.upper())
                 self.logger.warning(
                     "Couldn't figure out a root cmdline parameter from /etc/fstab."
-                    "Will use currently mounted '{}'."
-                    .format(rootstr)
+                    "Using '{}' as root from currently mounted '{}'."
+                    .format(rootstr, dev)
                 )
                 return rootstr
 
@@ -323,7 +324,7 @@ class depthchargectl_build(
             )
             root_dev = system_disks.by_mountpoint("/")
             root_mnt = {Path("/").resolve()}
-            root_str = get_root_str(*root_mnt)
+            root_str = get_root_str(root_dev, root_mnt)
 
         elif root in ("", "None", "none"):
             self.logger.warning(
@@ -340,7 +341,7 @@ class depthchargectl_build(
             )
             root_dev = system_disks.by_mountpoint(root)
             root_mnt = {Path(root).resolve()}
-            root_str = get_root_str(*root_mnt)
+            root_str = get_root_str(root_dev, root_mnt)
 
         elif system_disks.evaluate(root):
             self.logger.info(
@@ -349,7 +350,7 @@ class depthchargectl_build(
             )
             root_dev = system_disks.evaluate(root)
             root_mnt = system_disks.mountpoints(root)
-            root_str = get_root_str(*root_mnt)
+            root_str = get_root_str(root_dev, root_mnt)
 
         else:
             self.logger.warning(
