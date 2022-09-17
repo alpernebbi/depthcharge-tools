@@ -481,7 +481,7 @@ class Group(_MethodDecorator):
         grp = super().copy(*args, **kwargs)
 
         for arg in self._arguments:
-            group.add(arg)
+            grp.add(arg)
 
         return grp
 
