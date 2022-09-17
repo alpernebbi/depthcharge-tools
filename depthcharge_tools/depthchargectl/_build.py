@@ -82,28 +82,10 @@ class depthchargectl_build(
         if isinstance(kernel_version, KernelEntry):
             return kernel_version
 
-        if self.chroot is not None:
-            disk = system_disks.by_mountpoint(self.chroot)
-        else:
-            disk = system_disks.evaluate(self.root)
-
-        if disk is None:
-            disk = system_disks.by_mountpoint("/")
-
-        kernels = []
-        for mnt in system_disks.mountpoints(disk):
-            mnt = Path(mnt).resolve()
-            disks = Disks(
-                fstab=(mnt / "etc" / "fstab"),
-                crypttab=(mnt / "etc" / "crypttab"),
-            )
-            root = disks.by_mountpoint("/")
-            boot = disks.by_mountpoint("/boot")
-            for rootmnt in disks.mountpoints(root):
-                for bootmnt in disks.mountpoints(boot):
-                    kernels.extend(
-                        installed_kernels(root=rootmnt, boot=bootmnt)
-                    )
+        kernels = installed_kernels(
+            root=self.root_mountpoint,
+            boot=self.boot_mountpoint,
+        )
 
         if isinstance(kernel_version, str):
             kernel = max(
@@ -363,7 +345,7 @@ class depthchargectl_build(
                 .format(root)
             )
             root_dev = system_disks.evaluate(root)
-            root_mnt = system_disks.mountpoints(root) or {Path("/").resolve()}
+            root_mnt = system_disks.mountpoints(root)
             root_str = get_root_str(*root_mnt)
 
         else:
@@ -375,18 +357,103 @@ class depthchargectl_build(
             root_mnt = {Path("/").resolve()}
             root_str = str(root)
 
-        chroot = set(root_mnt).pop()
-        if chroot == Path("/").resolve():
-            self.__chroot = None
-        else:
-            self.__chroot = chroot
+        return {
+            "device": root_dev,
+            "mountpoints": root_mnt,
+            "cmdline": root_str,
+        }
 
-        return root_str
+    @options.add
+    @Argument("--root-mountpoint", nargs=1, help=argparse.SUPPRESS)
+    def root_mountpoint(self, root=None):
+        """Root mountpoint of the system to build for."""
+        if root:
+            root = Path(root).resolve()
+            self.logger.info(
+                "Using root mountpoint '{}' from given argument."
+                .format(root)
+            )
+            return root
 
-    @property
-    def chroot(self):
-        self.root
-        return self.__chroot
+        mountpoints = sorted(
+            self.root["mountpoints"],
+            key=lambda p: len(p.parents),
+        )
+
+        if len(mountpoints) > 1:
+            self.logger.warning(
+                "Choosing '{}' from multiple root mountpoints: {}."
+                .format(mountpoints[0], mountpoints)
+            )
+
+        if mountpoints:
+            return mountpoints[0]
+
+        self.logger.warning(
+            "Couldn't find root mountpoint, falling back to '/'."
+        )
+
+        return Path("/").resolve()
+
+    @options.add
+    @Argument("--boot-mountpoint", nargs=1, help=argparse.SUPPRESS)
+    def boot_mountpoint(self, boot=None):
+        """Boot mountpoint of the system to build for."""
+        if boot:
+            boot = Path(boot).resolve()
+            self.logger.info(
+                "Using boot mountpoint '{}' from given argument."
+                .format(root)
+            )
+            return boot
+
+        root = self.root_mountpoint
+        disks = Disks(
+            fstab=(root / "etc" / "fstab"),
+            crypttab=(root / "etc" / "crypttab"),
+        )
+        boot_str = disks.by_mountpoint("/boot", fstab_only=True)
+        device = system_disks.evaluate(boot_str)
+        mountpoints = sorted(
+            disks.mountpoints(device),
+            key=lambda p: len(p.parents),
+        )
+
+        if len(mountpoints) > 1:
+            self.logger.warning(
+                "Choosing '{}' from multiple /boot mountpoints: {}."
+                .format(mountpoints[0], mountpoints)
+            )
+
+        if mountpoints:
+            return mountpoints[0]
+
+        boot = (root / "boot").resolve()
+        if boot.is_dir():
+            self.logger.info(
+                "Couldn't find /boot mountpoint, falling back to '{}'."
+                .format(boot)
+            )
+            return boot
+
+        self.logger.warning(
+            "Couldn't find /boot mountpoint, falling back to /boot."
+            .format(boot)
+        )
+
+        return Path("/boot").resolve()
+
+    @options.add
+    @Argument("--root-cmdline", nargs=1, help=argparse.SUPPRESS)
+    def root_cmdline(self, root=None):
+        """Root parameter to add to kernel cmdline"""
+        if root:
+            root = str(root)
+            if root.startswith("root="):
+                root = root[5:]
+            return root
+
+        return self.root["cmdline"]
 
     @depthchargectl.kernel_cmdline.copy()
     def kernel_cmdline(self, *cmds):
@@ -396,14 +463,14 @@ class depthchargectl_build(
 
         # This evaluates self.root with the above self.kernel_cmdline,
         # then continues here to set self.kernel_cmdline a second time.
-        append_root = self.root is not None
+        append_root = self.root_cmdline is not None
 
         for c in list(cmdline):
             lhs, _, rhs = c.partition("=")
             if lhs.lower() != "root":
                 continue
 
-            if rhs == self.root:
+            if rhs == self.root_cmdline:
                 append_root = False
                 continue
 
@@ -416,9 +483,9 @@ class depthchargectl_build(
         if append_root:
             self.logger.info(
                 "Appending 'root={}' to kernel cmdline."
-                .format(self.root)
+                .format(self.root_cmdline)
             )
-            cmdline.append('root={}'.format(self.root))
+            cmdline.append('root={}'.format(self.root_cmdline))
 
         if self.ignore_initramfs:
             self.logger.warning(
@@ -430,11 +497,11 @@ class depthchargectl_build(
 
         # Linux kernel without an initramfs only supports certain
         # types of root parameters, check for them.
-        if self.initrd is None and self.root is not None:
-            if root_requires_initramfs(self.root):
+        if self.initrd is None and self.root_cmdline is not None:
+            if root_requires_initramfs(self.root_cmdline):
                 raise ValueError(
                     "An initramfs is required for root '{}'."
-                    .format(self.root)
+                    .format(self.root_cmdline)
                 )
 
         return cmdline
