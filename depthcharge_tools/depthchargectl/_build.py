@@ -1,6 +1,8 @@
 #! /usr/bin/env python3
 
 import argparse
+import collections
+import configparser
 import logging
 import os
 import shlex
@@ -566,6 +568,77 @@ class depthchargectl_build(
             path = self.images_dir / image_name
 
         return Path(path)
+
+    @depthchargectl.config.copy()
+    def config(self, file_=None):
+        """Additional configuration file to read"""
+        config = super().config
+        root = self.root_mountpoint
+        boot = self.boot_mountpoint
+
+        if root == Path("/").resolve():
+            return config
+
+        parser = configparser.ConfigParser()
+
+        config_files = [
+            *root.glob("etc/depthcharge-tools/config"),
+            *root.glob("etc/depthcharge-tools/config.d/*"),
+        ]
+
+        try:
+            for p in parser.read(config_files):
+                self.logger.debug("Read config file '{}'.".format(p))
+
+        except configparser.ParsingError as err:
+            self.logger.warning(
+                "Config file '{}' could not be parsed."
+                .format(err.filename)
+            )
+
+        file_configs = [
+            "images-dir",
+            "vboot-keyblock",
+            "vboot-public-key",
+            "vboot-private-key",
+        ]
+
+        def fixup_path(f):
+            p = Path(f).resolve()
+            if f.startswith("/boot"):
+                return str(boot / p.relative_to("/boot"))
+            elif f.startswith("/"):
+                return str(root / p.relative_to("/"))
+
+        for sect, conf in parser.items():
+            for key, value in conf.items():
+                if key in file_configs:
+                    conf[key] = fixup_path(value)
+
+        # Re-override with values from custom config file argument
+        if isinstance(file_, collections.abc.Mapping):
+            parser[self.config_section].update(file_)
+
+        elif file_ is not None:
+            try:
+                read = parser.read([file_])
+
+            except configparser.ParsingError as err:
+                raise ValueError(
+                    "Config file '{}' could not be parsed."
+                    .format(err.filename)
+                )
+
+            if file_ not in read:
+                raise ValueError(
+                    "Config file '{}' could not be read."
+                    .format(file_)
+                )
+
+        # Merge into actual config
+        config.parser.read_dict(parser)
+
+        return config
 
     def __call__(self):
         self.logger.warning(
