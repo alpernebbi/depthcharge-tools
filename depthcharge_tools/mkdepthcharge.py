@@ -367,7 +367,7 @@ class mkdepthcharge(
         elif not self.signprivate.is_file():
             raise ValueError(
                 "Signprivate file '{}' does not exist."
-                .format(self.keyblock)
+                .format(self.signprivate)
             )
         else:
             self.logger.info(
