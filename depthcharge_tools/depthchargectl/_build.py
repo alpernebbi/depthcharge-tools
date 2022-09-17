@@ -641,6 +641,21 @@ class depthchargectl_build(
 
         return config
 
+    @depthchargectl.images_dir.copy()
+    def images_dir(self, dir_=None):
+        """Directory to store built images"""
+        images_dir = super().images_dir
+        root = self.root_mountpoint
+
+        if any((
+            dir_ is not None,
+            root == Path("/").resolve(),
+            images_dir.is_relative_to(root),
+        )):
+            return images_dir
+
+        return root / images_dir.relative_to("/")
+
     def __call__(self):
         self.logger.warning(
             "Building depthcharge image for board '{}' ('{}')."
