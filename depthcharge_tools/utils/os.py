@@ -94,7 +94,10 @@ class Disks(DirectedGraph):
         for line in read_lines(mountinfo):
             if line and not line.startswith("#"):
                 fields = shlex.split(line)
-                device, mount = fields[2], fields[4]
+                device, fsroot, mount = fields[2], fields[3], fields[4]
+                if fsroot != "/":
+                    mountinfo_mounts[mount] = None
+                    continue
                 device = self.evaluate(device)
                 if device is not None:
                     mountinfo_mounts[mount] = device
