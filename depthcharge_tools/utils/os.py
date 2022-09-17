@@ -269,6 +269,28 @@ class Disks(DirectedGraph):
     def by_partuuid(self, partuuid):
         return self.evaluate("PARTUUID={}".format(partuuid))
 
+    def _get_dev_disk_info(self, device, prop):
+        device = self.evaluate(device)
+        for path in self._dev.glob("disk/by-{}/*".format(prop)):
+            dev = self.evaluate(path)
+            if dev == device:
+                return path.name
+
+    def get_id(self, device):
+        return self._get_dev_disk_info(device, "id")
+
+    def get_label(self, device):
+        return self._get_dev_disk_info(device, "label")
+
+    def get_partlabel(self, device):
+        return self._get_dev_disk_info(device, "partlabel")
+
+    def get_uuid(self, device):
+        return self._get_dev_disk_info(device, "uuid")
+
+    def get_partuuid(self, device):
+        return self._get_dev_disk_info(device, "partuuid")
+
     def by_kern_guid(self):
         for arg in kernel_cmdline():
             lhs, _, rhs = arg.partition("=")
