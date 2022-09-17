@@ -432,19 +432,21 @@ class depthchargectl_build(
             return mountpoints[0]
 
         boot = (root / "boot").resolve()
-        if boot.is_dir():
-            self.logger.info(
-                "Couldn't find /boot mountpoint, falling back to '{}'."
-                .format(boot)
-            )
-            return boot
-
-        self.logger.warning(
-            "Couldn't find /boot mountpoint, falling back to /boot."
+        self.logger.info(
+            "Couldn't find /boot in fstab, falling back to '{}'."
             .format(boot)
         )
 
-        return Path("/boot").resolve()
+        if root != Path("/").resolve() and not boot.is_dir():
+            self.logger.warning(
+                "Boot mountpoint '{}' does not exist for custom root."
+                .format(boot)
+            )
+            self.logger.warning(
+                "Not falling back to the running system for boot mountpoint."
+            )
+
+        return boot
 
     @options.add
     @Argument("--root-cmdline", nargs=1, help=argparse.SUPPRESS)
