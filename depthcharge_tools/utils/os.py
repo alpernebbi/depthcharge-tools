@@ -223,7 +223,7 @@ class Disks(DirectedGraph):
             device = self._fstab_mounts.get(mountpoint)
             return device
         else:
-            device = self._mounts.get(mountpoint)
+            device = self._mounts.get(str(mountpoint))
             return self.evaluate(device)
 
     def mountpoints(self, device, include_fstab=False):
