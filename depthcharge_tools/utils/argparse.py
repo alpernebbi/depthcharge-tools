@@ -207,7 +207,7 @@ class _MethodDecorator:
         else:
             func = None
 
-        args = tuple(*self._args, *args)
+        args = (*self._args, *args)
         kwargs = {**self._kwargs, **kwargs}
         obj = type(self)(*args, **kwargs)
         obj.__func__ = None
