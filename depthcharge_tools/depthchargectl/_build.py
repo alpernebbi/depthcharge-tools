@@ -427,6 +427,12 @@ class depthchargectl_build(
             key=lambda p: len(p.parents),
         )
 
+        if device and not mountpoints:
+            self.logger.warning(
+                "Boot partition '{}' for specified root is not mounted."
+                .format(device)
+            )
+
         if len(mountpoints) > 1:
             self.logger.warning(
                 "Choosing '{}' from multiple /boot mountpoints: {}."
