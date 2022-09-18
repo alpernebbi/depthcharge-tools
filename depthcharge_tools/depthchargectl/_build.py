@@ -354,7 +354,6 @@ class depthchargectl_build(
         if root is None:
             self.logger.info(
                 "Defaulting to current system root '/'."
-                .format(root)
             )
             root_dev = system_disks.by_mountpoint("/")
             root_mnt = {Path("/").resolve()}
