@@ -159,11 +159,14 @@ class depthchargectl_build(
             file_ = self.kernel_version.kernel
 
         # vmlinuz is always mandatory
-        if file_ is None:
+        if file_ is None and self.kernel_release is not None:
             raise ValueError(
                 "No vmlinuz file found for version '{}'."
-                .format(self.kernel_release or "(unknown)")
+                .format(self.kernel_release)
             )
+
+        elif file_ is None:
+            raise ValueError("No vmlinuz file found.")
 
         return Path(file_)
 
@@ -183,11 +186,15 @@ class depthchargectl_build(
             return None
 
         # Initramfs is optional.
-        if file_ is None:
+        if file_ is None and self.kernel_release is not None:
             self.logger.info(
                 "No initramfs file found for version '{}'."
-                .format(self.kernel_release or "(unknown)")
+                .format(self.kernel_release)
             )
+            return None
+
+        elif file_ is None:
+            self.logger.info("No initramfs file found.")
             return None
 
         else:
@@ -213,11 +220,17 @@ class depthchargectl_build(
 
         # Device trees are optional based on board configuration.
         if self.board.dt_compatible and len(files) == 0:
-            if self.fdtdir is None:
+            if self.fdtdir is None and self.kernel_release is not None:
                 raise ValueError(
                     "No dtb directory found for version '{}', "
                     "but this board needs a dtb."
-                    .format(self.kernel_release or "(unknown)")
+                    .format(self.kernel_release)
+                )
+
+            elif self.fdtdir is None:
+                raise ValueError(
+                    "No dtb directory found, "
+                    "but this board needs a dtb."
                 )
 
             self.logger.info(
