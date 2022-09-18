@@ -658,8 +658,16 @@ class depthchargectl_build(
                 if key in file_configs:
                     conf[key] = fixup_path(value)
 
-        # Re-override with values from custom config file argument
-        if isinstance(file_, collections.abc.Mapping):
+        # Re-override with values from custom config file argument, but
+        # try to avoid that for configs passed from other subcommands
+        # that are calling this one.
+        if isinstance(file_, configparser.ConfigParser):
+            pass
+
+        elif isinstance(file_, configparser.SectionProxy):
+            pass
+
+        elif isinstance(file_, collections.abc.Mapping):
             parser[self.config_section].update(file_)
 
         elif file_ is not None:
