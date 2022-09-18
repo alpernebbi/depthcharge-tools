@@ -294,15 +294,6 @@ class depthchargectl(
     def config_options(self):
         """Configuration options"""
 
-        # Autodetect OS-distributed keys if custom values not given.
-        keydir, keyblock, signprivate, signpubkey = vboot_keys()
-        if self.vboot_keyblock is None:
-            self.vboot_keyblock = keyblock
-        if self.vboot_private_key is None:
-            self.vboot_private_key = signprivate
-        if self.vboot_public_key is None:
-            self.vboot_public_key = signpubkey
-
         # Update the values in the configparser object so that the
         # config subcommand can query e.g. the autodetected board.
         self.config.update({
@@ -592,20 +583,57 @@ class depthchargectl(
         return dir_
 
     @config_options.add
+    @Argument("--vboot-keydir", nargs=1, help=argparse.SUPPRESS)
+    def vboot_keydir(self, dir_=None):
+        """Directory containing default vboot keys to use"""
+        if dir_:
+            keydir = vboot_keys(dir_, system=None)[0]
+            if keydir:
+                return Path(keydir).resolve()
+
+        root = self.root_mountpoint
+        if root != Path("/").resolve():
+            keydir = vboot_keys(root=root)[0]
+            if keydir:
+                return Path(keydir).resolve()
+
+        keydir = vboot_keys()[0]
+        if keydir:
+            return Path(keydir).resolve()
+
+        return None
+
+    @config_options.add
     @Argument("--vboot-keyblock", nargs=1)
     def vboot_keyblock(self, keyblock=None):
         """Keyblock file to include in images"""
-        if keyblock is None:
-            keyblock = self.config.get("vboot-keyblock")
+        if keyblock:
+            return Path(keyblock).resolve()
 
-        return keyblock
+        keyblock = self.config.get("vboot-keyblock")
+        if keyblock:
+            return Path(keyblock).resolve()
+
+        if self.vboot_keydir:
+            keyblock = self.vboot_keydir / "kernel.keyblock"
+            if keyblock.exists():
+                return Path(keyblock).resolve()
 
     @config_options.add
     @Argument("--vboot-public-key", nargs=1)
     def vboot_public_key(self, signpubkey=None):
         """Public key file to verify images with"""
-        if signpubkey is None:
-            signpubkey = self.config.get("vboot-public-key")
+        if signpubkey:
+            return Path(signpubkey).resolve()
+
+        signpubkey = self.config.get("vboot-public-key")
+        if signpubkey:
+            return Path(signpubkey).resolve()
+
+        if self.vboot_keydir:
+            signpubkey = self.vboot_keydir / "kernel_subkey.vbpubk"
+            if signpubkey.exists():
+                return Path(signpubkey).resolve()
 
         return signpubkey
 
@@ -613,8 +641,17 @@ class depthchargectl(
     @Argument("--vboot-private-key", nargs=1)
     def vboot_private_key(self, signprivate=None):
         """Private key file to sign images with"""
-        if signprivate is None:
-            signprivate = self.config.get("vboot-private-key")
+        if signprivate:
+            return Path(signprivate).resolve()
+
+        signprivate = self.config.get("vboot-private-key")
+        if signprivate:
+            return Path(signprivate).resolve()
+
+        if self.vboot_keydir:
+            signprivate = self.vboot_keydir / "kernel_data_key.vbprivk"
+            if signprivate.exists():
+                return Path(signprivate).resolve()
 
         return signprivate
 
