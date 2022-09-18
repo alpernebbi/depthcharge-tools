@@ -220,13 +220,21 @@ class depthchargectl(
         )
 
         if len(mountpoints) > 1:
+            mnt = mountpoints[0]
             self.logger.warning(
                 "Choosing '{}' from multiple root mountpoints: {}."
-                .format(mountpoints[0], mountpoints)
+                .format(mnt, mountpoints)
             )
+            return mnt
 
-        if mountpoints:
-            return mountpoints[0]
+        elif mountpoints:
+            mnt = mountpoints[0]
+            if mnt != Path("/").resolve():
+                self.logger.info(
+                    "Using root mountpoint '{}'."
+                    .format(mnt)
+                )
+            return mnt
 
         self.logger.warning(
             "Couldn't find root mountpoint, falling back to '/'."
