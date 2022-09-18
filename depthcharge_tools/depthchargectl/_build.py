@@ -274,7 +274,7 @@ class depthchargectl_build(
                     .format(root)
                 )
 
-        def get_root_str(dev, mounts):
+        def get_root_str(dev, mounts, default=None):
             rootset = set()
 
             for mnt in mounts:
@@ -304,6 +304,9 @@ class depthchargectl_build(
                     .format(rootstr)
                 )
                 return rootstr
+
+            if default:
+                return default
 
             rootuuid = system_disks.get_uuid(dev)
             if rootuuid:
@@ -354,7 +357,7 @@ class depthchargectl_build(
             )
             root_dev = system_disks.evaluate(root)
             root_mnt = system_disks.mountpoints(root)
-            root_str = get_root_str(root_dev, root_mnt)
+            root_str = get_root_str(root_dev, root_mnt, str(root))
 
         else:
             self.logger.warning(
