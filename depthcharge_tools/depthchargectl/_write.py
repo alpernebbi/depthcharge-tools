@@ -205,6 +205,30 @@ class depthchargectl_write(
 
         return Path("/").resolve()
 
+    @depthchargectl.root.copy()
+    def root(self, root=None):
+        """Root device or mountpoint of the system to work on."""
+        if root is not None:
+            return super().root
+
+        target = self.target
+        if target:
+            return target
+
+        return super().root
+
+    @depthchargectl.root_mountpoint.copy()
+    def root_mountpoint(self, mnt=None):
+        """Root mountpoint of the system to work on."""
+        if mnt is not None:
+            return super().root_mountpoint
+
+        target_mountpoint = self.target_mountpoint
+        if target_mountpoint:
+            return target_mountpoint
+
+        return super().root_mountpoint
+
     @options.add
     @Argument("--target-devices", metavar="DISK|PART", help=argparse.SUPPRESS)
     def target_devices(self, *devices):
