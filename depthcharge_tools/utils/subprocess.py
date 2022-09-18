@@ -264,6 +264,18 @@ class FdtgetRunner(ProcessRunner):
         else:
             return []
 
+class FileRunner(ProcessRunner):
+    def __init__(self):
+        super().__init__("file")
+
+    def brief(self, path):
+        proc = self("-b", path, check=False)
+
+        if proc.returncode == 0:
+            return proc.stdout.strip("\n")
+        else:
+            return None
+
 
 gzip = GzipRunner()
 lz4 = Lz4Runner()
@@ -273,3 +285,4 @@ vbutil_kernel = VbutilKernelRunner()
 cgpt = CgptRunner()
 crossystem = CrossystemRunner()
 fdtget = FdtgetRunner()
+file = FileRunner()
