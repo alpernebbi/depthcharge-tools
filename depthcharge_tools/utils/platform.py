@@ -307,11 +307,11 @@ class KernelEntry:
 
 
 class Architecture(str):
-    arm_32 = ["arm"]
-    arm_64 = ["arm64", "aarch64"]
+    arm_32 = ["arm", "ARM", "armv7", "ARMv7", ]
+    arm_64 = ["arm64", "ARM64", "aarch64", "AArch64"]
     arm = arm_32 + arm_64
     x86_32 = ["i386", "x86"]
-    x86_64 = ["x86_64", "amd64"]
+    x86_64 = ["x86_64", "amd64", "AMD64"]
     x86 = x86_32 + x86_64
     all = arm + x86
     groups = (arm_32, arm_64, x86_32, x86_64)
