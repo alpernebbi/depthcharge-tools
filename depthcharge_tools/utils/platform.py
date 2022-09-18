@@ -234,6 +234,22 @@ def installed_kernels(root=None, boot=None):
             fdtdirs[None] = d.resolve()
             break
 
+    if None in kernels:
+        kernel, release = kernels[None], None
+        for r, k in kernels.items():
+            if k == kernel and r is not None:
+                release = r
+                break
+
+        if release is not None:
+            del kernels[None]
+            if None in initrds:
+                initrds.setdefault(release, initrds[None])
+                del initrds[None]
+            if None in fdtdirs:
+                fdtdirs.setdefault(release, fdtdirs[None])
+                del fdtdirs[None]
+
     return [
         KernelEntry(
             release,
