@@ -284,7 +284,7 @@ class depthchargectl_build(
         return desc
 
     @options.add
-    @Argument("--root", nargs=1)
+    @depthchargectl.root.copy("--root")
     def root(self, root=None):
         """Root device or mountpoint of the system to build for"""
         if root in ("", "None", "none"):
