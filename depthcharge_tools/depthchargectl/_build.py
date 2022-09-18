@@ -90,6 +90,15 @@ class depthchargectl_build(
             boot=self.boot_mountpoint,
         )
 
+        kernel_arches = self.board.arch.kernel_arches
+        for k in list(kernels):
+            if k.arch not in kernel_arches:
+                self.logger.info(
+                    "Ignoring kernel '{}' incompatible with board arch."
+                    .format(k.release or "(unknown)")
+                )
+                kernels.remove(k)
+
         if isinstance(kernel_version, str):
             kernel = max(
                 (k for k in kernels if k.release == kernel_version),
