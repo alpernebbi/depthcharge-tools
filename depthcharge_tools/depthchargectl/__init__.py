@@ -345,6 +345,47 @@ class depthchargectl(
                     .format(err.filename)
                 )
 
+        root = self.root_mountpoint
+        boot = self.boot_mountpoint
+
+        def fixup_path(f):
+            p = Path(f).resolve()
+            if f.startswith("/boot"):
+                return str(boot / p.relative_to("/boot"))
+            elif f.startswith("/"):
+                return str(root / p.relative_to("/"))
+
+        if root != Path("/").resolve():
+            extra_parser = configparser.ConfigParser()
+            extra_files = [
+                *root.glob("etc/depthcharge-tools/config"),
+                *root.glob("etc/depthcharge-tools/config.d/*"),
+            ]
+
+            try:
+                for p in extra_parser.read(extra_files):
+                    self.logger.debug("Read config file '{}'.".format(p))
+
+            except configparser.ParsingError as err:
+                self.logger.warning(
+                    "Config file '{}' could not be parsed."
+                    .format(err.filename)
+                )
+
+            file_configs = [
+                "images-dir",
+                "vboot-keyblock",
+                "vboot-public-key",
+                "vboot-private-key",
+            ]
+
+            for sect, conf in extra_parser.items():
+                for key, value in conf.items():
+                    if key in file_configs:
+                        conf[key] = fixup_path(value)
+
+            parser.read_dict(extra_parser)
+
         if self.config_section not in parser.sections():
             if self.config_section != parser.default_section:
                 parser.add_section(self.config_section)
