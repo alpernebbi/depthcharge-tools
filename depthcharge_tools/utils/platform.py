@@ -364,3 +364,14 @@ class Architecture(str):
             return "x86"
         if self in self.x86_64:
             return "amd64"
+
+    @property
+    def kernel_arches(self):
+        if self in self.arm_32:
+            return self.arm_32
+        if self in self.arm_64:
+            return self.arm
+        if self in self.x86_32:
+            return self.x86_32
+        if self in self.x86_64:
+            return self.x86
