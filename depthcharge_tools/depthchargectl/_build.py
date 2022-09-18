@@ -292,23 +292,6 @@ class depthchargectl_build(
 
         root = super().root
 
-        if root is None:
-            cmdline = self.kernel_cmdline
-
-            for c in cmdline:
-                lhs, _, rhs = c.partition("=")
-                if lhs.lower() == "root":
-                    root = rhs
-
-            if root:
-                self.logger.info(
-                    "Using root '{}' set in user configured cmdline."
-                    .format(root)
-                )
-                return root
-
-            root = Path("/").resolve()
-
         if isinstance(root, Path):
             mnt = self.root_mountpoint
             disks = Disks(

@@ -176,10 +176,24 @@ class depthchargectl(
     def root(self, root=None):
         """Root device or mountpoint of the system to work on."""
         if root is None:
+            cmdline = self.kernel_cmdline
+
+            for c in cmdline:
+                lhs, _, rhs = c.partition("=")
+                if lhs.lower() == "root":
+                    root = rhs
+
+            if root:
+                self.logger.info(
+                    "Using root '{}' set in user configured cmdline."
+                    .format(root)
+                )
+                return str(root)
+
             self.logger.info(
                 "Defaulting to current system root '/'."
             )
-            return None
+            return Path("/").resolve()
 
         if os.path.ismount(Path(root).resolve()):
             self.logger.info(
@@ -318,6 +332,9 @@ class depthchargectl(
     @Argument("--config", nargs=1)
     def config(self, file_=None):
         """Additional configuration file to read"""
+        # Break cyclic dependencies here
+        self.config = configparser.ConfigParser()["DEFAULT"]
+
         if isinstance(file_, configparser.SectionProxy):
             parser = file_.parser
 
