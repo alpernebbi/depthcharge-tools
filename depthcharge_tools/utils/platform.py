@@ -157,7 +157,7 @@ def installed_kernels(root=None, boot=None):
         if not f.is_file():
             continue
         _, _, release = f.name.partition("-")
-        kernels[release] = f
+        kernels[release] = f.resolve()
 
     for f in (
         *boot.glob("vmlinuz"),
@@ -170,7 +170,7 @@ def installed_kernels(root=None, boot=None):
     ):
         if not f.is_file():
             continue
-        kernels[None] = f
+        kernels[None] = f.resolve()
         break
 
     for f in (
@@ -181,7 +181,7 @@ def installed_kernels(root=None, boot=None):
         if not f.is_file():
             continue
         _, _, release = f.name.partition("-")
-        initrds[release] = f
+        initrds[release] = f.resolve()
 
     for f in (
         *boot.glob("initrd.img"),
@@ -193,7 +193,7 @@ def installed_kernels(root=None, boot=None):
     ):
         if not f.is_file():
             continue
-        initrds[None] = f
+        initrds[None] = f.resolve()
         break
 
     for d in (
@@ -202,7 +202,7 @@ def installed_kernels(root=None, boot=None):
         if not d.is_dir():
             continue
         _, _, release = d.name.partition("linux-image-")
-        fdtdirs[release] = d
+        fdtdirs[release] = d.resolve()
 
     for d in (
         *boot.glob("dtbs-*"),
@@ -210,7 +210,7 @@ def installed_kernels(root=None, boot=None):
         if not d.is_dir():
             continue
         _, _, release = d.name.partition("-")
-        fdtdirs[release] = d
+        fdtdirs[release] = d.resolve()
 
     for d in (
         *boot.glob("dtbs/*"),
@@ -218,7 +218,7 @@ def installed_kernels(root=None, boot=None):
         if not d.is_dir():
             continue
         if d.name in kernels:
-            fdtdirs[d.name] = d
+            fdtdirs[d.name] = d.resolve()
 
     for d in (
         *boot.glob("dtbs"),
@@ -231,7 +231,7 @@ def installed_kernels(root=None, boot=None):
         dtbs = d.glob("**/*.dtb")
         counts = collections.Counter(dtb.name for dtb in dtbs)
         if all(c <= 1 for c in counts.values()):
-            fdtdirs[None] = d
+            fdtdirs[None] = d.resolve()
             break
 
     return [
