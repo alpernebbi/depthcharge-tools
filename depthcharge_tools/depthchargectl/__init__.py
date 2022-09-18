@@ -29,6 +29,10 @@ from depthcharge_tools.utils.argparse import (
 from depthcharge_tools.utils.collections import (
     ConfigDict,
 )
+from depthcharge_tools.utils.os import (
+    system_disks,
+    Disks,
+)
 from depthcharge_tools.utils.platform import (
     Architecture,
     vboot_keys,
@@ -166,6 +170,125 @@ class depthchargectl(
         self.logger.debug("Working in temp dir '{}'.".format(dir_))
 
         return dir_
+
+    @global_options.add
+    @Argument("--root", nargs=1)
+    def root(self, root=None):
+        """Root device or mountpoint of the system to work on."""
+        if root is None:
+            self.logger.info(
+                "Defaulting to current system root '/'."
+            )
+            return None
+
+        if os.path.ismount(Path(root).resolve()):
+            self.logger.info(
+                "Using root argument '{}' as the system to work on."
+                .format(root)
+            )
+            return Path(root).resolve()
+
+        self.logger.info(
+            "Using root argument '{}' as a device description."
+            .format(root)
+        )
+
+        return str(root)
+
+    @global_options.add
+    @Argument("--root-mountpoint", nargs=1, help=argparse.SUPPRESS)
+    def root_mountpoint(self, mnt=None):
+        """Root mountpoint of the system to work on."""
+        if mnt:
+            mnt = Path(mnt).resolve()
+            self.logger.info(
+                "Using root mountpoint '{}' from given argument."
+                .format(mnt)
+            )
+            return mnt
+
+        if self.root in ("", "None", "none", None):
+            return Path("/").resolve()
+
+        if isinstance(self.root, Path):
+            return self.root
+
+        disk = system_disks.evaluate(self.root)
+        mountpoints = sorted(
+            system_disks.mountpoints(disk),
+            key=lambda p: len(p.parents),
+        )
+
+        if len(mountpoints) > 1:
+            self.logger.warning(
+                "Choosing '{}' from multiple root mountpoints: {}."
+                .format(mountpoints[0], mountpoints)
+            )
+
+        if mountpoints:
+            return mountpoints[0]
+
+        self.logger.warning(
+            "Couldn't find root mountpoint, falling back to '/'."
+        )
+
+        return Path("/").resolve()
+
+    @global_options.add
+    @Argument("--boot-mountpoint", nargs=1, help=argparse.SUPPRESS)
+    def boot_mountpoint(self, boot=None):
+        """Boot mountpoint of the system to work on."""
+        if boot:
+            boot = Path(boot).resolve()
+            self.logger.info(
+                "Using boot mountpoint '{}' from given argument."
+                .format(root)
+            )
+            return boot
+
+        root = self.root_mountpoint
+        disks = Disks(
+            fstab=(root / "etc" / "fstab"),
+            crypttab=(root / "etc" / "crypttab"),
+        )
+        boot_str = disks.by_mountpoint("/boot", fstab_only=True)
+        device = system_disks.evaluate(boot_str)
+        mountpoints = sorted(
+            disks.mountpoints(device),
+            key=lambda p: len(p.parents),
+        )
+
+        if device and not mountpoints:
+            self.logger.warning(
+                "Boot partition '{}' for specified root is not mounted."
+                .format(device)
+            )
+
+        if len(mountpoints) > 1:
+            self.logger.warning(
+                "Choosing '{}' from multiple /boot mountpoints: {}."
+                .format(mountpoints[0], mountpoints)
+            )
+
+        if mountpoints:
+            return mountpoints[0]
+
+        boot = (root / "boot").resolve()
+        self.logger.info(
+            "Couldn't find /boot in fstab, falling back to '{}'."
+            .format(boot)
+        )
+
+        if root != Path("/").resolve() and not boot.is_dir():
+            self.logger.warning(
+                "Boot mountpoint '{}' does not exist for custom root."
+                .format(boot)
+            )
+            self.logger.warning(
+                "Not falling back to the running system for boot mountpoint."
+            )
+
+        return boot
 
     @Group
     def config_options(self):
