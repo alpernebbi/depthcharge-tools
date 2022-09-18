@@ -55,7 +55,7 @@ class Board:
 
     @property
     def arch(self):
-        return self._config.get("arch")
+        return Architecture(self._config.get("arch"))
 
     @property
     def dt_compatible(self):
