@@ -174,6 +174,9 @@ class depthchargectl_build(
     @Argument("--initramfs", nargs=1)
     def initrd(self, file_=None):
         """Ramdisk image"""
+        # Trigger more important errors first
+        self.kernel
+
         if file_ is None and self.kernel_version is not None:
             if self.kernel == self.kernel_version.kernel:
                 file_ = self.kernel_version.initrd
@@ -217,6 +220,8 @@ class depthchargectl_build(
     @Argument("--dtbs", nargs="+", metavar="FILE")
     def dtbs(self, *files):
         """Device-tree binary files to use instead of searching fdtdir"""
+        # Trigger more important errors first
+        self.kernel
 
         # Device trees are optional based on board configuration.
         if self.board.dt_compatible and len(files) == 0:
