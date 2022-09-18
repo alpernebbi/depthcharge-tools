@@ -574,15 +574,22 @@ class depthchargectl(
     @Argument("--images-dir", nargs=1)
     def images_dir(self, dir_=None):
         """Directory to store built images"""
-        if dir_ is None:
-            dir_ = self.config.get("images-dir")
+        if dir_ is not None:
+            return Path(dir_).resolve()
 
+        dir_ = self.config.get("images-dir")
         if dir_ is None:
             raise ValueError(
                 "Images directory is not specified"
             )
 
-        return Path(dir_)
+        dir_ = Path(dir_).resolve()
+
+        root = self.root_mountpoint
+        if root != Path("/").resolve() and not dir_.is_relative_to(root):
+            return root / dir_.relative_to("/")
+
+        return dir_
 
     @config_options.add
     @Argument("--vboot-keyblock", nargs=1)
