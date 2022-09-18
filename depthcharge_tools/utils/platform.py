@@ -8,7 +8,10 @@ import shlex
 
 from pathlib import Path
 
-from depthcharge_tools.utils.subprocess import crossystem
+from depthcharge_tools.utils.subprocess import (
+    crossystem,
+    file,
+)
 
 
 def dt_compatibles():
@@ -256,6 +259,16 @@ class KernelEntry:
             return "Linux {}".format(self.release)
         else:
             return "{}, with Linux {}".format(self.os_name, self.release)
+
+    @property
+    def arch(self):
+        info = file.brief(self.kernel)
+        if not info:
+            info = str(self.kernel)
+
+        for arch in Architecture.all:
+            if re.search(r"\b{}\b".format(arch), info):
+                return Architecture(arch)
 
     def _comparable_parts(self):
         pattern = "([^a-zA-Z0-9]?)([a-zA-Z]*)([0-9]*)"
