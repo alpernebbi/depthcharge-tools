@@ -111,7 +111,10 @@ class depthchargectl_target(
         # Disks containing /boot and / should be available during boot,
         # so we target only them by default.
         if not disks:
-            disks = system_disks.bootable_disks()
+            if self.all_disks:
+                disks = system_disks.roots()
+            else:
+                disks = system_disks.bootable_disks()
 
         if not disks:
             raise ValueError(
@@ -197,6 +200,12 @@ class depthchargectl_target(
     def allow_current(self, allow=False):
         """Allow targeting the currently booted partition."""
         return allow
+
+    @options.add
+    @Argument("-a", "--all-disks", all_disks=True)
+    def all_disks(self, all_disks=False):
+        """Target partitions on all disks."""
+        return all_disks
 
     def __call__(self):
         # We will need to check partitions against this if allow_current
