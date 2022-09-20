@@ -317,8 +317,14 @@ class depthchargectl_build(
                 )
                 return root
 
+            if mnt != Path("/").resolve():
+                raise ValueError(
+                    "Couldn't convert mountpoint '{}' to a root cmdline."
+                    .format(mnt)
+                )
+
             raise ValueError(
-                "Couldn't convert mountpoint '{}' to a root parameter."
+                "Couldn't figure out a root cmdline for this system."
                 .format(mnt)
             )
 
