@@ -302,9 +302,9 @@ class Disks(DirectedGraph):
             if lhs == "kern_guid":
                 return self.by_partuuid(rhs)
 
-    def bootable_disks(self):
-        root = self.by_mountpoint("/")
-        boot = self.by_mountpoint("/boot")
+    def bootable_disks(self, fstab_only=False):
+        root = self.by_mountpoint("/", fstab_only=fstab_only)
+        boot = self.by_mountpoint("/boot", fstab_only=fstab_only)
         return self.roots(root, boot)
 
     def add_edge(self, node, child):

@@ -258,7 +258,11 @@ class depthchargectl_write(
             fstab=(target / "etc" / "fstab"),
             crypttab=(target / "etc" / "crypttab"),
         )
-        devices = disks.bootable_disks()
+        devices = {
+            *disks.bootable_disks(fstab_only=True),
+            *system_disks.roots(system_disks.by_mountpoint(target)),
+            *system_disks.roots(system_disks.by_mountpoint(target / "boot")),
+        }
         if devices:
             self.logger.info(
                 "Using target devices '{}' from target mountpoint."
