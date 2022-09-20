@@ -215,7 +215,12 @@ class Disks(DirectedGraph):
         try:
             return Partition(device, dev=dev, sys=sys)
         except:
+            pass
+
+        try:
             return Disk(device, dev=dev, sys=sys)
+        except:
+            pass
 
     def by_mountpoint(self, mountpoint, fstab_only=False):
         if not Path(mountpoint).exists():
