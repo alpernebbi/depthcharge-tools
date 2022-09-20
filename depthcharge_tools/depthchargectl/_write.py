@@ -138,10 +138,16 @@ class depthchargectl_write(
         return force
 
     @options.add
-    @Argument("-t", "--target", metavar="DISK|PART|MNT")
-    def target(self, target):
+    @Argument("-t", "--target", metavar="DISK|PART|MNT", nargs=1)
+    def target(self, target=None):
         """Specify a disk, partition or system to write to."""
         if target is None:
+            # Break cyclic dependencies
+            self.target = None
+
+            if self.root_mountpoint != Path("/").resolve():
+                return self.root
+
             return None
 
         if os.path.ismount(Path(target).resolve()):
@@ -159,7 +165,7 @@ class depthchargectl_write(
         return str(target)
 
     @options.add
-    @Argument("--target-mountpoint", metavar="MNT", help=argparse.SUPPRESS)
+    @Argument("--target-mountpoint", metavar="MNT", help=argparse.SUPPRESS, nargs=1)
     def target_mountpoint(self, mnt=None):
         """Root mountpoint of the system to write to."""
         if mnt is not None:
