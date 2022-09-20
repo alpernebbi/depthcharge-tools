@@ -138,142 +138,10 @@ class depthchargectl_write(
         return force
 
     @options.add
-    @Argument("-t", "--target", metavar="DISK|PART|MNT", nargs=1)
-    def target(self, target=None):
-        """Specify a disk, partition or system to write to."""
-        if target is None:
-            # Break cyclic dependencies
-            self.target = None
-
-            if self.root_mountpoint != Path("/").resolve():
-                return self.root
-
-            return None
-
-        if os.path.ismount(Path(target).resolve()):
-            self.logger.info(
-                "Using target '{}' as the system to write to."
-                .format(target)
-            )
-            return Path(target).resolve()
-
-        self.logger.info(
-            "Using target argument '{}' as a device description."
-            .format(target)
-        )
-
-        return str(target)
-
-    @options.add
-    @Argument("--target-mountpoint", metavar="MNT", help=argparse.SUPPRESS, nargs=1)
-    def target_mountpoint(self, mnt=None):
-        """Root mountpoint of the system to write to."""
-        if mnt is not None:
-            self.logger.info(
-                "Using target mountpoint '{}' from argument."
-                .format(mnt)
-            )
-            return Path(mnt).resolve()
-
-        target = self.target
-        if target is None:
-            return None
-
-        if isinstance(target, Path):
-            return target
-
-        disk = system_disks.evaluate(target)
-        mountpoints = sorted(
-            system_disks.mountpoints(disk),
-            key=lambda p: len(p.parents),
-        )
-
-        if len(mountpoints) > 1:
-            mnt = mountpoints[0]
-            self.logger.warning(
-                "Choosing '{}' from multiple target mountpoints: {}."
-                .format(mnt, mountpoints)
-            )
-            return mnt
-
-        elif mountpoints:
-            mnt = mountpoints[0]
-            if mnt != Path("/").resolve():
-                self.logger.info(
-                    "Using target mountpoint '{}'."
-                    .format(mnt)
-                )
-            return mnt
-
-        self.logger.warning(
-            "Couldn't find target mountpoint, falling back to '/'."
-        )
-
-        return Path("/").resolve()
-
-    @depthchargectl.root.copy()
-    def root(self, root=None):
-        """Root device or mountpoint of the system to work on."""
-        if root is not None:
-            return super().root
-
-        target = self.target
-        if target:
-            return target
-
-        return super().root
-
-    @depthchargectl.root_mountpoint.copy()
-    def root_mountpoint(self, mnt=None):
-        """Root mountpoint of the system to work on."""
-        if mnt is not None:
-            return super().root_mountpoint
-
-        target_mountpoint = self.target_mountpoint
-        if target_mountpoint:
-            return target_mountpoint
-
-        return super().root_mountpoint
-
-    @options.add
-    @Argument("--target-devices", metavar="DISK|PART", help=argparse.SUPPRESS)
-    def target_devices(self, *devices):
-        """Bootable disks of the system to write to."""
-        if devices:
-            self.logger.info(
-                "Using target devices '{}' from given argument."
-                .format(devices)
-            )
-            return devices
-
-        target = self.target
-        if target is None:
-            return []
-
-        if isinstance(target, str):
-            device = system_disks.evaluate(target)
-            return [device] if device else []
-
-        disks = Disks(
-            fstab=(target / "etc" / "fstab"),
-            crypttab=(target / "etc" / "crypttab"),
-        )
-        devices = {
-            *disks.bootable_disks(fstab_only=True),
-            *system_disks.roots(system_disks.by_mountpoint(target)),
-            *system_disks.roots(system_disks.by_mountpoint(target / "boot")),
-        }
-        if devices:
-            self.logger.info(
-                "Using target devices '{}' from target mountpoint."
-                .format(devices)
-            )
-            return devices
-
-        raise ValueError(
-            "Could not find devices for target '{}'"
-            .format(target)
-        )
+    @Argument("-t", "--target", metavar="DISK|PART")
+    def target(self, target):
+        """Specify a disk or partition to write to."""
+        return target
 
     @options.add
     @Argument("--no-prioritize", prioritize=False)
@@ -330,7 +198,7 @@ class depthchargectl_write(
             try:
                 image = depthchargectl.build_(
                     kernel_version=self.kernel_version,
-                    root=self.target,
+                    root=self.root,
                     config=self.config,
                     board=self.board,
                     tmpdir=self.tmpdir / "build",
@@ -352,7 +220,7 @@ class depthchargectl_write(
         self.logger.info("Searching disks for a target partition.")
         try:
             target = depthchargectl.target(
-                disks=self.target_devices,
+                disks=[self.target] if self.target else [],
                 min_size=image.stat().st_size,
                 allow_current=self.allow_current,
                 config=self.config,
