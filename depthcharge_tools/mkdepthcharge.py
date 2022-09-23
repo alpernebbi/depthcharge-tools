@@ -558,25 +558,32 @@ class mkdepthcharge(
             )
             self.logger.info(proc.stdout)
 
-            self.logger.info("Using FIT image as vboot kernel.")
-            vmlinuz_vboot = fit_image
+            self.logger.info("Packing files as depthcharge image.")
+            proc = vbutil_kernel(
+                "--version", "1",
+                "--arch", self.arch.vboot,
+                "--vmlinuz", fit_image,
+                "--config", cmdline_file,
+                "--bootloader", bootloader,
+                "--keyblock", self.keyblock,
+                "--signprivate", self.signprivate,
+                "--pack", self.output,
+            )
+            self.logger.info(proc.stdout)
 
         elif self.image_format == "zimage":
-            self.logger.info("Using vmlinuz file as vboot kernel.")
-            vmlinuz_vboot = vmlinuz
-
-        self.logger.info("Packing files as depthcharge image.")
-        proc = vbutil_kernel(
-            "--version", "1",
-            "--arch", self.arch.vboot,
-            "--vmlinuz", vmlinuz_vboot,
-            "--config", cmdline_file,
-            "--bootloader", bootloader,
-            "--keyblock", self.keyblock,
-            "--signprivate", self.signprivate,
-            "--pack", self.output,
-        )
-        self.logger.info(proc.stdout)
+            self.logger.info("Packing files as depthcharge image.")
+            proc = vbutil_kernel(
+                "--version", "1",
+                "--arch", self.arch.vboot,
+                "--vmlinuz", vmlinuz,
+                "--config", cmdline_file,
+                "--bootloader", bootloader,
+                "--keyblock", self.keyblock,
+                "--signprivate", self.signprivate,
+                "--pack", self.output,
+            )
+            self.logger.info(proc.stdout)
 
         self.logger.info("Verifying built depthcharge image:")
         signpubkey_args = []
