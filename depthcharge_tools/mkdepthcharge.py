@@ -468,6 +468,7 @@ class mkdepthcharge(
     def __call__(self):
         vmlinuz = self.vmlinuz
         initramfs = self.initramfs
+        bootloader = self.bootloader
         dtbs = self.dtbs
         tmpdir = self.tmpdir
 
@@ -486,13 +487,14 @@ class mkdepthcharge(
                 .format(dtb)
             )
 
-
         # mkimage can't open files when they are read-only for some
         # reason. Copy them into a temp dir in fear of modifying the
         # originals.
         vmlinuz = copy(vmlinuz, tmpdir)
         if initramfs is not None:
             initramfs = copy(initramfs, tmpdir)
+        if bootloader is not None:
+            bootloader = copy(bootloader, tmpdir)
         dtbs = [copy(dtb, tmpdir) for dtb in dtbs]
 
         # We can add write permissions after we copy the files to temp.
@@ -525,13 +527,10 @@ class mkdepthcharge(
         cmdline_file.write_text(self.cmdline)
 
         # vbutil_kernel --bootloader argument is mandatory, but it's
-        # contents don't matter at least on arm systems.
-        if self.bootloader is not None:
-            bootloader = copy(bootloader, tmpdir)
-        else:
-            bootloader = tmpdir / "bootloader.bin"
-            bootloader.write_bytes(bytes(512))
-            self.logger.info("Using dummy file for bootloader.")
+        # unused in depthcharge except as a multiboot ramdisk. Prepare
+        # this empty file as its replacement where necessary.
+        empty = tmpdir / "empty.bin"
+        empty.write_bytes(bytes(512))
 
         if self.image_format == "fit":
             fit_image = tmpdir / "depthcharge.fit"
@@ -564,7 +563,7 @@ class mkdepthcharge(
                 "--arch", self.arch.vboot,
                 "--vmlinuz", fit_image,
                 "--config", cmdline_file,
-                "--bootloader", bootloader,
+                "--bootloader", bootloader or empty,
                 "--keyblock", self.keyblock,
                 "--signprivate", self.signprivate,
                 "--pack", self.output,
@@ -578,7 +577,7 @@ class mkdepthcharge(
                 "--arch", self.arch.vboot,
                 "--vmlinuz", vmlinuz,
                 "--config", cmdline_file,
-                "--bootloader", bootloader,
+                "--bootloader", bootloader or empty,
                 "--keyblock", self.keyblock,
                 "--signprivate", self.signprivate,
                 "--pack", self.output,
