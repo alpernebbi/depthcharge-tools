@@ -468,14 +468,32 @@ class Argument(_MethodDecorator):
 class Group(_MethodDecorator):
     def __init__(self, *args, **kwargs):
         self._arguments = []
+        self.group = None
         super().__init__(*args, **kwargs)
 
-    def wrap(self, func):
-        if isinstance(func, Argument):
-            self.add(func)
+    def wrap(self, wrapped):
+        if isinstance(wrapped, Argument):
+            self.wrap(wrapped.__func__)
+            self.add(wrapped)
+
+            # Don't duplicate help message
+            wrapped.__doc__ = None
+
             return self
 
-        return super().wrap(func)
+        if isinstance(wrapped, Group):
+            old_doc = self.__doc__
+            self.wrap(wrapped.__func__)
+            self.add(wrapped)
+
+            # Don't override help message
+            if old_doc is not None:
+                wrapped.__doc__ = self.__doc__
+                self.__doc__ = old_doc
+
+            return self
+
+        return super().wrap(wrapped)
 
     def copy(self, *args, **kwargs):
         grp = super().copy(*args, **kwargs)
@@ -533,9 +551,18 @@ class Group(_MethodDecorator):
     def build(self, parent):
         parser = parent.add_argument_group(*self._args, **self.__kwargs)
 
-        for arg in self._arguments:
-            arg.__get__(self.__self__, type(self.__self__))
-            arg.build(parser)
+        items = list(self._arguments)
+        while items:
+            item = items.pop()
+            item.__get__(self.__self__, type(self.__self__))
+
+            # Argparse doesn't print help message for nested groups,
+            # so we flatten them here.
+            if isinstance(item, Group):
+                items = list(item._arguments) + items
+                continue
+
+            item.build(parser)
 
         return parser
 
@@ -710,7 +737,7 @@ def command_call(call):
                 grp.__self__ = None
                 for arg in grp._arguments:
                     arg.__self__ = None
-                    if arg.dest == argparse.SUPPRESS:
+                    if not hasattr(arg, "dest") or arg.dest == argparse.SUPPRESS:
                         continue
                     try:
                         func = arg.__func__.__get__(object(), object)
@@ -719,7 +746,10 @@ def command_call(call):
                     except:
                         self.__dict__.setdefault(arg.dest, None)
 
-                if grp_name not in (arg.dest for arg in grp._arguments):
+                if grp_name not in (
+                    arg.dest for arg in grp._arguments
+                    if hasattr(arg, "dest")
+                ):
                     try:
                         # grp.__get__(self, type(self)) would mutate self
                         func = grp.__func__.__get__(object(), object)
@@ -958,7 +988,8 @@ class CommandMeta(type):
         for attr, value in cls.items():
             if isinstance(value, Group):
                 group = getattr(cls, attr)
-                group.build(parser)
+                if group.group is None:
+                    group.build(parser)
 
             elif isinstance(value, Argument):
                 arg = getattr(cls, attr)
