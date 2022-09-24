@@ -19,6 +19,9 @@ from depthcharge_tools.utils.os import (
     CrosPartition,
     Partition,
 )
+from depthcharge_tools.utils.string import (
+    parse_bytesize,
+)
 
 from depthcharge_tools.depthchargectl import depthchargectl
 
@@ -184,16 +187,8 @@ class depthchargectl_target(
         """Target partitions larger than this size."""
         if bytes_ is None:
             return 0x10000
-        elif isinstance(bytes_, int):
-            return bytes_
-        elif bytes_.startswith("0x"):
-            return int(bytes_, 16)
-        elif bytes_.startswith("0o"):
-            return int(bytes_, 8)
-        elif bytes_.startswith("0b"):
-            return int(bytes_, 2)
-        else:
-            return int(bytes_)
+
+        return parse_bytesize(bytes_)
 
     @options.add
     @Argument("--allow-current", allow=True)
