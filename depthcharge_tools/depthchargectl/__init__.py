@@ -210,6 +210,9 @@ class depthchargectl(
     @Argument("--root-mountpoint", nargs=1, help=argparse.SUPPRESS)
     def root_mountpoint(self, mnt=None):
         """Root mountpoint of the system to work on."""
+        # Break cyclic dependencies here
+        yield Path("/").resolve()
+
         if mnt:
             mnt = Path(mnt).resolve()
             self.logger.info(
@@ -329,9 +332,6 @@ class depthchargectl(
     @Argument("--config", nargs=1)
     def config(self, file_=None):
         """Additional configuration file to read"""
-        # Break cyclic dependencies here
-        self.config = configparser.ConfigParser()["DEFAULT"]
-
         if isinstance(file_, configparser.SectionProxy):
             parser = file_.parser
 
