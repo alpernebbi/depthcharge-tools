@@ -444,9 +444,12 @@ class mkdepthcharge(
         return cmdline
 
     @vboot_options.add
-    @Argument("--no-kern-guid", kern_guid=False)
+    @Argument(
+        "--no-kern-guid", kern_guid=False,
+        help="Don't prepend kern_guid=%%U to the cmdline."
+    )
     def kern_guid(self, kern_guid=True):
-        """Don't prepend kern_guid=%%U to the cmdline."""
+        """Prepend kern_guid=%%U to the cmdline."""
         return kern_guid
 
     @vboot_options.add
