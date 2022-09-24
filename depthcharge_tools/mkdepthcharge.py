@@ -4,10 +4,12 @@ import argparse
 import logging
 import os
 import platform
+import struct
 import subprocess
 import sys
 import tempfile
 
+from mmap import mmap
 from pathlib import Path
 
 from depthcharge_tools import __version__
@@ -26,6 +28,9 @@ from depthcharge_tools.utils.pathlib import (
 from depthcharge_tools.utils.platform import (
     Architecture,
     vboot_keys,
+)
+from depthcharge_tools.utils.string import (
+    parse_bytesize,
 )
 from depthcharge_tools.utils.subprocess import (
     mkimage,
@@ -169,10 +174,6 @@ class mkdepthcharge(
                 raise ValueError(
                     "Name argument not supported with zimage format."
                 )
-            if self.initramfs is not None:
-                raise ValueError(
-                    "Initramfs image not supported with zimage format."
-                )
             if self.dtbs:
                 raise ValueError(
                     "Device tree files not supported with zimage format."
@@ -304,6 +305,34 @@ class mkdepthcharge(
             desc = "unavailable"
 
         return desc
+
+    @Group
+    def zimage_options(self):
+        """zImage format options"""
+
+    @zimage_options.add
+    @Argument(
+        "--no-pad-vmlinuz", pad=False,
+        help="Don't pad the vmlinuz file for safe decompression",
+    )
+    def pad_vmlinuz(self, pad=None):
+        """Pad vmlinuz for safe decompression"""
+        if pad is None:
+            return (
+                self.image_format == "zimage"
+                and self.initramfs is not None
+            )
+
+        return bool(pad)
+
+    @zimage_options.add
+    @Argument("--kernel-start", nargs=1)
+    def kernel_start(self, addr=None):
+        """Start of depthcharge kernel buffer in memory"""
+        if addr is None:
+            return 0x100000
+
+        return parse_bytesize(pad)
 
     @Group
     def vboot_options(self):
@@ -570,7 +599,7 @@ class mkdepthcharge(
             )
             self.logger.info(proc.stdout)
 
-        elif self.image_format == "zimage":
+        elif self.image_format == "zimage" and initramfs is None:
             self.logger.info("Packing files as depthcharge image.")
             proc = vbutil_kernel(
                 "--version", "1",
@@ -581,6 +610,114 @@ class mkdepthcharge(
                 "--keyblock", self.keyblock,
                 "--signprivate", self.signprivate,
                 "--pack", self.output,
+            )
+            self.logger.info(proc.stdout)
+
+        elif self.image_format == "zimage":
+            # The bzImage overwrites parts of the buffer we control
+            # while decompressing itself. We need to make sure we don't
+            # place initramfs in that range. For that, we need to know
+            # how offsets in file correspond to addresses in memory.
+
+            def addr_to_offs(addr, load_addr=self.kernel_start):
+                return addr - load_addr + 0x10000
+
+            def offs_to_addr(offs, load_addr=self.kernel_start):
+                return offs + load_addr - 0x10000
+
+            def align_up(size, align=0x1000):
+                return ((size + align - 1) // align) * align
+
+            # bzImage header has the address the kernel will decompress
+            # to, and the amount of memory it needs there to work.
+            # See Documentation/x86/boot.rst in Linux tree for offsets.
+            with vmlinuz.open("r+b") as f, mmap(f.fileno(), 0) as data:
+                if data[0x202:0x206] != b"HdrS":
+                    raise ValueError(
+                        "Vmlinuz file is not a Linux kernel bzImage."
+                    )
+
+                pref_address, init_size = struct.unpack(
+                    "<QI", data[0x258:0x264]
+                )
+                pad_to = align_up(addr_to_offs(pref_address + init_size))
+
+                if self.pad_vmlinuz and pad_to > data.size():
+                    self.logger.info(
+                        "Padding vmlinuz to size {:#x}"
+                        .format(pad_to)
+                    )
+                    data.resize(pad_to)
+
+            # vbutil_kernel picks apart the vmlinuz in ways I don't
+            # really want to reimplement right now, so just call it.
+            self.logger.info("Packing files as temporary image.")
+            temp_img = tmpdir / "temp.img"
+            proc = vbutil_kernel(
+                "--version", "1",
+                "--arch", self.arch.vboot,
+                "--vmlinuz", vmlinuz,
+                "--config", cmdline_file,
+                "--bootloader", initramfs,
+                "--keyblock", self.keyblock,
+                "--signprivate", self.signprivate,
+                "--pack", temp_img,
+            )
+            self.logger.info(proc.stdout)
+
+            # Do binary editing for now, until I get time to write
+            # parsers for vboot_reference structs and kernel headers.
+            with temp_img.open("r+b") as f, mmap(f.fileno(), 0) as data:
+                if data[:8] != b"CHROMEOS":
+                    raise RuntimeError(
+                        "Unexpected output format from vbutil_kernel, "
+                        "expected 'CHROMEOS' magic at start of file."
+                    )
+
+                # File starts with a keyblock and a kernel preamble
+                # immediately afterwards, and padding up to 0x10000.
+                keyblock_size = struct.unpack(
+                    "<I", data[0x10:0x14]
+                )[0]
+                p = preamble_offset = keyblock_size
+
+                # Preamble has the "memory address" of the "bootloader"
+                # but it assumes the body is loaded at 0x100000.
+                bootloader_addr = struct.unpack(
+                    "<I", data[p+0x38:p+0x3c]
+                )[0]
+                bootloader_offset = addr_to_offs(bootloader_addr, 0x100000)
+
+                # Assume vbutil_kernel correctly put it as "bootloader"
+                initramfs_offset = bootloader_offset
+                initramfs_addr = offs_to_addr(initramfs_offset)
+                initramfs_size = initramfs.stat().st_size
+
+                self.logger.info(
+                    "Initramfs is at offset {:#x}, address {:#x}, size {:#x}."
+                    .format(initramfs_offset, initramfs_addr, initramfs_size)
+                )
+
+                # Params is immediately before bootloader with size 0x1000
+                p = params_offset = bootloader_offset - 0x1000
+                if data[p+0x202:p+0x206] != b"HdrS":
+                    raise RuntimeError(
+                        "Unexpected output format from vbutil_kernel, "
+                        "expected 'HdrS' magic in boot params."
+                    )
+
+                # These get passed to the kernel unmodified by depthcharge.
+                # "initrdmem=addr,size" in the cmdline would work, but
+                # this looks like how bootloaders are supposed to do it.
+                data[p+0x218:p+0x21c] = struct.pack("<I", initramfs_addr)
+                data[p+0x21c:p+0x220] = struct.pack("<I", initramfs_size)
+
+            self.logger.info("Re-signing edited temporary image.")
+            proc = vbutil_kernel(
+                "--keyblock", self.keyblock,
+                "--signprivate", self.signprivate,
+                "--oldblob", temp_img,
+                "--repack", self.output,
             )
             self.logger.info(proc.stdout)
 
