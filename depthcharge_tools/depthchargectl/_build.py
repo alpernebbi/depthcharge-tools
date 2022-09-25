@@ -70,10 +70,6 @@ class depthchargectl_build(
     logger = depthchargectl.logger.getChild("build")
     config_section = "depthchargectl/build"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.__chroot = None
-
     @Group
     def positionals(self):
         """Positional arguments"""
