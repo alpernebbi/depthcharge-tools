@@ -246,7 +246,7 @@ class depthchargectl_target(
         good_partitions = []
         for p in self.partitions:
             if self.min_size is not None and p.size < self.min_size:
-                self.logger.info(
+                self.logger.warning(
                     "Skipping partition '{}' as too small."
                     .format(p)
                 )
