@@ -602,6 +602,10 @@ class depthchargectl(
 
         dir_ = Path(dir_).resolve()
 
+        boot = self.boot_mountpoint
+        if boot != Path("/boot").resolve() and dir_.is_relative_to("/boot"):
+            return boot / dir_.relative_to("/boot")
+
         root = self.root_mountpoint
         if root != Path("/").resolve() and not dir_.is_relative_to(root):
             return root / dir_.relative_to("/")
