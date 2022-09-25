@@ -209,9 +209,6 @@ class depthchargectl(
     @Argument("--root-mountpoint", nargs=1, help=argparse.SUPPRESS)
     def root_mountpoint(self, mnt=None):
         """Root mountpoint of the system to work on."""
-        # Break cyclic dependencies here
-        yield Path("/").resolve()
-
         if mnt:
             mnt = Path(mnt).resolve()
             self.logger.info(
@@ -309,6 +306,9 @@ class depthchargectl(
 
     @Argument(dest=argparse.SUPPRESS, help=argparse.SUPPRESS)
     def diskinfo(self):
+        # Break cyclic dependencies here
+        yield Disks()
+
         root = self.root_mountpoint
 
         return Disks(
@@ -689,6 +689,9 @@ class depthchargectl(
     @Argument("--kernel-cmdline", nargs="+", metavar="CMD")
     def kernel_cmdline(self, *cmds):
         """Command line options for the kernel"""
+        # Break cyclic dependencies here
+        yield []
+
         if len(cmds) == 0:
             cmdline = self.config.get("kernel-cmdline")
             if cmdline is not None:
