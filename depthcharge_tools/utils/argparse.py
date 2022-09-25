@@ -517,6 +517,7 @@ class Group(_MethodDecorator):
         if isinstance(grp, inspect.BoundArguments):
             inputs = instance.__dict__.pop(self.__name__)
             func = super().__get__(instance, owner)
+            instance.__dict__[self.__name__] = inputs
 
             if callable(func):
                 try:
@@ -528,9 +529,7 @@ class Group(_MethodDecorator):
                 instance.__dict__[self.__name__] = outputs
                 return outputs
 
-            else:
-                instance.__dict__[self.__name__] = inputs
-                return inputs
+            return inputs
 
         return grp
 
