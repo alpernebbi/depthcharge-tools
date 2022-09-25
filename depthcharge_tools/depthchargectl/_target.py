@@ -14,7 +14,6 @@ from depthcharge_tools.utils.argparse import (
     CommandExit,
 )
 from depthcharge_tools.utils.os import (
-    system_disks,
     Disk,
     CrosPartition,
     Partition,
@@ -115,9 +114,9 @@ class depthchargectl_target(
         # so we target only them by default.
         if not disks:
             if self.all_disks:
-                disks = system_disks.roots()
+                disks = self.diskinfo.roots()
             else:
-                disks = system_disks.bootable_disks()
+                disks = self.diskinfo.bootable_disks()
 
         if not disks:
             raise ValueError(
@@ -139,7 +138,7 @@ class depthchargectl_target(
             self.logger.info("Finding disks for targets '{}'.".format(disks))
             images = []
             for d in disks:
-                if system_disks.evaluate(d) is None:
+                if self.diskinfo.evaluate(d) is None:
                     try:
                         images.append(Disk(d))
                     except ValueError as err:
@@ -148,7 +147,7 @@ class depthchargectl_target(
                             exc_info=self.logger.isEnabledFor(logging.DEBUG),
                         )
 
-            for d in (*system_disks.roots(*disks), *images):
+            for d in (*self.diskinfo.roots(*disks), *images):
                 self.logger.info("Using '{}' as a disk.".format(d))
                 try:
                     partitions.extend(d.cros_partitions())
@@ -205,7 +204,7 @@ class depthchargectl_target(
     def __call__(self):
         # We will need to check partitions against this if allow_current
         # is false.
-        current = system_disks.by_kern_guid()
+        current = self.diskinfo.by_kern_guid()
 
         # Given a single partition, check if the partition is valid.
         if len(self.partitions) == 1 and len(self.disks) == 0:

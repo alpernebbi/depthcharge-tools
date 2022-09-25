@@ -16,10 +16,6 @@ from depthcharge_tools.utils.argparse import (
     Group,
     CommandExit,
 )
-from depthcharge_tools.utils.os import (
-    system_disks,
-    Disks,
-)
 from depthcharge_tools.utils.platform import (
     KernelEntry,
     installed_kernels,
@@ -245,7 +241,7 @@ class depthchargectl_write(
 
         # Check and warn if we targeted the currently booted partition,
         # as that usually means it's the only partition.
-        current = system_disks.by_kern_guid()
+        current = self.diskinfo.by_kern_guid()
         if self.allow_current and target.path == current.path:
             self.logger.warning(
                 "Overwriting the currently booted partition '{}'. "

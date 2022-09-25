@@ -30,7 +30,6 @@ from depthcharge_tools.utils.collections import (
     ConfigDict,
 )
 from depthcharge_tools.utils.os import (
-    system_disks,
     Disks,
 )
 from depthcharge_tools.utils.platform import (
@@ -227,9 +226,9 @@ class depthchargectl(
         if isinstance(self.root, Path):
             return self.root
 
-        disk = system_disks.evaluate(self.root)
+        disk = self.diskinfo.evaluate(self.root)
         mountpoints = sorted(
-            system_disks.mountpoints(disk),
+            self.diskinfo.mountpoints(disk),
             key=lambda p: len(p.parents),
         )
 
@@ -268,15 +267,10 @@ class depthchargectl(
             )
             return boot
 
-        root = self.root_mountpoint
-        disks = Disks(
-            fstab=(root / "etc" / "fstab"),
-            crypttab=(root / "etc" / "crypttab"),
-        )
-        boot_str = disks.by_mountpoint("/boot", fstab_only=True)
-        device = system_disks.evaluate(boot_str)
+        boot_str = self.diskinfo.by_mountpoint("/boot", fstab_only=True)
+        device = self.diskinfo.evaluate(boot_str)
         mountpoints = sorted(
-            disks.mountpoints(device),
+            self.diskinfo.mountpoints(device),
             key=lambda p: len(p.parents),
         )
 
@@ -295,6 +289,7 @@ class depthchargectl(
         if mountpoints:
             return mountpoints[0]
 
+        root = self.root_mountpoint
         boot = (root / "boot").resolve()
         self.logger.info(
             "Couldn't find /boot in fstab, falling back to '{}'."
@@ -311,6 +306,15 @@ class depthchargectl(
             )
 
         return boot
+
+    @Argument(dest=argparse.SUPPRESS, help=argparse.SUPPRESS)
+    def diskinfo(self):
+        root = self.root_mountpoint
+
+        return Disks(
+            fstab=(root / "etc" / "fstab"),
+            crypttab=(root / "etc" / "crypttab"),
+        )
 
     @Group
     def config_options(self):

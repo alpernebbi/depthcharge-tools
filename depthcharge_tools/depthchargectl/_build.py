@@ -20,8 +20,6 @@ from depthcharge_tools.utils.argparse import (
     CommandExit,
 )
 from depthcharge_tools.utils.os import (
-    system_disks,
-    Disks,
     Partition,
 )
 from depthcharge_tools.utils.pathlib import (
@@ -290,11 +288,7 @@ class depthchargectl_build(
 
         if isinstance(root, Path):
             mnt = self.root_mountpoint
-            disks = Disks(
-                fstab=(mnt / "etc" / "fstab"),
-                crypttab=(mnt / "etc" / "crypttab"),
-            )
-            root = disks.by_mountpoint("/", fstab_only=True)
+            root = self.diskinfo.by_mountpoint("/", fstab_only=True)
 
             if root:
                 self.logger.info(
@@ -303,8 +297,8 @@ class depthchargectl_build(
                 )
                 return root
 
-            dev = system_disks.by_mountpoint(mnt)
-            uuid = system_disks.get_uuid(dev)
+            dev = self.diskinfo.by_mountpoint(mnt)
+            uuid = self.diskinfo.get_uuid(dev)
             if uuid:
                 root = "UUID={}".format(uuid.upper())
                 self.logger.warning(
@@ -324,7 +318,7 @@ class depthchargectl_build(
                 .format(mnt)
             )
 
-        if not system_disks.evaluate(root):
+        if not self.diskinfo.evaluate(root):
             self.logger.warning(
                 "Using root '{}' but it's not a device or mountpoint."
                 .format(root)

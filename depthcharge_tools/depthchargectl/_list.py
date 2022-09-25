@@ -15,7 +15,6 @@ from depthcharge_tools.utils.collections import (
     TypedList
 )
 from depthcharge_tools.utils.os import (
-    system_disks,
     Disk,
     CrosPartition,
 )
@@ -120,12 +119,12 @@ class depthchargectl_list(
 
         if self.all_disks:
             self.logger.info("Searching all disks.")
-            disks = system_disks.roots()
+            disks = self.diskinfo.roots()
         elif disks:
             self.logger.info("Searching real disks for {}.".format(disks))
             images = []
             for d in disks:
-                if system_disks.evaluate(d) is None:
+                if self.diskinfo.evaluate(d) is None:
                     try:
                         images.append(Disk(d))
                     except ValueError as err:
@@ -133,10 +132,10 @@ class depthchargectl_list(
                             err,
                             exc_info=self.logger.isEnabledFor(logging.DEBUG),
                         )
-            disks = [*system_disks.roots(*disks), *images]
+            disks = [*self.diskinfo.roots(*disks), *images]
         else:
             self.logger.info("Searching bootable disks.")
-            disks = system_disks.bootable_disks()
+            disks = self.diskinfo.bootable_disks()
 
         if disks:
             self.logger.info("Using disks: {}.".format(disks))

@@ -607,6 +607,3 @@ class CrosPartition(Partition):
             return NotImplemented
 
         return self._comparable_parts() > other._comparable_parts()
-
-
-system_disks = Disks()

@@ -12,7 +12,6 @@ from depthcharge_tools.utils.argparse import (
     CommandExit,
 )
 from depthcharge_tools.utils.os import (
-    system_disks,
     Disk,
     Partition,
     CrosPartition,
@@ -57,7 +56,7 @@ class depthchargectl_bless(
         device = self.disk or self.partition
 
         if isinstance(device, str):
-            sys_device = system_disks[device]
+            sys_device = self.diskinfo.evaluate(device)
 
             if sys_device is not None:
                 self.logger.info(
@@ -91,7 +90,7 @@ class depthchargectl_bless(
             self.logger.info(
                 "No partition given, defaulting to currently booted one."
             )
-            partition = system_disks.by_kern_guid()
+            partition = self.diskinfo.by_kern_guid()
 
         if partition is None:
             if is_cros_boot():

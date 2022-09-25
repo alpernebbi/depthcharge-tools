@@ -15,9 +15,6 @@ from depthcharge_tools.utils.argparse import (
     Group,
     CommandExit,
 )
-from depthcharge_tools.utils.os import (
-    system_disks,
-)
 
 from depthcharge_tools.depthchargectl import depthchargectl
 
@@ -129,7 +126,7 @@ class depthchargectl_remove(
         )
         badparts = []
         error_disks = []
-        for disk in system_disks.bootable_disks():
+        for disk in self.diskinfo.bootable_disks():
             try:
                 parts = disk.cros_partitions()
             except subprocess.CalledProcessError as err:
@@ -167,7 +164,7 @@ class depthchargectl_remove(
                                 ),
                             )
 
-        current = system_disks.by_kern_guid()
+        current = self.diskinfo.by_kern_guid()
         if current in badparts:
             if self.force:
                 self.logger.warning(
