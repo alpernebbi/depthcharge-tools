@@ -219,6 +219,7 @@ class depthchargectl_write(
                 disks=[self.target] if self.target else [],
                 min_size=image.stat().st_size,
                 allow_current=self.allow_current,
+                root=self.root,
                 config=self.config,
                 board=self.board,
                 tmpdir=self.tmpdir / "target",
