@@ -526,6 +526,14 @@ class Group(_MethodDecorator):
                     raise RuntimeError(
                         "Group method raised AttributeError"
                     ) from err
+
+                if inspect.isgenerator(outputs):
+                    try:
+                        while True:
+                            instance.__dict__[self.__name__] = next(outputs)
+                    except StopIteration as err:
+                        outputs = err.value
+
                 instance.__dict__[self.__name__] = outputs
                 return outputs
 
