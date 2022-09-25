@@ -831,7 +831,17 @@ class CommandMeta(type):
         cls.__custom_kwargs = kwargs
         return cls
 
-    def __call__(cls, *args, **kwargs):
+    @property
+    def __call__(cls):
+        cls_call = cls.__dict__.get("__call__", None)
+        cls_call = getattr(cls_call, "__func__", cls_call)
+
+        if inspect.isgeneratorfunction(cls_call):
+            return cls.__generator_call
+        else:
+            return cls.__normal_call
+
+    def __normal_call(cls, *args, **kwargs):
         instance = super().__call__()
         raise_exit = kwargs.pop("__raise_CommandExit", False)
 
@@ -840,6 +850,24 @@ class CommandMeta(type):
                 retval = inst(*args, **kwargs)
         else:
             retval = instance(*args, **kwargs)
+
+        if isinstance(retval, CommandExit):
+            if raise_exit:
+                raise retval
+            else:
+                retval = retval.output
+
+        return retval
+
+    def __generator_call(cls, *args, **kwargs):
+        instance = super().__call__()
+        raise_exit = kwargs.pop("__raise_CommandExit", False)
+
+        if hasattr(instance, "__enter__"):
+            with instance as inst:
+                retval = yield from inst(*args, **kwargs)
+        else:
+            retval = yield from instance(*args, **kwargs)
 
         if isinstance(retval, CommandExit):
             if raise_exit:
@@ -878,6 +906,14 @@ class CommandMeta(type):
 
         try:
             output = command(__raise_CommandExit=True, **kwargs)
+
+            if inspect.isgenerator(output):
+                try:
+                    while True:
+                        print(next(output))
+                except StopIteration as err:
+                    output = err.value
+
             if output is not None:
                 print(output)
 
