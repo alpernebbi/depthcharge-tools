@@ -645,6 +645,15 @@ class mkdepthcharge(
                 )
                 pad_to = align_up(addr_to_offs(pref_address + init_size))
 
+                # Custom kernels may have PHYSICAL_START high enough
+                # that we can squeeze the initramfs between vmlinuz and
+                # the preferred_address. Very unlikely, but saves space.
+                # Didn't work unless I padded the vmlinuz by 0x15000.
+                low_pad = 0x18000
+                low_usable = pref_address - align_up(data.size()) - low_pad
+                if initramfs.stat().st_size < low_usable:
+                    pad_to = align_up(data.size()) + low_pad
+
                 if self.pad_vmlinuz and pad_to > data.size():
                     self.logger.info(
                         "Padding vmlinuz to size {:#x}"
