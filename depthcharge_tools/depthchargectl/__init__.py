@@ -260,7 +260,7 @@ class depthchargectl(
             boot = Path(boot).resolve()
             self.logger.info(
                 "Using boot mountpoint '{}' from given argument."
-                .format(root)
+                .format(boot)
             )
             return boot
 
