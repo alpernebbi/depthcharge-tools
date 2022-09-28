@@ -48,6 +48,19 @@ class mkdepthcharge(
     logger = logging.getLogger(__name__)
 
 
+    # Inputs can have the same name and cause collisions in tmpdir.
+    def _tempfile(self, name):
+        f = self.tmpdir / name
+        if not f.exists():
+            return f
+
+        for i in range(9999):
+            f = f.with_name("{}-idx{:04}".format(name, i))
+            if not f.exists():
+                return f
+
+        raise FileExistsError(self.tmpdir / name)
+
     # Debian packs the arm64 kernel uncompressed, but the bindeb-pkg
     # kernel target packs it as gzip. So we'll try to decompress inputs.
     def _decompress(self, f):
@@ -56,7 +69,7 @@ class mkdepthcharge(
             .format(f)
         )
 
-        decomp = decompress(f, self.tmpdir / f.name)
+        decomp = decompress(f, self._tempfile(f.name))
         if decomp is not None:
             self.logger.info(
                 "Decompressed input '{}' as '{}'."
@@ -68,7 +81,7 @@ class mkdepthcharge(
     # Copy inputs to tmpdir because mkimage wants modifiable files.
     def _copy(self, f):
         if self.tmpdir not in f.parents:
-            f = copy(f, self.tmpdir)
+            f = copy(f, self._tempfile(f.name))
         f.chmod(0o755)
 
         return f
@@ -588,27 +601,27 @@ class mkdepthcharge(
         # Depthcharge on arm64 with FIT supports these two compressions.
         if self.compress == "lz4":
             self.logger.info("Compressing kernel with lz4.")
-            vmlinuz = lz4.compress(vmlinuz, tmpdir / "vmlinuz.lz4")
+            vmlinuz = lz4.compress(vmlinuz, self._tempfile("vmlinuz.lz4"))
         elif self.compress == "lzma":
             self.logger.info("Compressing kernel with lzma.")
-            vmlinuz = lzma.compress(vmlinuz, tmpdir / "vmlinuz.lzma")
+            vmlinuz = lzma.compress(vmlinuz, self._tempfile("vmlinuz.lzma"))
         elif self.compress not in (None, "none"):
             fmt = "Compression type '{}' is not supported."
             msg = fmt.format(compress)
             raise ValueError(msg)
 
         # vbutil_kernel --config argument wants cmdline as a file.
-        cmdline_file = tmpdir / "kernel.args"
+        cmdline_file = self._tempfile("kernel.args")
         cmdline_file.write_text(self.cmdline)
 
         # vbutil_kernel --bootloader argument is mandatory, but it's
         # unused in depthcharge except as a multiboot ramdisk. Prepare
         # this empty file as its replacement where necessary.
-        empty = tmpdir / "empty.bin"
+        empty = self._tempfile("empty.bin")
         empty.write_bytes(bytes(512))
 
         if self.image_format == "fit":
-            fit_image = tmpdir / "depthcharge.fit"
+            fit_image = self._tempfile("depthcharge.fit")
 
             initramfs_args = []
             if initramfs is not None:
@@ -707,7 +720,7 @@ class mkdepthcharge(
             # vbutil_kernel picks apart the vmlinuz in ways I don't
             # really want to reimplement right now, so just call it.
             self.logger.info("Packing files as temporary image.")
-            temp_img = tmpdir / "temp.img"
+            temp_img = self._tempfile("temp.img")
             proc = vbutil_kernel(
                 "--version", "1",
                 "--arch", self.arch.vboot,
