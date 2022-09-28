@@ -893,8 +893,8 @@ class CommandMeta(type):
         root_logger.addHandler(logging.StreamHandler())
         root_logger.setLevel(logging.NOTSET)
 
-        if hasattr(command, "logger"):
-            logger = command.logger
+        if hasattr(command, "_logger"):
+            logger = command._logger
         else:
             logging.getLogger(cls.__module__)
 
