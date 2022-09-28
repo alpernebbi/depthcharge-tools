@@ -10,7 +10,6 @@ from pathlib import Path
 
 from depthcharge_tools.utils.subprocess import (
     crossystem,
-    file,
 )
 
 
@@ -278,13 +277,17 @@ class KernelEntry:
 
     @property
     def arch(self):
-        info = file.brief(self.kernel)
-        if not info:
-            info = str(self.kernel)
+        kernel = Path(self.kernel)
 
-        for arch in Architecture.all:
-            if re.search(r"\b{}\b".format(arch), info):
-                return Architecture(arch)
+        with kernel.open("rb") as f:
+            head = f.read(4096)
+
+        if head[0x202:0x206] == b"HdrS":
+            return Architecture("x86")
+        elif head[0x38:0x3c] == b"ARM\x64":
+            return Architecture("arm64")
+        elif head[0x34:0x38] == b"\x45\x45\x45\x45":
+            return Architecture("arm")
 
     def _comparable_parts(self):
         pattern = "([^a-zA-Z0-9]?)([a-zA-Z]*)([0-9]*)"
