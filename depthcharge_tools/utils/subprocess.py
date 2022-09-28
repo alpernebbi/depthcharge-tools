@@ -95,6 +95,62 @@ class LzmaRunner(ProcessRunner):
         return self("-t", stdin=path, check=False)
 
 
+class LzopRunner(ProcessRunner):
+    def __init__(self):
+        super().__init__("lzop")
+
+    def compress(self, src, dest):
+        return self("-c", stdin=src, stdout=dest)
+
+    def decompress(self, src, dest):
+        return self("-c", "-d", stdin=src, stdout=dest)
+
+    def test(self, path):
+        return self("-t", stdin=path, check=False)
+
+
+class Bzip2Runner(ProcessRunner):
+    def __init__(self):
+        super().__init__("bzip2")
+
+    def compress(self, src, dest):
+        return self("-c", stdin=src, stdout=dest)
+
+    def decompress(self, src, dest):
+        return self("-c", "-d", stdin=src, stdout=dest)
+
+    def test(self, path):
+        return self("-t", stdin=path, check=False)
+
+
+class XzRunner(ProcessRunner):
+    def __init__(self):
+        super().__init__("xz")
+
+    def compress(self, src, dest):
+        return self("-z", "--check=crc32", stdin=src, stdout=dest)
+
+    def decompress(self, src, dest):
+        return self("-d", stdin=src, stdout=dest)
+
+    def test(self, path):
+        return self("-t", stdin=path, check=False)
+
+
+class ZstdRunner(ProcessRunner):
+    def __init__(self):
+        super().__init__("zstd")
+
+    def compress(self, src, dest):
+        return self("-z", "-9", stdin=src, stdout=dest)
+
+    def decompress(self, src, dest):
+        return self("-d", stdin=src, stdout=dest)
+
+    def test(self, path):
+        return self("-t", stdin=path, check=False)
+
+
 class MkimageRunner(ProcessRunner):
     def __init__(self):
         super().__init__("mkimage")
@@ -280,6 +336,10 @@ class FileRunner(ProcessRunner):
 gzip = GzipRunner()
 lz4 = Lz4Runner()
 lzma = LzmaRunner()
+lzop = LzopRunner()
+bzip2 = Bzip2Runner()
+xz = XzRunner()
+zstd = ZstdRunner()
 mkimage = MkimageRunner()
 vbutil_kernel = VbutilKernelRunner()
 cgpt = CgptRunner()
