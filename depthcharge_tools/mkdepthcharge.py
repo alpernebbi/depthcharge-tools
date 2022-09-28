@@ -47,6 +47,32 @@ class mkdepthcharge(
 
     logger = logging.getLogger(__name__)
 
+
+    # Debian packs the arm64 kernel uncompressed, but the bindeb-pkg
+    # kernel target packs it as gzip. So we'll try to decompress inputs.
+    def _decompress(self, f):
+        self.logger.info(
+            "Trying to decompress file '{}'."
+            .format(f)
+        )
+
+        decomp = decompress(f, self.tmpdir / f.name)
+        if decomp is not None:
+            self.logger.info(
+                "Decompressed input '{}' as '{}'."
+                .format(f, decomp)
+            )
+
+        return decomp or f
+
+    # Copy inputs to tmpdir because mkimage wants modifiable files.
+    def _copy(self, f):
+        if self.tmpdir not in f.parents:
+            f = copy(f, self.tmpdir)
+        f.chmod(0o755)
+
+        return f
+
     @Group
     def input_files(self):
         """Input files"""
@@ -61,17 +87,18 @@ class mkdepthcharge(
         files = [Path(f).resolve() for f in files]
 
         for f in files:
-            # Decompress files to run detection on content
-            decomp = decompress(f)
-            if decomp is not None:
-                head = decomp[:4096]
-            else:
-                with f.open("rb") as f_:
-                    head = f_.read(4096)
+            # Decompress files to run detection on content.
+            decomp = self._decompress(f)
+            with decomp.open("rb") as f_:
+                head = f_.read(4096)
 
             # Portable Executable and ELF files
             if head.startswith(b"MZ") or head.startswith(b"ELF"):
-                vmlinuz.append(f)
+                self.logger.info(
+                    "File '{}' identified as a vmlinuz."
+                    .format(f)
+                )
+                vmlinuz.append(decomp)
 
             # Cpio files
             elif (
@@ -79,19 +106,47 @@ class mkdepthcharge(
                 or head.startswith(b"070702")
                 or head.startswith(b"070707")
             ):
+                self.logger.info(
+                    "File '{}' identified as an initramfs."
+                    .format(f)
+                )
+                # Keep initramfs compressed
                 initramfs.append(f)
+
+                # Avoid name collision when copying initramfs to tmpdir
+                if decomp != f:
+                    decomp.unlink()
 
             # Device-tree blobs
             elif head.startswith(b"\xd0\x0d\xfe\xed"):
-                dtbs.append(f)
+                self.logger.info(
+                    "File '{}' identified as a device-tree blob."
+                    .format(f)
+                )
+                dtbs.append(decomp)
 
             # Failed to detect, assume in the order in usage string
             elif len(vmlinuz) == 0:
-                vmlinuz.append(f)
+                self.logger.info(
+                    "Assuming file '{}' is a vmlinuz."
+                    .format(f)
+                )
+                vmlinuz.append(decomp)
+
             elif len(initramfs) == 0:
+                self.logger.info(
+                    "Assuming file '{}' is an initramfs."
+                    .format(f)
+                )
+                # Keep initramfs compressed
                 initramfs.append(f)
+
             else:
-                dtbs.append(f)
+                self.logger.info(
+                    "Assuming file '{}' is a device-tree blob."
+                    .format(f)
+                )
+                dtbs.append(decomp)
 
         return {
             "vmlinuz": vmlinuz,
@@ -106,7 +161,12 @@ class mkdepthcharge(
         files = self.files["vmlinuz"]
 
         if vmlinuz is not None:
-            files = [Path(vmlinuz).resolve(), *files]
+            vmlinuz = Path(vmlinuz).resolve()
+            self.logger.info(
+                "Using file '{}' as a vmlinuz."
+                .format(vmlinuz)
+            )
+            files = [self._decompress(vmlinuz), *files]
 
         if len(files) == 0:
             raise ValueError(
@@ -118,7 +178,7 @@ class mkdepthcharge(
                 "Can't build with multiple kernels"
             )
 
-        vmlinuz = files[0]
+        vmlinuz = self._copy(files[0])
 
         return vmlinuz
 
@@ -129,7 +189,12 @@ class mkdepthcharge(
         files = self.files["initramfs"]
 
         if initramfs is not None:
-            files = [Path(initramfs).resolve(), *files]
+            initramfs = Path(initramfs).resolve()
+            self.logger.info(
+                "Using file '{}' as an initramfs."
+                .format(initramfs)
+            )
+            files = [initramfs, *files]
 
         if len(files) > 1:
             raise ValueError(
@@ -137,7 +202,7 @@ class mkdepthcharge(
             )
 
         if files:
-            initramfs = files[0]
+            initramfs = self._copy(files[0])
         else:
             initramfs = None
 
@@ -149,10 +214,15 @@ class mkdepthcharge(
         """Device-tree binary file"""
         files = self.files["dtbs"]
 
-        if dtbs:
-            dtbs = [Path(dtb).resolve() for dtb in dtbs]
+        dtbs = [Path(dtb).resolve() for dtb in dtbs]
+        for dtb in dtbs:
+            self.logger.info(
+                "Using file '{}' as a device-tree blob."
+                .format(dtb)
+            )
 
-        dtbs = [*dtbs, *files]
+        dtbs = [self._decompress(dtb) for dtb in dtbs]
+        dtbs = [self._copy(dtb) for dtb in (*dtbs, *files)]
 
         return dtbs
 
@@ -499,45 +569,8 @@ class mkdepthcharge(
         dtbs = self.dtbs
         tmpdir = self.tmpdir
 
-        self.logger.info(
-            "Using vmlinuz: '{}'."
-            .format(vmlinuz)
-        )
-        if initramfs is not None:
-            self.logger.info(
-                "Using initramfs: '{}'."
-                .format(initramfs)
-            )
-        for dtb in dtbs:
-            self.logger.info(
-                "Using dtb: '{}'."
-                .format(dtb)
-            )
-
-        # mkimage can't open files when they are read-only for some
-        # reason. Copy them into a temp dir in fear of modifying the
-        # originals.
-        vmlinuz = copy(vmlinuz, tmpdir)
-        if initramfs is not None:
-            initramfs = copy(initramfs, tmpdir)
         if bootloader is not None:
             bootloader = copy(bootloader, tmpdir)
-        dtbs = [copy(dtb, tmpdir) for dtb in dtbs]
-
-        # We can add write permissions after we copy the files to temp.
-        vmlinuz.chmod(0o755)
-        if initramfs is not None:
-            initramfs.chmod(0o755)
-        for dtb in dtbs:
-            dtb.chmod(0o755)
-
-        # Debian packs the arm64 kernel uncompressed, but the bindeb-pkg
-        # kernel target packs it as gzip.
-        self.logger.info("Trying kernel decompression.")
-        decomp = decompress(vmlinuz, tmpdir / "vmlinuz.decompressed")
-        if decomp is not None:
-            self.logger.info("Kernel is compressed, using decompressed.")
-            vmlinuz = decomp
 
         # Depthcharge on arm64 with FIT supports these two compressions.
         if self.compress == "lz4":
