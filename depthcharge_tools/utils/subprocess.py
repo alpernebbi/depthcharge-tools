@@ -15,9 +15,6 @@ class ProcessRunner:
     def __init__(self, *args_prefix, **kwargs_defaults):
         self.args_prefix = args_prefix
         self.kwargs_defaults = {
-            'stdin': subprocess.PIPE,
-            'stdout': subprocess.PIPE,
-            'stderr': subprocess.PIPE,
             'encoding': "utf-8",
             'check': True,
         }
@@ -28,7 +25,7 @@ class ProcessRunner:
         kwargs = {**self.kwargs_defaults, **kwargs_overrides}
 
         with contextlib.ExitStack() as ctx:
-            stdin = kwargs.get("stdin")
+            stdin = kwargs.get("stdin", None)
             if isinstance(stdin, str):
                 stdin = Path(stdin)
             if isinstance(stdin, bytes):
@@ -37,18 +34,24 @@ class ProcessRunner:
                 kwargs["input"] = stdin
             if isinstance(stdin, Path):
                 kwargs["stdin"] = ctx.enter_context(stdin.open("r"))
+            if stdin is None:
+                kwargs["stdin"] = subprocess.PIPE
 
-            stdout = kwargs.get("stdout")
+            stdout = kwargs.get("stdout", None)
             if isinstance(stdout, str):
                 stdout = Path(stdout)
             if isinstance(stdout, Path):
                 kwargs["stdout"] = ctx.enter_context(stdout.open("x"))
+            if stdout is None:
+                kwargs["stdout"] = subprocess.PIPE
 
-            stderr = kwargs.get("stderr")
+            stderr = kwargs.get("stderr", None)
             if isinstance(stderr, str):
                 stderr = Path(stderr)
             if isinstance(stderr, Path):
                 kwargs["stderr"] = ctx.enter_context(stderr.open("x"))
+            if stderr is None:
+                kwargs["stderr"] = subprocess.PIPE
 
             return subprocess.run(args, **kwargs)
 
