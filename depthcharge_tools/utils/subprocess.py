@@ -31,23 +31,23 @@ class ProcessRunner:
             stdin = kwargs.get("stdin")
             if isinstance(stdin, str):
                 stdin = Path(stdin)
-            elif isinstance(stdin, bytes):
+            if isinstance(stdin, bytes):
                 kwargs["stdin"] = None
                 kwargs["encoding"] = None
                 kwargs["input"] = stdin
-            elif isinstance(stdin, Path):
+            if isinstance(stdin, Path):
                 kwargs["stdin"] = ctx.enter_context(stdin.open("r"))
 
             stdout = kwargs.get("stdout")
             if isinstance(stdout, str):
                 stdout = Path(stdout)
-            elif isinstance(stdout, Path):
+            if isinstance(stdout, Path):
                 kwargs["stdout"] = ctx.enter_context(stdout.open("x"))
 
             stderr = kwargs.get("stderr")
             if isinstance(stderr, str):
                 stderr = Path(stderr)
-            elif isinstance(stderr, Path):
+            if isinstance(stderr, Path):
                 kwargs["stderr"] = ctx.enter_context(stderr.open("x"))
 
             return subprocess.run(args, **kwargs)
