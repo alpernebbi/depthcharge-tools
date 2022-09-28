@@ -304,10 +304,23 @@ class mkdepthcharge(
         """Architecture to build for."""
 
         # We should be able to make an image for other architectures, but
-        # the default should be this machine's.
+        # the default should be whatever board the kernel is for.
         if arch is None:
-            arch = Architecture(platform.machine())
-            self.logger.info("Assuming CPU architecture '{}'.".format(arch))
+            with self.vmlinuz.open("rb") as f:
+                head = f.read(4096)
+
+            if head[0x202:0x206] == b"HdrS":
+                arch = Architecture("x86")
+            elif head[0x38:0x3c] == b"ARM\x64":
+                arch = Architecture("arm64")
+            elif head[0x34:0x38] == b"\x45\x45\x45\x45":
+                arch = Architecture("arm")
+
+            self.logger.info(
+                "Assuming CPU architecture '{}' from vmlinuz file."
+                .format(arch)
+            )
+
         elif arch not in Architecture.all:
             raise ValueError(
                 "Can't build images for unknown architecture '{}'"
