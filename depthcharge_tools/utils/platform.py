@@ -8,6 +8,9 @@ import shlex
 
 from pathlib import Path
 
+from depthcharge_tools.utils.pathlib import (
+    decompress,
+)
 from depthcharge_tools.utils.subprocess import (
     crossystem,
 )
@@ -279,8 +282,12 @@ class KernelEntry:
     def arch(self):
         kernel = Path(self.kernel)
 
-        with kernel.open("rb") as f:
-            head = f.read(4096)
+        decomp = decompress(kernel)
+        if decomp:
+            head = decomp[:4096]
+        else:
+            with kernel.open("rb") as f:
+                head = f.read(4096)
 
         if head[0x202:0x206] == b"HdrS":
             return Architecture("x86")
