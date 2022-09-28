@@ -45,8 +45,13 @@ class mkdepthcharge(
 ):
     """Build boot images for the ChromeOS bootloader."""
 
-    logger = logging.getLogger(__name__)
+    _logger = logging.getLogger(__name__)
 
+    @property
+    def logger(self):
+        # Set verbosity before logging messages
+        self.verbosity
+        return self._logger
 
     # Inputs can have the same name and cause collisions in tmpdir.
     def _tempfile(self, name):
@@ -278,7 +283,7 @@ class mkdepthcharge(
     def verbosity(self, verbosity=0):
         """Print more detailed output."""
         level = logging.WARNING - int(verbosity) * 10
-        self.logger.setLevel(level)
+        self._logger.setLevel(level)
         return verbosity
 
     @options.add
