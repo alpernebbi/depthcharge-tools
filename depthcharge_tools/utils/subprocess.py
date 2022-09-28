@@ -57,98 +57,175 @@ class GzipRunner(ProcessRunner):
     def __init__(self):
         super().__init__("gzip")
 
-    def compress(self, src, dest):
-        return self("-c", "-6", stdin=src, stdout=dest)
+    def compress(self, src, dest=None):
+        proc = self("-c", "-6", stdin=src, stdout=dest)
 
-    def decompress(self, src, dest):
-        return self("-c", "-d", stdin=src, stdout=dest)
+        if dest is None:
+            return proc.stdout
+        else:
+            return Path(dest)
+
+    def decompress(self, src, dest=None):
+        proc = self("-c", "-d", stdin=src, stdout=dest)
+
+        if dest is None:
+            return proc.stdout
+        else:
+            return Path(dest)
 
     def test(self, path):
-        return self("-t", stdin=path, check=False)
+        proc = self("-t", stdin=path, check=False)
+        return proc.returncode == 0
 
 
 class Lz4Runner(ProcessRunner):
     def __init__(self):
         super().__init__("lz4")
 
-    def compress(self, src, dest):
-        return self("-z", "-9", stdin=src, stdout=dest)
+    def compress(self, src, dest=None):
+        proc = self("-z", "-9", stdin=src, stdout=dest)
 
-    def decompress(self, src, dest):
-        return self("-d", stdin=src, stdout=dest)
+        if dest is None:
+            return proc.stdout
+        else:
+            return Path(dest)
+
+    def decompress(self, src, dest=None):
+        proc = self("-d", stdin=src, stdout=dest)
+
+        if dest is None:
+            return proc.stdout
+        else:
+            return Path(dest)
 
     def test(self, path):
-        return self("-t", stdin=path, check=False)
+        proc = self("-t", stdin=path, check=False)
+        return proc.returncode == 0
 
 
 class LzmaRunner(ProcessRunner):
     def __init__(self):
         super().__init__("lzma")
 
-    def compress(self, src, dest):
-        return self("-z", stdin=src, stdout=dest)
+    def compress(self, src, dest=None):
+        proc = self("-z", stdin=src, stdout=dest)
 
-    def decompress(self, src, dest):
-        return self("-d", stdin=src, stdout=dest)
+        if dest is None:
+            return proc.stdout
+        else:
+            return Path(dest)
+
+    def decompress(self, src, dest=None):
+        proc = self("-d", stdin=src, stdout=dest)
+
+        if dest is None:
+            return proc.stdout
+        else:
+            return Path(dest)
 
     def test(self, path):
-        return self("-t", stdin=path, check=False)
+        proc = self("-t", stdin=path, check=False)
+        return proc.returncode == 0
 
 
 class LzopRunner(ProcessRunner):
     def __init__(self):
         super().__init__("lzop")
 
-    def compress(self, src, dest):
-        return self("-c", stdin=src, stdout=dest)
+    def compress(self, src, dest=None):
+        proc = self("-c", stdin=src, stdout=dest)
 
-    def decompress(self, src, dest):
-        return self("-c", "-d", stdin=src, stdout=dest)
+        if dest is None:
+            return proc.stdout
+        else:
+            return Path(dest)
+
+    def decompress(self, src, dest=None):
+        proc = self("-c", "-d", stdin=src, stdout=dest)
+
+        if dest is None:
+            return proc.stdout
+        else:
+            return Path(dest)
 
     def test(self, path):
-        return self("-t", stdin=path, check=False)
+        proc = self("-t", stdin=path, check=False)
+        return proc.returncode == 0
 
 
 class Bzip2Runner(ProcessRunner):
     def __init__(self):
         super().__init__("bzip2")
 
-    def compress(self, src, dest):
-        return self("-c", stdin=src, stdout=dest)
+    def compress(self, src, dest=None):
+        proc = self("-c", stdin=src, stdout=dest)
 
-    def decompress(self, src, dest):
-        return self("-c", "-d", stdin=src, stdout=dest)
+        if dest is None:
+            return proc.stdout
+        else:
+            return Path(dest)
+
+    def decompress(self, src, dest=None):
+        proc = self("-c", "-d", stdin=src, stdout=dest)
+
+        if dest is None:
+            return proc.stdout
+        else:
+            return Path(dest)
 
     def test(self, path):
-        return self("-t", stdin=path, check=False)
+        proc = self("-t", stdin=path, check=False)
+        return proc.returncode == 0
 
 
 class XzRunner(ProcessRunner):
     def __init__(self):
         super().__init__("xz")
 
-    def compress(self, src, dest):
-        return self("-z", "--check=crc32", stdin=src, stdout=dest)
+    def compress(self, src, dest=None):
+        proc = self("-z", "--check=crc32", stdin=src, stdout=dest)
 
-    def decompress(self, src, dest):
-        return self("-d", stdin=src, stdout=dest)
+        if dest is None:
+            return proc.stdout
+        else:
+            return Path(dest)
+
+    def decompress(self, src, dest=None):
+        proc = self("-d", stdin=src, stdout=dest)
+
+        if dest is None:
+            return proc.stdout
+        else:
+            return Path(dest)
 
     def test(self, path):
-        return self("-t", stdin=path, check=False)
+        proc = self("-t", stdin=path, check=False)
+        return proc.returncode == 0
 
 
 class ZstdRunner(ProcessRunner):
     def __init__(self):
         super().__init__("zstd")
 
-    def compress(self, src, dest):
-        return self("-z", "-9", stdin=src, stdout=dest)
+    def compress(self, src, dest=None):
+        proc = self("-z", "-9", stdin=src, stdout=dest)
 
-    def decompress(self, src, dest):
-        return self("-d", stdin=src, stdout=dest)
+        if dest is None:
+            return proc.stdout
+        else:
+            return Path(dest)
+
+    def decompress(self, src, dest=None):
+        proc = self("-d", stdin=src, stdout=dest)
+
+        if dest is None:
+            return proc.stdout
+        else:
+            return Path(dest)
 
     def test(self, path):
-        return self("-t", stdin=path, check=False)
+        proc = self("-t", stdin=path, check=False)
+        return proc.returncode == 0
 
 
 class MkimageRunner(ProcessRunner):

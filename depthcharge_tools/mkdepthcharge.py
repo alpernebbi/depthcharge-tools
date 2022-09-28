@@ -20,10 +20,6 @@ from depthcharge_tools.utils.argparse import (
 )
 from depthcharge_tools.utils.pathlib import (
     copy,
-    is_gzip,
-    gunzip,
-    lz4,
-    lzma,
 )
 from depthcharge_tools.utils.platform import (
     Architecture,
@@ -35,7 +31,9 @@ from depthcharge_tools.utils.string import (
 from depthcharge_tools.utils.subprocess import (
     mkimage,
     vbutil_kernel,
-    gzip as gzip_runner,
+    gzip,
+    lz4,
+    lzma,
 )
 
 
@@ -69,7 +67,7 @@ class mkdepthcharge(
             # Partially decompress gzip files to run detection on content
             if head.startswith(b"\x1f\x8b"):
                 try:
-                    gzip_runner.decompress(head, subprocess.PIPE)
+                    output = gzip.decompress(head)
                 except subprocess.CalledProcessError as err:
                     if err.output:
                         head = err.output
@@ -538,17 +536,17 @@ class mkdepthcharge(
 
         # Debian packs the arm64 kernel uncompressed, but the bindeb-pkg
         # kernel target packs it as gzip.
-        if is_gzip(vmlinuz):
+        if gzip.test(vmlinuz):
             self.logger.info("Kernel is gzip compressed, decompressing.")
-            vmlinuz = gunzip(vmlinuz)
+            vmlinuz = gzip.decompress(vmlinuz, tmpdir / "vmlinuz.gunzip")
 
         # Depthcharge on arm64 with FIT supports these two compressions.
         if self.compress == "lz4":
             self.logger.info("Compressing kernel with lz4.")
-            vmlinuz = lz4(vmlinuz)
+            vmlinuz = lz4.compress(vmlinuz, tmpdir / "vmlinuz.lz4")
         elif self.compress == "lzma":
             self.logger.info("Compressing kernel with lzma.")
-            vmlinuz = lzma(vmlinuz)
+            vmlinuz = lzma.compress(vmlinuz, tmpdir / "vmlinuz.lzma")
         elif self.compress not in (None, "none"):
             fmt = "Compression type '{}' is not supported."
             msg = fmt.format(compress)
