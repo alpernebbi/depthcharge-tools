@@ -58,7 +58,7 @@ class ProcessRunner:
 
 class GzipRunner(ProcessRunner):
     def __init__(self):
-        super().__init__("gzip")
+        super().__init__("gzip", encoding=None)
 
     def compress(self, src, dest=None):
         proc = self("-c", "-6", stdin=src, stdout=dest)
@@ -83,7 +83,7 @@ class GzipRunner(ProcessRunner):
 
 class Lz4Runner(ProcessRunner):
     def __init__(self):
-        super().__init__("lz4")
+        super().__init__("lz4", encoding=None)
 
     def compress(self, src, dest=None):
         proc = self("-z", "-9", stdin=src, stdout=dest)
@@ -108,7 +108,7 @@ class Lz4Runner(ProcessRunner):
 
 class LzmaRunner(ProcessRunner):
     def __init__(self):
-        super().__init__("lzma")
+        super().__init__("lzma", encoding=None)
 
     def compress(self, src, dest=None):
         proc = self("-z", stdin=src, stdout=dest)
@@ -133,7 +133,7 @@ class LzmaRunner(ProcessRunner):
 
 class LzopRunner(ProcessRunner):
     def __init__(self):
-        super().__init__("lzop")
+        super().__init__("lzop", encoding=None)
 
     def compress(self, src, dest=None):
         proc = self("-c", stdin=src, stdout=dest)
@@ -158,7 +158,7 @@ class LzopRunner(ProcessRunner):
 
 class Bzip2Runner(ProcessRunner):
     def __init__(self):
-        super().__init__("bzip2")
+        super().__init__("bzip2", encoding=None)
 
     def compress(self, src, dest=None):
         proc = self("-c", stdin=src, stdout=dest)
@@ -183,7 +183,7 @@ class Bzip2Runner(ProcessRunner):
 
 class XzRunner(ProcessRunner):
     def __init__(self):
-        super().__init__("xz")
+        super().__init__("xz", encoding=None)
 
     def compress(self, src, dest=None):
         proc = self("-z", "--check=crc32", stdin=src, stdout=dest)
@@ -208,7 +208,7 @@ class XzRunner(ProcessRunner):
 
 class ZstdRunner(ProcessRunner):
     def __init__(self):
-        super().__init__("zstd")
+        super().__init__("zstd", encoding=None)
 
     def compress(self, src, dest=None):
         proc = self("-z", "-9", stdin=src, stdout=dest)
