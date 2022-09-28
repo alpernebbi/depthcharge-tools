@@ -37,7 +37,7 @@ class depthchargectl_remove(
 ):
     """Remove images and disable partitions containing them."""
 
-    logger = depthchargectl.logger.getChild("remove")
+    _logger = depthchargectl._logger.getChild("remove")
     config_section = "depthchargectl/remove"
 
     @depthchargectl.board.copy()

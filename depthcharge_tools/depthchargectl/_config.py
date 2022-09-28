@@ -23,7 +23,7 @@ class depthchargectl_config(
 ):
     """Get depthchargectl configuration values."""
 
-    logger = depthchargectl.logger.getChild("config")
+    _logger = depthchargectl._logger.getChild("config")
     config_section = "depthchargectl/config"
 
     @depthchargectl.board.copy()

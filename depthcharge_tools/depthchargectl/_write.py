@@ -65,7 +65,7 @@ class depthchargectl_write(
 ):
     """Write an image to a ChromeOS kernel partition."""
 
-    logger = depthchargectl.logger.getChild("write")
+    _logger = depthchargectl._logger.getChild("write")
     config_section = "depthchargectl/write"
 
     @depthchargectl.board.copy()

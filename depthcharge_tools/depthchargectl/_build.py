@@ -65,7 +65,7 @@ class depthchargectl_build(
 ):
     """Buld a depthcharge image for the running system."""
 
-    logger = depthchargectl.logger.getChild("build")
+    _logger = depthchargectl._logger.getChild("build")
     config_section = "depthchargectl/build"
 
     @Group

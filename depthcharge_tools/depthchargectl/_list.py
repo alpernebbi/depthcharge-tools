@@ -95,7 +95,7 @@ class depthchargectl_list(
 ):
     """List ChromeOS kernel partitions."""
 
-    logger = depthchargectl.logger.getChild("list")
+    _logger = depthchargectl._logger.getChild("list")
     config_section = "depthchargectl/list"
 
     @depthchargectl.board.copy()

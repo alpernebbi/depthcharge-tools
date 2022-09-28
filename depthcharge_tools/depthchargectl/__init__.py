@@ -119,8 +119,14 @@ class depthchargectl(
 ):
     """Manage Chrome OS kernel partitions."""
 
-    logger = logging.getLogger(__name__)
+    _logger = logging.getLogger(__name__)
     config_section = "depthchargectl"
+
+    @property
+    def logger(self):
+        # Set verbosity before logging messages
+        self.verbosity
+        return self._logger
 
     @Group
     def global_options(self):
@@ -147,7 +153,7 @@ class depthchargectl(
     def verbosity(self, verbosity=0):
         """Print more detailed output."""
         level = logging.WARNING - int(verbosity) * 10
-        self.logger.setLevel(level)
+        self._logger.setLevel(level)
         return verbosity
 
     @global_options.add

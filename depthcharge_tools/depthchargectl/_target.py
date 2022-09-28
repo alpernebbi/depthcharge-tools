@@ -90,7 +90,7 @@ class depthchargectl_target(
 ):
     """Choose or validate a ChromeOS Kernel partition to use."""
 
-    logger = depthchargectl.logger.getChild("target")
+    _logger = depthchargectl._logger.getChild("target")
     config_section = "depthchargectl/target"
 
     @depthchargectl.board.copy()

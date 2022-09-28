@@ -88,7 +88,7 @@ class depthchargectl_check(
 ):
     """Check if a depthcharge image can be booted."""
 
-    logger = depthchargectl.logger.getChild("check")
+    _logger = depthchargectl._logger.getChild("check")
     config_section = "depthchargectl/check"
 
     @Group
