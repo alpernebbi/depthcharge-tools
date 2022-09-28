@@ -190,8 +190,10 @@ def installed_kernels(root=None, boot=None):
         *boot.glob("initrd"),
         *boot.glob("initramfs-linux.img"),
         *boot.glob("initramfs-vanilla"),
+        *boot.glob("initramfs"),
         *root.glob("initrd.img"),
         *root.glob("initrd"),
+        *root.glob("initramfs"),
     ):
         if not f.is_file():
             continue
