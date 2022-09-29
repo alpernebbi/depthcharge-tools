@@ -486,6 +486,9 @@ class depthchargectl_build(
             )
             compress_list.remove("none")
 
+        if not compress_list:
+            raise SizeTooBigError()
+
         for compress in compress_list:
             self.logger.info("Trying with compression '{}'.".format(compress))
             tmpdir = self.tmpdir / "mkdepthcharge-{}".format(compress)
