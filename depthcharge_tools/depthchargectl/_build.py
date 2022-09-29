@@ -525,7 +525,9 @@ class depthchargectl_build(
             )
 
         else:
-            if self.initrd is not None:
+            # The necessary zimage padding might be too big, actually
+            # check if reducing the initramfs would make things fit.
+            if outtmp.stat().st_size - initrd_size < self.board.image_max_size:
                 raise InitramfsSizeTooBigError()
             else:
                 raise SizeTooBigError()
