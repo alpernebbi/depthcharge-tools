@@ -180,13 +180,23 @@ class depthchargectl_remove(
         for part in badparts:
             self.logger.info("Deactivating '{}'.".format(part))
             try:
-                part.attribute = 0x000
-            except subprocess.CalledProcessError as err:
-                error_parts.append(part)
-                self.logger.debug(
-                    "Couldn't zero attributes for partition '{}'."
-                    .format(part)
+                depthchargectl.bless(
+                    partition=target,
+                    bad=True,
+                    root=self.root,
+                    config=self.config,
+                    board=self.board,
+                    tmpdir=self.tmpdir / "bless",
+                    images_dir=self.images_dir,
+                    vboot_keyblock=self.vboot_keyblock,
+                    vboot_public_key=self.vboot_public_key,
+                    vboot_private_key=self.vboot_private_key,
+                    kernel_cmdline=self.kernel_cmdline,
+                    ignore_initramfs=self.ignore_initramfs,
+                    verbosity=self.verbosity,
                 )
+            except Exception as err:
+                error_parts.append(part)
                 self.logger.debug(
                     err,
                     exc_info=self.logger.isEnabledFor(logging.DEBUG),
