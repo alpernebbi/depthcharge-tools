@@ -110,19 +110,6 @@ class depthchargectl_target(
         disks = list(self.disks)
         partitions = list(self.partitions)
 
-        # Disks containing /boot and / should be available during boot,
-        # so we target only them by default.
-        if not disks:
-            if self.all_disks:
-                disks = self.diskinfo.roots()
-            else:
-                disks = self.diskinfo.bootable_disks()
-
-        if not disks:
-            raise ValueError(
-                "Couldn't find a real disk containing root or boot."
-            )
-
         # The inputs can be a mixed list of partitions and disks,
         # separate the two.
         for d in list(disks):
@@ -132,34 +119,6 @@ class depthchargectl_target(
                 disks.remove(d)
             except:
                 pass
-
-        # For arguments which are disks, search all their partitions.
-        if disks:
-            self.logger.info("Finding disks for targets '{}'.".format(disks))
-            images = []
-            for d in disks:
-                if self.diskinfo.evaluate(d) is None:
-                    try:
-                        images.append(Disk(d))
-                    except ValueError as err:
-                        self.logger.warning(
-                            err,
-                            exc_info=self.logger.isEnabledFor(logging.DEBUG),
-                        )
-
-            for d in (*self.diskinfo.roots(*disks), *images):
-                self.logger.info("Using '{}' as a disk.".format(d))
-                try:
-                    partitions.extend(d.cros_partitions())
-                except subprocess.CalledProcessError as err:
-                    self.logger.warning(
-                        "Couldn't get partitions for disk '{}'."
-                        .format(d)
-                    )
-                    self.logger.debug(
-                        err,
-                        exc_info=self.logger.isEnabledFor(logging.DEBUG),
-                    )
 
         self.disks = disks
         self.partitions = partitions
@@ -202,13 +161,16 @@ class depthchargectl_target(
         return all_disks
 
     def __call__(self):
+        disks = list(self.disks)
+        partitions = list(self.partitions)
+
         # We will need to check partitions against this if allow_current
         # is false.
         current = self.diskinfo.by_kern_guid()
 
         # Given a single partition, check if the partition is valid.
-        if len(self.partitions) == 1 and len(self.disks) == 0:
-            part = self.partitions[0]
+        if len(partitions) == 1 and len(disks) == 0:
+            part = partitions[0]
 
             self.logger.info("Checking if target partition is writable.")
             if part.path is not None and not part.path.is_block_device():
@@ -242,8 +204,28 @@ class depthchargectl_target(
                     self.min_size,
                 )
 
+        # For arguments which are disks, search all their partitions.
+        # If no disks or partitions were given, search bootable disks.
+        # Search all disks if explicitly asked.
+        if disks or not partitions or self.all_disks:
+            partitions += depthchargectl.list(
+                disks=disks,
+                all_disks=self.all_disks,
+                root=self.root,
+                config=self.config,
+                board=self.board,
+                tmpdir=self.tmpdir / "list",
+                images_dir=self.images_dir,
+                vboot_keyblock=self.vboot_keyblock,
+                vboot_public_key=self.vboot_public_key,
+                vboot_private_key=self.vboot_private_key,
+                kernel_cmdline=self.kernel_cmdline,
+                ignore_initramfs=self.ignore_initramfs,
+                verbosity=self.verbosity,
+            )
+
         good_partitions = []
-        for p in self.partitions:
+        for p in partitions:
             if self.min_size is not None and p.size < self.min_size:
                 self.logger.warning(
                     "Skipping partition '{}' as too small."
