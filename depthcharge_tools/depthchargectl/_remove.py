@@ -120,49 +120,49 @@ class depthchargectl_remove(
         # size 64KiB == 0x10000.
         image_vblock = image.read_bytes()[:0x10000]
 
+        partitions = depthchargectl.list(
+            root=self.root,
+            config=self.config,
+            board=self.board,
+            tmpdir=self.tmpdir / "list",
+            images_dir=self.images_dir,
+            vboot_keyblock=self.vboot_keyblock,
+            vboot_public_key=self.vboot_public_key,
+            vboot_private_key=self.vboot_private_key,
+            kernel_cmdline=self.kernel_cmdline,
+            ignore_initramfs=self.ignore_initramfs,
+            verbosity=self.verbosity,
+        )
+
         self.logger.info(
             "Searching for Chrome OS Kernel partitions containing '{}'."
             .format(image)
         )
         badparts = []
         error_disks = []
-        for disk in self.diskinfo.bootable_disks():
-            try:
-                parts = disk.cros_partitions()
-            except subprocess.CalledProcessError as err:
-                error_disks.append(disk)
-                self.logger.debug(
-                    "Couldn't get partitions for disk '{}'."
-                    .format(disk)
-                )
-                self.logger.debug(
-                    err,
-                    exc_info=self.logger.isEnabledFor(logging.DEBUG),
-                )
-                continue
 
-            for part in parts:
-                self.logger.info("Checking partition '{}'.".format(part))
+        for part in partitions:
+            self.logger.info("Checking partition '{}'.".format(part))
 
-                # It's OK to check only the vblock header, as that
-                # contains signatures on the content and those will be
-                # different if the content is different.
-                with part.path.open("rb") as p:
-                    if p.read(0x10000) == image_vblock:
-                        try:
-                            if part.attribute:
-                                badparts.append(part)
-                        except subprocess.CalledProcessError as err:
-                            self.logger.warning(
-                                "Couldn't get attribute for partition '{}'."
-                                .format(part)
-                            )
-                            self.logger.debug(
-                                err,
-                                exc_info=self.logger.isEnabledFor(
-                                    logging.DEBUG,
-                                ),
-                            )
+            # It's OK to check only the vblock header, as that
+            # contains signatures on the content and those will be
+            # different if the content is different.
+            with part.path.open("rb") as p:
+                if p.read(0x10000) == image_vblock:
+                    try:
+                        if part.attribute:
+                            badparts.append(part)
+                    except subprocess.CalledProcessError as err:
+                        self.logger.warning(
+                            "Couldn't get attribute for partition '{}'."
+                            .format(part)
+                        )
+                        self.logger.debug(
+                            err,
+                            exc_info=self.logger.isEnabledFor(
+                                logging.DEBUG,
+                            ),
+                        )
 
         current = self.diskinfo.by_kern_guid()
         if current in badparts:
