@@ -265,27 +265,32 @@ class depthchargectl_write(
                 "Setting '{}' as the highest-priority bootable part."
                 .format(target)
             )
-
             try:
-                target.attribute = 0x010
-            except subprocess.CalledProcessError as err:
+                depthchargectl.bless(
+                    partition=target,
+                    oneshot=True,
+                    root=self.root,
+                    config=self.config,
+                    board=self.board,
+                    tmpdir=self.tmpdir / "bless",
+                    images_dir=self.images_dir,
+                    vboot_keyblock=self.vboot_keyblock,
+                    vboot_public_key=self.vboot_public_key,
+                    vboot_private_key=self.vboot_private_key,
+                    kernel_cmdline=self.kernel_cmdline,
+                    ignore_initramfs=self.ignore_initramfs,
+                    verbosity=self.verbosity,
+                )
+            except Exception as err:
                 raise CommandExit(
-                    "Failed to set attributes for partition '{}'."
+                    "Failed to set '{}' as the highest-priority bootable part."
                     .format(target)
                 ) from err
 
-            try:
-                target.prioritize()
-            except subprocess.CalledProcessError as err:
-                raise CommandExit(
-                    "Failed to prioritize partition '{}'."
-                    .format(target)
-                ) from err
-
-            self.logger.warning(
-                "Set partition '{}' as next to boot."
-                .format(target)
-            )
+        self.logger.warning(
+            "Set partition '{}' as next to boot."
+            .format(target)
+        )
 
     global_options = depthchargectl.global_options
     config_options = depthchargectl.config_options
