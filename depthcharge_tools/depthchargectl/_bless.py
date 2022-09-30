@@ -176,19 +176,6 @@ class depthchargectl_bless(
                     .format(self.partition)
                 ) from err
 
-            try:
-                self.partition.prioritize()
-            except subprocess.CalledProcessError as err:
-                raise CommandExit(
-                    "Failed to prioritize partition '{}'."
-                    .format(self.partition)
-                ) from err
-
-            self.logger.info(
-                "Set partition '{}' as the highest-priority bootable part."
-                .format(self.partition)
-            )
-
             if self.oneshot == False:
                 try:
                     self.partition.successful = 1
@@ -216,6 +203,19 @@ class depthchargectl_bless(
                     "Set partition '{}' as not yet successfully booted."
                     .format(self.partition)
                 )
+
+            try:
+                self.partition.prioritize()
+            except subprocess.CalledProcessError as err:
+                raise CommandExit(
+                    "Failed to prioritize partition '{}'."
+                    .format(self.partition)
+                ) from err
+
+            self.logger.info(
+                "Set partition '{}' as the highest-priority bootable part."
+                .format(self.partition)
+            )
 
         else:
             try:
