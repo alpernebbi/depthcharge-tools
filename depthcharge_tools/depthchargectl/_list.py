@@ -135,7 +135,15 @@ class depthchargectl_list(
             disks = [*self.diskinfo.roots(*disks), *images]
         else:
             self.logger.info("Searching bootable disks.")
-            disks = self.diskinfo.bootable_disks()
+            root = (
+                self.diskinfo.by_mountpoint("/", fstab_only=True)
+                or self.diskinfo.by_mountpoint(self.root_mountpoint)
+            )
+            boot = (
+                self.diskinfo.by_mountpoint("/boot", fstab_only=True)
+                or self.diskinfo.by_mountpoint(self.boot_mountpoint)
+            )
+            disks = self.diskinfo.roots(root, boot)
 
         if disks:
             self.logger.info("Using disks: {}.".format(disks))
