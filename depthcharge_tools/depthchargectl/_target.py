@@ -140,8 +140,8 @@ class depthchargectl_target(
         """Options"""
 
     @options.add
-    @Argument("-s", "--min-size")
-    def min_size(self, bytes_):
+    @Argument("-s", "--min-size", nargs=1)
+    def min_size(self, bytes_=None):
         """Target partitions larger than this size."""
         if bytes_ is None:
             return 0x10000
