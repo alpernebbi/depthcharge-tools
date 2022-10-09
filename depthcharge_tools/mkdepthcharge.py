@@ -368,6 +368,16 @@ class mkdepthcharge(
 
         return format_
 
+    @options.add
+    @Argument("--kernel-start", nargs=1)
+    def kernel_start(self, addr=None):
+        """Start of depthcharge kernel buffer in memory."""
+        if addr is not None:
+            return parse_bytesize(addr)
+
+        if self.arch in Architecture.x86:
+            return 0x100000
+
     @Group
     def fit_options(self):
         """FIT image options"""
@@ -420,15 +430,6 @@ class mkdepthcharge(
             )
 
         return bool(pad)
-
-    @zimage_options.add
-    @Argument("--kernel-start", nargs=1)
-    def kernel_start(self, addr=None):
-        """Start of depthcharge kernel buffer in memory"""
-        if addr is None:
-            return 0x100000
-
-        return parse_bytesize(pad)
 
     @Group
     def vboot_options(self):
