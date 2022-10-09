@@ -400,6 +400,50 @@ class FdtgetRunner(ProcessRunner):
         else:
             return []
 
+
+class FdtputRunner(ProcessRunner):
+    def __init__(self):
+        super().__init__("fdtput")
+
+    def put(self, dt_file, node='/', prop='', value=None, type=None):
+        if isinstance(value, list):
+            values = value
+        else:
+            values = [value]
+
+        value_args = []
+        for value in values:
+            if isinstance(value, str):
+                value_args.append(value)
+                if type is None:
+                    type = str
+
+            elif isinstance(value, bytes):
+                value_args.extend(hex(c) for c in value)
+                if type is None:
+                    type = bytes
+
+            elif isinstance(value, int):
+                value_args.append(str(value))
+                if type is None:
+                    type = int
+
+            else:
+                value_args.append(str(value))
+
+        options = []
+        if type == str:
+            options += ["--type", "s"]
+        elif type == int:
+            options += ["--type", "i"]
+        elif type == bytes:
+            options += ["--type", 'bx']
+        elif type is not None:
+            options += ["--type", str(type)]
+
+        self(*options, str(dt_file), str(node), str(prop), *value_args)
+
+
 class FileRunner(ProcessRunner):
     def __init__(self):
         super().__init__("file")
@@ -425,4 +469,5 @@ vbutil_kernel = VbutilKernelRunner()
 cgpt = CgptRunner()
 crossystem = CrossystemRunner()
 fdtget = FdtgetRunner()
+fdtput = FdtputRunner()
 file = FileRunner()
