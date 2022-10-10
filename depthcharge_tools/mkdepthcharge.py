@@ -34,6 +34,8 @@ from depthcharge_tools.utils.subprocess import (
     vbutil_kernel,
     lz4,
     lzma,
+    fdtget,
+    fdtput,
 )
 
 
@@ -412,6 +414,15 @@ class mkdepthcharge(
 
         return desc
 
+    @fit_options.add
+    @Argument("--ramdisk-load-address", nargs=1)
+    def ramdisk_load_address(self, addr=None):
+        """Add load address to FIT ramdisk image section."""
+        if addr is not None:
+            return parse_bytesize(addr)
+
+        return None
+
     @Group
     def zimage_options(self):
         """zImage format options"""
@@ -650,6 +661,25 @@ class mkdepthcharge(
                 fit_image,
             )
             self.logger.info(proc.stdout)
+
+            # The ramdisk node can be ramdisk@1 or ramdisk-1.
+            def ramdisk_node(fit_image):
+                for subimage in fdtget.subnodes(fit_image, "/images"):
+                    node = "/images/{}".format(subimage)
+                    try:
+                        if fdtget.get(fit_image, node, "type") == "ramdisk":
+                            return node
+                    except:
+                        continue
+
+            # Earlier 32-bit ARM Chromebooks use U-Boot, which needs a
+            # usable load address for the FIT ramdisk image section.
+            if initramfs is not None and self.ramdisk_load_address:
+                self.logger.info("Patching FIT for ramdisk load address.")
+                fdtput.put(
+                    fit_image, ramdisk_node(fit_image),
+                    "load", self.ramdisk_load_address,
+                )
 
             self.logger.info("Packing files as depthcharge image.")
             proc = vbutil_kernel(
