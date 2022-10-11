@@ -423,6 +423,22 @@ class mkdepthcharge(
 
         return None
 
+    @fit_options.add
+    @Argument("--patch-dtbs", patch_dtbs=True)
+    def patch_dtbs(self, patch_dtbs=False):
+        """Add linux,initrd properties to device-tree binary files."""
+        if (
+            patch_dtbs
+            and self.kernel_start is None
+            and self.ramdisk_load_address is None
+        ):
+            raise ValueError(
+                "The kernel buffer start address or a ramdisk load address "
+                "is required to patch DTB files for initramfs support."
+            )
+
+        return bool(patch_dtbs)
+
     @Group
     def zimage_options(self):
         """zImage format options"""
@@ -647,6 +663,65 @@ class mkdepthcharge(
             dtb_args = []
             for dtb in dtbs:
                 dtb_args += ["-b", dtb]
+
+            # The later 32-bit ARM Chromebooks use Depthcharge, but
+            # their stock versions don't have the code to support FIT
+            # ramdisks. But since we know the fixed KERNEL_START we can
+            # deduce where the initramfs will be, and inject its address
+            # into the DTBs the way Linux expects bootloaders to do.
+            if initramfs is not None and self.patch_dtbs:
+
+                # We'll probably never need this, as only old U-Boot builds
+                # need a ramdisk load address and those can handle the
+                # initrd properties fine.
+                if self.ramdisk_load_address:
+                    initrd_start = self.ramdisk_load_address
+                    initrd_end = initrd_start + initramfs.stat().st_size
+
+                else:
+                    # Allocate space for the properties we want to set,
+                    # adding them later would shift things around.
+                    self.logger.info("Preparing dtb files for initramfs support.")
+                    for dtb in dtbs:
+                        fdtput.put(dtb, "/chosen", "linux,initrd-start", 0)
+                        fdtput.put(dtb, "/chosen", "linux,initrd-end", 0)
+
+                    # Make a temporary image and search for the initramfs
+                    # inside it, because I don't want to risk a wrong
+                    # estimate and don't want to mess with pylibfdt.
+                    self.logger.info("Packing files as temp FIT image:")
+                    tmp_image = self._tempfile("depthcharge.fit.tmp")
+                    proc = mkimage(
+                        "-f", "auto",
+                        "-A", self.arch.mkimage,
+                        "-O", "linux",
+                        "-C", self.compress,
+                        "-n", self.name,
+                        *initramfs_args,
+                        *dtb_args,
+                        "-d", vmlinuz,
+                        tmp_image,
+                    )
+                    self.logger.info(proc.stdout)
+
+                    with tmp_image.open("r+b") as f, mmap(f.fileno(), 0) as data:
+                        initrd_offset = data.find(initramfs.read_bytes())
+                        self.logger.info(
+                            "Initramfs is at offset {:#x} in FIT image."
+                            .format(initrd_offset)
+                        )
+                    initrd_start = initrd_offset + self.kernel_start
+                    initrd_end = initrd_start + initramfs.stat().st_size
+
+                self.logger.info(
+                    "Initramfs should be at address {:#x} - {:#x} in memory."
+                    .format(initrd_start, initrd_end)
+                )
+
+                self.logger.info("Patching dtb files for initramfs support.")
+                for dtb in dtbs:
+                    fdtput.put(dtb, "/chosen", "linux,initrd-start", initrd_start)
+                    fdtput.put(dtb, "/chosen", "linux,initrd-end", initrd_end)
 
             self.logger.info("Packing files as FIT image:")
             proc = mkimage(
