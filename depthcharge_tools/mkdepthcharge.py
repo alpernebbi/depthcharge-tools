@@ -694,6 +694,7 @@ class mkdepthcharge(
                     proc = mkimage(
                         "-f", "auto",
                         "-A", self.arch.mkimage,
+                        "-T", "kernel_noload",
                         "-O", "linux",
                         "-C", self.compress,
                         "-n", self.name,
@@ -727,6 +728,7 @@ class mkdepthcharge(
             proc = mkimage(
                 "-f", "auto",
                 "-A", self.arch.mkimage,
+                "-T", "kernel_noload",
                 "-O", "linux",
                 "-C", self.compress,
                 "-n", self.name,
