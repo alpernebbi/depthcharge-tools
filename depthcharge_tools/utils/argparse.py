@@ -568,7 +568,7 @@ class Group(_MethodDecorator):
 
         items = list(self._arguments)
         while items:
-            item = items.pop()
+            item = items.pop(0)
             item.__get__(self.__self__, type(self.__self__))
 
             # Argparse doesn't print help message for nested groups,
