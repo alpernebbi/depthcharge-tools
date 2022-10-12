@@ -100,6 +100,7 @@ class mkdepthcharge(
     @input_files.add
     @Argument(help=argparse.SUPPRESS)
     def files(self, *files):
+        """Input files (vmlinuz, initramfs, dtbs)"""
         vmlinuz = []
         initramfs = []
         dtbs = []
