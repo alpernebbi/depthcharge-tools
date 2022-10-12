@@ -99,6 +99,24 @@ class Board:
         return self._config.getboolean("boots-lzma-kernel", False)
 
     @property
+    def loads_zimage_ramdisk(self):
+        return self._config.getboolean("loads-zimage-ramdisk", False)
+
+    @property
+    def loads_fit_ramdisk(self):
+        return self._config.getboolean("loads-fit-ramdisk", False)
+
+    @property
+    def fit_ramdisk_load_address(self):
+        addr = self._config.get("fit-ramdisk-load-address", None)
+        return parse_bytesize(addr)
+
+    @property
+    def image_start_address(self):
+        addr = self._config.get("image-start-address", None)
+        return parse_bytesize(addr)
+
+    @property
     def image_max_size(self):
         max_size = self._config.get("image-max-size")
         if max_size in (None, "None", "none"):

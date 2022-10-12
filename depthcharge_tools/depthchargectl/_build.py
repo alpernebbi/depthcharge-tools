@@ -489,6 +489,22 @@ class depthchargectl_build(
         if not compress_list:
             raise SizeTooBigError()
 
+        # Avoid passing format-specific options unrelated to board format
+        image_format_opts = {
+            "image_format": self.board.image_format,
+        }
+
+        if self.board.image_format == "fit":
+            image_format_opts["patch_dtbs"] = not self.board.loads_fit_ramdisk
+
+            if self.board.fit_ramdisk_load_address is not None:
+                image_format_opts["ramdisk_load_address"] = (
+                    self.board.fit_ramdisk_load_address
+                )
+
+        elif self.board.image_format == "zimage":
+            image_format_opts["pad_vmlinuz"] = not self.board.loads_zimage_ramdisk
+
         for compress in compress_list:
             self.logger.info("Trying with compression '{}'.".format(compress))
             tmpdir = self.tmpdir / "mkdepthcharge-{}".format(compress)
@@ -499,7 +515,8 @@ class depthchargectl_build(
                     cmdline=self.kernel_cmdline,
                     compress=compress,
                     dtbs=self.dtbs,
-                    image_format=self.board.image_format,
+                    **image_format_opts,
+                    kernel_start=self.board.image_start_address,
                     initramfs=self.initrd,
                     keyblock=self.vboot_keyblock,
                     name=self.description,
