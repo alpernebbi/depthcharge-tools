@@ -424,7 +424,14 @@ class mkdepthcharge(
         return None
 
     @fit_options.add
-    @Argument("--patch-dtbs", patch_dtbs=True)
+    @Argument(
+        "--no-patch-dtbs", patch_dtbs=False,
+        help=argparse.SUPPRESS,
+    )
+    @Argument(
+        "--patch-dtbs", patch_dtbs=True,
+        help="Add linux,initrd properties to device-tree binary files.",
+    )
     def patch_dtbs(self, patch_dtbs=False):
         """Add linux,initrd properties to device-tree binary files."""
         if (
@@ -447,6 +454,10 @@ class mkdepthcharge(
     @Argument(
         "--no-pad-vmlinuz", pad=False,
         help="Don't pad the vmlinuz file for safe decompression",
+    )
+    @Argument(
+        "--pad-vmlinuz", pad=True,
+        help=argparse.SUPPRESS,
     )
     def pad_vmlinuz(self, pad=None):
         """Pad vmlinuz for safe decompression"""
@@ -571,6 +582,10 @@ class mkdepthcharge(
     @Argument(
         "--no-kern-guid", kern_guid=False,
         help="Don't prepend kern_guid=%%U to the cmdline."
+    )
+    @Argument(
+        "--kern-guid", kern_guid=True,
+        help=argparse.SUPPRESS,
     )
     def kern_guid(self, kern_guid=True):
         """Prepend kern_guid=%%U to the cmdline."""
