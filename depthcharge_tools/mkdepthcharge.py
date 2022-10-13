@@ -680,6 +680,16 @@ class mkdepthcharge(
             for dtb in dtbs:
                 dtb_args += ["-b", dtb]
 
+            # The subimage nodes can be <type>@1 or <type>-1.
+            def subimage_by_type(fit_image, subimage_type):
+                for subimage in fdtget.subnodes(fit_image, "/images"):
+                    node = "/images/{}".format(subimage)
+                    try:
+                        if fdtget.get(fit_image, node, "type") == subimage_type:
+                            return node
+                    except:
+                        continue
+
             # The later 32-bit ARM Chromebooks use Depthcharge, but
             # their stock versions don't have the code to support FIT
             # ramdisks. But since we know the fixed KERNEL_START we can
@@ -710,7 +720,7 @@ class mkdepthcharge(
                     proc = mkimage(
                         "-f", "auto",
                         "-A", self.arch.mkimage,
-                        "-T", "kernel_noload",
+                        "-T", "kernel",
                         "-O", "linux",
                         "-C", self.compress,
                         "-n", self.name,
@@ -720,6 +730,14 @@ class mkdepthcharge(
                         tmp_image,
                     )
                     self.logger.info(proc.stdout)
+
+                    # Mkimage breaks the config node key with -T kernel_noload.
+                    # Apparently this shifts things around as well, so...
+                    self.logger.info("Patching temp FIT for kernel_noload type.")
+                    fdtput.put(
+                        tmp_image, subimage_by_type(tmp_image, "kernel"),
+                        "type", "kernel_noload",
+                    )
 
                     with tmp_image.open("r+b") as f, mmap(f.fileno(), 0) as data:
                         initrd_offset = data.find(initramfs.read_bytes())
@@ -744,7 +762,7 @@ class mkdepthcharge(
             proc = mkimage(
                 "-f", "auto",
                 "-A", self.arch.mkimage,
-                "-T", "kernel_noload",
+                "-T", "kernel",
                 "-O", "linux",
                 "-C", self.compress,
                 "-n", self.name,
@@ -755,24 +773,21 @@ class mkdepthcharge(
             )
             self.logger.info(proc.stdout)
 
-            # The ramdisk node can be ramdisk@1 or ramdisk-1.
-            def ramdisk_node(fit_image):
-                for subimage in fdtget.subnodes(fit_image, "/images"):
-                    node = "/images/{}".format(subimage)
-                    try:
-                        if fdtget.get(fit_image, node, "type") == "ramdisk":
-                            return node
-                    except:
-                        continue
-
             # Earlier 32-bit ARM Chromebooks use U-Boot, which needs a
             # usable load address for the FIT ramdisk image section.
             if initramfs is not None and self.ramdisk_load_address:
                 self.logger.info("Patching FIT for ramdisk load address.")
                 fdtput.put(
-                    fit_image, ramdisk_node(fit_image),
+                    fit_image, subimage_by_type(fit_image, "ramdisk"),
                     "load", self.ramdisk_load_address,
                 )
+
+            # Mkimage breaks the config node key with -T kernel_noload.
+            self.logger.info("Patching FIT for kernel_noload type.")
+            fdtput.put(
+                fit_image, subimage_by_type(fit_image, "kernel"),
+                "type", "kernel_noload",
+            )
 
             self.logger.info("Packing files as depthcharge image.")
             proc = vbutil_kernel(
