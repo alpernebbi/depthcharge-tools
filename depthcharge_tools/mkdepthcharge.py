@@ -789,6 +789,17 @@ class mkdepthcharge(
                 "type", "kernel_noload",
             )
 
+            if (
+                initramfs is not None
+                and self.patch_dtbs
+                and self.ramdisk_load_address is None
+            ):
+                with fit_image.open("r+b") as f, mmap(f.fileno(), 0) as data:
+                    if initrd_offset != data.find(initramfs.read_bytes()):
+                        raise RuntimeError(
+                            "Initramfs FIT offset changed after rebuild."
+                        )
+
             self.logger.info("Packing files as depthcharge image.")
             proc = vbutil_kernel(
                 "--version", "1",
