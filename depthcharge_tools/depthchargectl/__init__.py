@@ -510,6 +510,10 @@ class depthchargectl(
                         idx -= 1
                     matchparts.pop()
 
+                # Avoid matching only on "libreboot" without actual board
+                if parts[-1] == "libreboot" and idx == len(parts) - 2:
+                    return (len(parts) - 1, float("inf"))
+
                 return (idx, len(sectname.split("/")))
 
             match_groups = collections.defaultdict(list)
