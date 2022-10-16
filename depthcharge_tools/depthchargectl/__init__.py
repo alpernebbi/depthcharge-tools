@@ -38,6 +38,7 @@ from depthcharge_tools.utils.platform import (
     cros_hwid,
     dt_compatibles,
     is_cros_boot,
+    is_cros_libreboot,
 )
 from depthcharge_tools.utils.string import (
     parse_bytesize,
@@ -551,6 +552,14 @@ class depthchargectl(
 
         if matches:
             sectname, board = matches[0]
+
+            if is_cros_libreboot():
+                libreboot_name = "{}/libreboot".format(sectname)
+                libreboot_board = boards.get(libreboot_name, None)
+                if libreboot_board:
+                    sectname = libreboot_name
+                    board = libreboot_board
+
             self.logger.info(
                 "Detected board '{}' ('{}') by HWID."
                 .format(board.name, board.codename)
@@ -579,6 +588,14 @@ class depthchargectl(
 
         if match is not None:
             sectname, board = match
+
+            if is_cros_libreboot():
+                libreboot_name = "{}/libreboot".format(sectname)
+                libreboot_board = boards.get(libreboot_name, None)
+                if libreboot_board:
+                    sectname = libreboot_name
+                    board = libreboot_board
+
             self.logger.info(
                 "Detected board '{}' ('{}') by device-tree compatibles."
                 .format(board.name, board.codename)
