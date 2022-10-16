@@ -287,10 +287,12 @@ class depthchargectl_write(
                     .format(target)
                 ) from err
 
-        self.logger.warning(
-            "Set partition '{}' as next to boot."
-            .format(target)
-        )
+            self.logger.warning(
+                "Set partition '{}' as next to boot."
+                .format(target)
+            )
+
+        return target
 
     global_options = depthchargectl.global_options
     config_options = depthchargectl.config_options
