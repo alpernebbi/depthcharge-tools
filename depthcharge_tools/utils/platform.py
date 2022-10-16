@@ -37,6 +37,15 @@ def cros_hwid():
     return crossystem.hwid()
 
 
+def cros_fwid():
+    fwid_file = Path("/proc/device-tree/firmware/chromeos/firmware-version")
+    if fwid_file.exists():
+        return fwid_file.read_text().strip("\x00")
+
+    # If we booted with e.g. u-boot, we don't have dt/firmware/chromeos
+    return crossystem.fwid()
+
+
 def os_release(root=None):
     os_release = {}
 
@@ -73,6 +82,14 @@ def is_cros_boot():
         return True
 
     return False
+
+
+def is_cros_libreboot():
+    fwid = cros_fwid()
+    if fwid is None:
+        return False
+
+    return fwid.lower().startswith("libreboot")
 
 
 def root_requires_initramfs(root):

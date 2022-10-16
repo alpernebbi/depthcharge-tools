@@ -338,6 +338,14 @@ class CrossystemRunner(ProcessRunner):
         else:
             return None
 
+    def fwid(self):
+        proc = self("fwid", check=False)
+
+        if proc.returncode == 0:
+            return proc.stdout
+        else:
+            return None
+
 
 class FdtgetRunner(ProcessRunner):
     def __init__(self):
