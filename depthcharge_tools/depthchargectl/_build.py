@@ -280,7 +280,7 @@ class depthchargectl_build(
     @options.add
     @depthchargectl.root.copy("--root")
     def root(self, root=None):
-        """Root device or mountpoint of the system to build for"""
+        """Root device to add to the kernel cmdline"""
         if root in ("", "None", "none"):
             return None
 
