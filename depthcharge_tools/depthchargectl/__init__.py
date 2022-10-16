@@ -87,6 +87,9 @@ class Board:
     @property
     def hwid_match(self):
         pattern = self._config.get("hwid-match")
+        if pattern in (None, "None", "none"):
+            return None
+
         if pattern:
             return re.compile(pattern)
 
