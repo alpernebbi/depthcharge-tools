@@ -10,10 +10,9 @@ systems as is. This means someone who wants to use e.g. Debian_ on these
 boards need to either replace the firmware or work their system into
 `the format depthcharge expects`_. These tools are about the latter.
 
-Right now these are developed on and tested with only one arm64 board,
+Right now these are developed on and tested with only a few boards,
 but everything will attempt to work on other boards based on my best
-guesses. Support for `x86 boards`_ is very limited at a fundamental
-level due to a lack of understanding on my part.
+guesses.
 
 .. _depthcharge: https://chromium.googlesource.com/chromiumos/platform/depthcharge
 .. _the format depthcharge expects: https://www.chromium.org/chromium-os/chromiumos-design-docs/disk-format#TOC-Google-Chrome-OS-devices
@@ -174,12 +173,9 @@ partitions, and you need special care while invoking as root::
 
 Contributing
 ============
-I only own one chromebook, so I need your help to make it work with all
+I only own two chromebooks, so I need your help to make it work with all
 others. Pull requests, bug reports, or even pointers in the right
-direction for existing issues are all welcome. Currently I need the most
-help with `x86 boards`_.
-
-.. _x86 boards: https://github.com/alpernebbi/depthcharge-tools/issues/2
+direction for existing issues are all welcome.
 
 
 License
