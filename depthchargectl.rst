@@ -6,8 +6,8 @@ depthchargectl
 Manage the ChromeOS bootloader and its boot images
 --------------------------------------------------
 
-:date: 2021-04-27
-:version: v0.5.0
+:date: 2022-10-19
+:version: v0.6.0
 :manual_section: 1
 :manual_group: depthcharge-tools
 
@@ -21,7 +21,7 @@ Manage the ChromeOS bootloader and its boot images
 .. |VBOOT_KEYBLOCK| replace:: **/usr/share/vboot/kernel.keyblock**
 .. |VBOOT_PUBLIC_KEY| replace:: **/usr/share/vboot/kernel_subkey.vbpubk**
 .. |VBOOT_PRIVATE_KEY| replace:: **/usr/share/vboot/kernel_data_key.vbprivk**
-.. |KERNEL_CMDLINE| replace:: **"console=tty0 quiet splash"**
+.. |KERNEL_CMDLINE| replace:: **"console=tty0 gpt quiet splash"**
 .. |INITD_DIR| replace:: **/etc/init.d**
 .. |SYSTEMD_DIR| replace:: **/usr/lib/systemd/system**
 
@@ -153,6 +153,11 @@ Global options
 -V, --version
     Print program version and exit.
 
+--root ROOT
+    Root device or mountpoint of the system to work on. If a mounted
+    device is given, its mountpoint is used. Defaults to the currently
+    booted system's root.
+
 --tmpdir DIR
     Directory to keep temporary files. Normally **depthchargectl**
     creates a temporary directory by itself and removes it when it
@@ -233,8 +238,8 @@ depthchargectl build options
 
 --root ROOT
     Root device to add to kernel cmdline. By default, this is acquired
-    from **/etc/fstab** or **/proc/self/mounts**. If "none" is passed,
-    no root parameter is added.
+    from **/etc/fstab** or a filesystem UUID is derived from the mounted
+    root. If "none" is passed, no root parameter is added.
 
 --compress *TYPE* [*TYPE* ...]
     Compression types to attempt. By default, all compression types that
@@ -273,7 +278,7 @@ building the image, instead of letting **depthchargectl** deduce them:
     in configuration.
 
 --dtbs *FILE* [*FILE* ...]
-    Device-tree binary files to use instead of searching fdtdir.
+    Device-tree binary files to use instead of searching *fdtdir*.
 
 depthchargectl config options
 -----------------------------
@@ -317,11 +322,16 @@ depthchargectl remove options
 
 depthchargectl target options
 -----------------------------
+-a, --all-disks
+    Consider all available disks, instead of considering only disks
+    containing the root and boot partitions.
+
 --allow-current
     Allow targeting the currently booted partition.
 
 -s BYTES, --min-size BYTES
-    Only consider partitions larger than this size in bytes.
+    Only consider partitions larger than this size in bytes. Defaults to
+    **64 KiB** to ignore unused partitions in ChromeOS installations.
 
 depthchargectl write options
 ----------------------------
@@ -363,8 +373,9 @@ depthchargectl build exit status
     be solvable by reducing the *initramfs* size.
 
 4
-    Like **3**, but without an *initramfs*. This might be solvable by
-    reducing the *vmlinuz* size, perhaps by building a custom kernel.
+    Like **3**, but without an *initramfs* or reducing the *initramfs*
+    size wouldn't make things fit. This might be solvable by reducing
+    the *vmlinuz* size, perhaps by building a custom kernel.
 
 depthchargectl check exit status
 --------------------------------
@@ -446,21 +457,33 @@ FILES
 
 EXAMPLES
 ========
-depthchargectl list -n -o PATH
+**depthchargectl** **list** **-n** **-o** *PATH*
     Get a list of partitions **depthchargectl** will act on by default.
 
-depthchargectl write --allow-current
+**depthchargectl** **build** **--board** *kevin* **--root** */mnt* **--output** *depthcharge.img*
+    Build an image for the Samsung Chromebook Plus (v1), using files
+    from and intended to boot with the chroot system mounted at */mnt*.
+
+**depthchargectl** **config** *board*
+    Print the board codename for the detected board.
+
+**depthchargectl** **config** **--default** *False* *enable-system-hooks*
+    Print the *enable-system-hooks* config if it's set, *False* if not.
+    This specific config key is meant to be a common mechanism which
+    distro packagers can use to let users disable system upgrade hooks
+    that use depthchargectl.
+
+**depthchargectl** **write** **--allow-current**
     Build, check and write an image for the latest *kernel-version* of
     this system to disk while allowing overwriting the currently booted
     partiiton. You might use this if you only have a single ChromeOS
     kernel partition, but broken kernels might make your system
     unbootable.
 
-depthchargectl write vmlinux.kpart -t /dev/mmcblk1p1
+**depthchargectl** **write** *vmlinux.kpart* **-t** */dev/mmcblk1p1*
     Write the **vmlinux.kpart** file to **/dev/mmcblk1p1**, only if both
     the image and the partition are valid. Something of this form would
     be used for writing images to a secondary or external disk.
-
 
 SEE ALSO
 ========
