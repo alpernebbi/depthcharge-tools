@@ -599,6 +599,16 @@ class mkdepthcharge(
         if file_ is not None:
             file_ = Path(file_).resolve()
 
+        if (
+            self.image_format == "zimage"
+            and self.initramfs is not None
+            and file_ is not None
+        ):
+            raise ValueError(
+                "Can't build images with both initramfs and "
+                "bootloader stub for zimage format."
+            )
+
         return file_
 
     @vboot_options.add
