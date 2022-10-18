@@ -67,12 +67,19 @@ the work::
 
 Installation
 ============
-These tools depend on ``mkimage``, ``vbutil_kernel``, ``cgpt``,
-``crossystem``, ``fdtget``, ``gzip``, ``lz4``, and ``lzma`` executables
-and the ``pkg_resources`` python package usually distributed with
-``setuptools``, so you need to install those first. You also need
-``docutils`` to build the manual pages with ``rst2man``, but only for
-that.
+This depends on the ``pkg_resources`` Python package which is usually
+distributed with ``setuptools``. The tools can run a number of programs
+when necessary, which should be considered dependencies:
+
+- ``futility`` (``vbutil_kernel``), ``cgpt``, ``crossystem``
+- ``mkimage``, ``fdtget``, ``fdtput``
+- ``lz4``, ``lzma``
+- ``gzip``, ``lzop``, ``bzip2``, ``xz``, ``zstd``
+  (optional, for unpacking compressed ``/boot/vmlinuz``)
+
+The ``rst2man`` program (from ``docutils``) should be used to convert
+the ``mkdepthcharge.rst`` and ``depthchargectl.rst`` files to manual
+pages. However, this is not automated here and has to be done manually.
 
 This project (or at least ``depthchargectl``) is meant to be integrated
 into your operating system by its maintainers, and the best way to
