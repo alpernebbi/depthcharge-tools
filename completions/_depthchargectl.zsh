@@ -6,6 +6,7 @@ function _depthchargectl {
         {-v,--verbose}'[Print more detailed output.]' \
         {-V,--version}'[Print program version.]' \
         --tmpdir'[Directory to keep temporary files.]:temp dir:_directories' \
+        --root'[Root device or mountpoint of the system to work on]:root device:{_depthchargectl__root; _depthchargectl__disk}' \
         --config'[Additional configuration file to read]:config file:_files' \
         --board'[Assume running on the specified board]:board codenames:{_depthchargectl__board;}' \
         --images-dir'[Directory to store built images]:images dir:_directories' \
@@ -38,7 +39,7 @@ function _depthchargectl {
                 --kernel'[Kernel executable]:kernel:_files' \
                 --initramfs'[Ramdisk image]:initramfs:_files' \
                 --fdtdir'[Directory to search device-tree binaries for the board]:fdtdir:_directories' \
-                --dtbs'[Device-tree binary files to use instead of searching fdtdir]:dtb files:_files' \
+                --dtbs'[Device-tree binary files to use instead of searching fdtdir]:*:dtb files:_files' \
                 ':kernel version:{_depthchargectl__kernel}' \
                 ;
             ;;
@@ -58,7 +59,7 @@ function _depthchargectl {
             local outputspec='{_values -s , "description" "A" "ATTRIBUTE" "S" "SUCCESSFUL" "T" "TRIES" "P" "PRIORITY" "PATH" "DISKPATH" "DISK" "PARTNO" "SIZE"}'
             _arguments -S \
                 {-n,--noheadings}'[Do not print column headings.]' \
-                {-a,--all-disks}'[list partitions on all disks.]' \
+                {-a,--all-disks}'[List partitions on all disks.]' \
                 {-c,--count}'[Print only the count of partitions.]' \
                 {-o,--output}'[Comma separated list of columns to output.]:columns:'"$outputspec" \
                 '*::disk or partition:{_depthchargectl__disk}' \
@@ -72,8 +73,9 @@ function _depthchargectl {
             ;;
         args:target)
             _arguments -S \
-                {-s,--min-bytes}'[Target partitions larger than this size.]:bytes:(16777216 33554432)' \
+                {-s,--min-size}'[Target partitions larger than this size.]:bytes:(8M 16M 32M 64M 128M 256M 512M)' \
                 --allow-current'[Allow targeting the currently booted part.]' \
+                {-a,--all-disks}'[Target partitions on all disks.]' \
                 '*::disk or partition:{_depthchargectl__disk}' \
                 ;
             ;;
@@ -95,13 +97,21 @@ function _depthchargectl__kernel {
     if command -v linux-version >/dev/null 2>/dev/null; then
         local kversions=($(linux-version list))
         _describe 'kernel version' kversions
+    else
+        local script=(
+            'from depthcharge_tools.utils.platform import installed_kernels;'
+            'kernels = (k.release for k in installed_kernels());'
+            'print(*sorted(filter(None, kernels)));'
+        )
+        local kversions=($(python3 -c "$script"))
+        _describe 'kernel version' kversions
     fi
-}
+} 2>/dev/null
 
 function _depthchargectl__disk {
-    local disks=($(lsblk -o "PATH" -n -l))
+    local disks=($(lsblk -o "PATH" -n -l)) 2>/dev/null
     _describe 'disk or partition' disks
-}
+} 2>/dev/null
 
 function _depthchargectl__board {
     local script=(
@@ -112,16 +122,16 @@ function _depthchargectl__board {
     )
     local boards=($(python3 -c "$script"))
     _describe 'board codenames' boards
-}
+} 2>/dev/null
 
 function _depthchargectl__cmdline {
     local cmdline=($(cat /proc/cmdline | sed -e 's/\(cros_secure\|kern_guid\)[^ ]* //g'))
     _describe 'kernel cmdline' cmdline
-}
+} 2>/dev/null
 
 function _depthchargectl__root {
     local root=($(findmnt --fstab -n -o SOURCE "/"))
     _describe root root
-}
+} 2>/dev/null
 
 _depthchargectl "$@"
