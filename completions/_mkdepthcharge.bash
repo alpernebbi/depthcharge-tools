@@ -11,7 +11,12 @@ _mkdepthcharge__file() {
             compopt +o nospace
         fi
     fi
-}
+} 2>/dev/null
+
+_mkdepthcharge__cmdline() {
+    cmdline="$(cat /proc/cmdline | sed -e 's/\(cros_secure\|kern_guid\)[^ ]* //g')"
+    COMPREPLY+=($(compgen -W "$cmdline" -- "$cur"))
+} 2>/dev/null
 
 _mkdepthcharge() {
     COMPREPLY=()
@@ -21,8 +26,10 @@ _mkdepthcharge() {
         -h --help -V --version -v --verbose
         -d --vmlinuz -i --initramfs -b --dtbs
         -o --output --tmpdir -A --arch --format
-        -C --compress -n --name
-        -c --cmdline --no-kern-guid --bootloader
+        -C --compress -n --name --kernel-start
+        --ramdisk-load-address --patch-dtbs --no-patch-dtbs
+        --pad-vmlinuz --no-pad-vmlinuz
+        -c --cmdline --kern-guid --no-kern-guid --bootloader
         --keydir --keyblock --signprivate --signpubkey
     )
 
@@ -35,13 +42,14 @@ _mkdepthcharge() {
         --format)       COMPREPLY+=($(compgen -W "fit zimage" -- "$cur")) ;;
         -C|--compress)  COMPREPLY+=($(compgen -W "none lz4 lzma" -- "$cur")) ;;
         -n|--name)
-            local name="$(. /etc/os-release; echo "$NAME")"
-            COMPREPLY+=($(compgen -W "$name" -- "$cur"))
+            if [ -f /etc/os-release ]; then
+                local name="$(. /etc/os-release; echo "$NAME")"
+                COMPREPLY+=($(compgen -W "$name" -- "$cur"))
+            fi
             ;;
-        -c|--cmdline)
-            cmdline="$(cat /proc/cmdline | sed -e 's/\(cros_secure\|kern_guid\)[^ ]* //g')"
-            COMPREPLY+=($(compgen -W "$cmdline" -- "$cur"))
-            ;;
+        --kernel-start) : ;;
+        --ramdisk-load-address) : ;;
+        -c|--cmdline)   _mkdepthcharge__cmdline ;;
         --tmpdir)       _mkdepthcharge__file ;;
         --bootloader)   _mkdepthcharge__file ;;
         --keydir)       _mkdepthcharge__file ;;

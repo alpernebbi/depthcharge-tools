@@ -11,17 +11,38 @@ _depthchargectl__file() {
             compopt +o nospace
         fi
     fi
-}
+} 2>/dev/null
+
+_depthchargectl__timestamp() {
+    local timestamp="$(date "+%s")"
+    COMPREPLY+=($(compgen -W "$timestamp" -- "$cur"))
+} 2>/dev/null
 
 _depthchargectl__disk() {
-    COMPREPLY+=($(compgen -W "$(lsblk -o "PATH" -n -l)" -- "$cur"))
-}
+    local disks="$(lsblk -o "PATH" -n -l)"
+    COMPREPLY+=($(compgen -W "$disks" -- "$cur"))
+} 2>/dev/null
+
+_depthchargectl__root() {
+    local root="$(findmnt --fstab -n -o SOURCE "/")"
+    COMPREPLY+=($(compgen -W "$root" -- "$cur"))
+} 2>/dev/null
+
+_depthchargectl__cmdline() {
+    local cmdline="$(cat /proc/cmdline | sed -e 's/\(cros_secure\|kern_guid\)[^ ]* //g')"
+    COMPREPLY+=($(compgen -W "$cmdline" -- "$cur"))
+} 2>/dev/null
 
 _depthchargectl__kernel() {
     if command -v _kernel_versions >/dev/null 2>/dev/null; then
         _kernel_versions
+    else
+        local script="from depthcharge_tools.utils.platform import installed_kernels"
+        "$script;kernels = (k.release for k in installed_kernels());"
+        "$script;print(*sorted(filter(None, kernels)));"
+        COMPREPLY+=($(compgen -W "$(python3 -c "$script")" -- "$cur"))
     fi
-}
+} 2>/dev/null
 
 _depthchargectl__boards() {
     # later
@@ -30,13 +51,13 @@ _depthchargectl__boards() {
     script="$script;boards = re.findall(\"codename = (.+)\", boards_ini)"
     script="$script;print(*sorted(boards))"
     COMPREPLY+=($(compgen -W "$(python3 -c "$script")" -- "$cur"))
-}
+} 2>/dev/null
 
 _depthchargectl() {
     COMPREPLY=()
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local global_opts=(-h --help -V --version -v --verbose --tmpdir)
+    local global_opts=(-h --help -V --version -v --verbose --tmpdir --root)
     local config_opts=(
         --config --board --images-dir
         --vboot-keyblock --vboot-public-key --vboot-private-key
@@ -45,6 +66,7 @@ _depthchargectl() {
     local cmds=(bless build config check list remove target write)
 
     case "$prev" in
+        --root) _depthchargectl__root; _depthchargectl__disk; return ;;
         --tmpdir) _depthchargectl__file; return ;;
         --config) _depthchargectl__file; return ;;
         --board) _depthchargectl__boards; return ;;
@@ -52,11 +74,7 @@ _depthchargectl() {
         --vboot-keyblock) _depthchargectl__file; return ;;
         --vboot-public-key) _depthchargectl__file; return ;;
         --vboot-private-key) _depthchargectl__file; return ;;
-        --kernel-cmdline)
-            cmdline="$(cat /proc/cmdline | sed -e 's/\(cros_secure\|kern_guid\)[^ ]* //g')"
-            COMPREPLY+=($(compgen -W "$cmdline" -- "$cur"))
-            return
-            ;;
+        --kernel-cmdline) _depthchargectl__cmdline; return ;;
         --ignore-initramfs) : ;;
         --) ;;
         *) ;;
@@ -102,25 +120,19 @@ _depthchargectl_build() {
 )
     case "$prev" in
         --description)
-            local name="$(. /etc/os-release; echo "$NAME")"
-            COMPREPLY+=($(compgen -W "$name" -- "$cur"))
+            if [ -f /etc/os-release ]; then
+                local name="$(. /etc/os-release; echo "$NAME")"
+                COMPREPLY+=($(compgen -W "$name" -- "$cur"))
+            fi
             return
             ;;
-        --root)
-            local root="$(findmnt --fstab -n -o SOURCE "/")"
-            COMPREPLY+=($(compgen -W "$root" -- "$cur"))
-            _depthchargectl__disk
-            return
-            ;;
+        --root) _depthchargectl__root; _depthchargectl__disk; return ;;
         --compress)
             local compress=(none lz4 lzma)
             COMPREPLY+=($(compgen -W "${compress[*]}" -- "$cur"))
             return
             ;;
-        --timestamp)
-            COMPREPLY+=($(compgen -W "$(date "+%s")" -- "$cur"))
-            return
-            ;;
+        --timestamp) _depthchargectl__timestamp; return;;
         -o|--output) _depthchargectl__file; return ;;
         --kernel-release) _depthchargectl__kernel; return ;;
         --kernel) _depthchargectl__file; return ;;
@@ -183,8 +195,8 @@ _depthchargectl_remove() {
 }
 
 _depthchargectl_target() {
-    local opts=(-s --min-size --allow-current)
-    local sizes=(8388608 16777216 33554432 67108864 134217728 268435456 536870912)
+    local opts=(-s --min-size --allow-current -a --all-disks)
+    local sizes=(8M 16M 32M 64M 128M 256M 512M)
     case "$prev" in
         -s|--min-size)
             COMPREPLY+=($(compgen -W "${sizes[*]}" -- "$cur"))
