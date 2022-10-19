@@ -181,7 +181,7 @@ class depthchargectl_remove(
             self.logger.info("Deactivating '{}'.".format(part))
             try:
                 depthchargectl.bless(
-                    partition=target,
+                    partition=part,
                     bad=True,
                     root=self.root,
                     config=self.config,
