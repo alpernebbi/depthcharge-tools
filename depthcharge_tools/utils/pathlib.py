@@ -28,6 +28,10 @@ def decompress(src, dest=None, partial=False):
         try:
             return runner.decompress(src, dest)
 
+        except FileNotFoundError:
+            if dest:
+                dest.unlink()
+
         except subprocess.CalledProcessError as err:
             if dest is None and err.output and partial:
                 return err.output
