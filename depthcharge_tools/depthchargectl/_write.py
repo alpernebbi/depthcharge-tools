@@ -243,7 +243,7 @@ class depthchargectl_write(
         # Check and warn if we targeted the currently booted partition,
         # as that usually means it's the only partition.
         current = self.diskinfo.by_kern_guid()
-        if self.allow_current and target.path == current.path:
+        if current is not None and self.allow_current and target.path == current.path:
             self.logger.warning(
                 "Overwriting the currently booted partition '{}'. "
                 "This might make your system unbootable."
