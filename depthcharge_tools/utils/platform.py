@@ -193,6 +193,15 @@ def installed_kernels(root=None, boot=None):
         break
 
     for f in (
+        *boot.glob("initramfs-*.img"),
+    ):
+        if not f.is_file():
+            continue
+        _, _, release = f.name.partition("-")
+        release = release[:-4]
+        initrds[release] = f.resolve()
+
+    for f in (
         *boot.glob("initrd-*"),
         *boot.glob("initrd.img-*"),
         *boot.glob("initramfs-*"),
