@@ -21,7 +21,7 @@ Manage the ChromeOS bootloader and its boot images
 .. |VBOOT_KEYBLOCK| replace:: **/usr/share/vboot/kernel.keyblock**
 .. |VBOOT_PUBLIC_KEY| replace:: **/usr/share/vboot/kernel_subkey.vbpubk**
 .. |VBOOT_PRIVATE_KEY| replace:: **/usr/share/vboot/kernel_data_key.vbprivk**
-.. |KERNEL_CMDLINE| replace:: **"console=tty0 gpt quiet splash"**
+.. |KERNEL_CMDLINE| replace:: **"console=tty0 quiet splash"**
 .. |INITD_DIR| replace:: **/etc/init.d**
 .. |SYSTEMD_DIR| replace:: **/usr/lib/systemd/system**
 
