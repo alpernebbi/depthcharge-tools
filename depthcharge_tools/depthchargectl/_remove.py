@@ -206,7 +206,7 @@ class depthchargectl_remove(
             done_parts.append(part)
             self.logger.warning("Deactivated '{}'.".format(part))
 
-        if image.parent == self.images_dir:
+        if image.parent == self.images_dir and not error_disks and not error_parts:
             self.logger.info(
                 "Image '{}' is in images dir, deleting."
                 .format(image)
