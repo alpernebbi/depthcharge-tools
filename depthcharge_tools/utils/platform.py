@@ -236,6 +236,7 @@ def installed_kernels(root=None, boot=None):
         fdtdirs[release] = d.resolve()
 
     for d in (
+        *boot.glob("dtb-*"),
         *boot.glob("dtbs-*"),
     ):
         if not d.is_dir():
@@ -244,6 +245,7 @@ def installed_kernels(root=None, boot=None):
         fdtdirs[release] = d.resolve()
 
     for d in (
+        *boot.glob("dtb/*"),
         *boot.glob("dtbs/*"),
     ):
         if not d.is_dir():
@@ -253,6 +255,7 @@ def installed_kernels(root=None, boot=None):
 
     for d in (
         *boot.glob("dtbs"),
+        *boot.glob("dtb"),
         *root.glob("usr/share/dtb"),
     ):
         if not d.is_dir():
