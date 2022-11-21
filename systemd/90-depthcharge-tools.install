@@ -1,0 +1,274 @@
+#!/bin/sh
+# SPDX-License-Identifier: LGPL-2.1-or-later
+#
+# This is a modified copy of 90-loaderentry.install from systemd.
+#
+# systemd is free software; you can redistribute it and/or modify it
+# under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation; either version 2.1 of the License, or
+# (at your option) any later version.
+#
+# systemd is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with systemd; If not, see <https://www.gnu.org/licenses/>.
+
+set -e
+
+COMMAND="${1:?}"
+KERNEL_VERSION="${2:?}"
+ENTRY_DIR_ABS="${3:?}"
+KERNEL_IMAGE="$4"
+INITRD_OPTIONS_SHIFT=4
+
+[ "$KERNEL_INSTALL_LAYOUT" = "depthcharge-tools" ] || exit 0
+
+log() {
+    if [ "$KERNEL_INSTALL_VERBOSE" -gt 0 ]; then
+        echo "$@"
+    fi
+} >&2
+
+maybe_error() {
+    # Ignore errors if we're not booted with depthcharge
+    if grep "cros_secure" /proc/cmdline >/dev/null 2>&1; then
+        if [ -n "$1" ]; then
+            echo "Error: $1"
+        fi
+        echo "Error: Failed to update depthcharge partitions, system may be unbootable."
+        exit 1
+    else
+        if [ -n "$1" ]; then
+            log "Error: $1"
+        fi
+        log "Not booted with depthcharge, so ignoring that."
+        exit 0
+    fi
+} >&2
+
+# Disable if our package is not installed.
+if ! command -v depthchargectl >/dev/null 2>&1; then
+    log "Not running depthcharge plugin, depthchargectl is missing."
+    exit 0
+fi
+
+run_depthchargectl() {
+    if [ "$KERNEL_INSTALL_VERBOSE" -gt 0 ]; then
+        log "Running depthchargectl $@:"
+        depthchargectl --verbose "$@"
+    else
+        depthchargectl "$@" 2>/dev/null
+    fi
+}
+
+MACHINE_ID="$KERNEL_INSTALL_MACHINE_ID"
+ENTRY_TOKEN="$KERNEL_INSTALL_ENTRY_TOKEN"
+BOOT_ROOT="$KERNEL_INSTALL_BOOT_ROOT"
+
+BOOT_MNT="$(stat -c %m "$BOOT_ROOT")"
+if [ "$BOOT_MNT" = '/' ]; then
+    BOOT_DIR="$ENTRY_DIR_ABS"
+else
+    BOOT_DIR="${ENTRY_DIR_ABS#"$BOOT_MNT"}"
+fi
+
+case "$COMMAND" in
+    remove)
+        ENABLED="$(
+            depthchargectl config \
+                --section depthchargectl/remove \
+                --default False \
+                enable-system-hooks 2>/dev/null
+        )" || maybe_error
+
+        # Disable based on package configuration
+        if [ "$ENABLED" != "True" ]; then
+            log "Not removing depthcharge image, disabled by config."
+            exit 0
+        fi
+
+        IMAGES_DIR="$(
+            depthchargectl config \
+                --section depthchargectl/remove \
+                images-dir 2>/dev/null
+        )" || maybe_error
+
+        if [ -f "$IMAGES_DIR/$KERNEL_VERSION.img" ]; then
+            # Assuming kernel-install handles warnings about removing the running kernel
+            run_depthchargectl remove --force "$KERNEL_VERSION" >/dev/null \
+                || maybe_error
+        else
+            log "Not removing depthcharge image, already doesn't exist."
+        fi
+
+        exit 0
+        ;;
+    add)
+        ;;
+    *)
+        exit 0
+        ;;
+esac
+
+ENABLED="$(
+    depthchargectl config \
+        --section depthchargectl/write \
+        --default False \
+        enable-system-hooks
+)" || maybe_error
+
+if [ "$ENABLED" != "True" ]; then
+    log "Not writing depthcharge image, disabled by config."
+    exit 0
+fi
+
+IMAGES_DIR="$(
+    depthchargectl config \
+        --section depthchargectl/write \
+        images-dir
+)" || maybe_error
+
+BOARD="$(depthchargectl config board)" || maybe_error
+if [ "$BOARD" = "none" ]; then
+    maybe_error "Cannot build depthcharge images when no board is specified."
+fi
+
+KERNEL_CMDLINE="$(
+    depthchargectl config \
+        --section depthchargectl/write \
+        kernel-cmdline 2>/dev/null
+)" || KERNEL_CMDLINE=""
+
+if [ -n "$KERNEL_INSTALL_CONF_ROOT" ]; then
+    if [ -f "$KERNEL_INSTALL_CONF_ROOT/cmdline" ]; then
+        BOOT_OPTIONS="$(tr -s "$IFS" ' ' <"$KERNEL_INSTALL_CONF_ROOT/cmdline")"
+    fi
+elif [ -f /etc/kernel/cmdline ]; then
+    BOOT_OPTIONS="$(tr -s "$IFS" ' ' </etc/kernel/cmdline)"
+elif [ -f /usr/lib/kernel/cmdline ]; then
+    BOOT_OPTIONS="$(tr -s "$IFS" ' ' </usr/lib/kernel/cmdline)"
+elif [ -n "$KERNEL_CMDLINE" ]; then
+    BOOT_OPTIONS="$KERNEL_CMDLINE"
+else
+    BOOT_OPTIONS="$(tr -s "$IFS" '\n' </proc/cmdline | grep -ve '^BOOT_IMAGE=' -e '^initrd=' | tr '\n' ' ')"
+fi
+
+BOOT_OPTIONS="${BOOT_OPTIONS% }"
+
+# If the boot entries are named after the machine ID, then suffix the kernel
+# command line with the machine ID we use, so that the machine ID remains
+# stable, even during factory reset, in the initrd (where the system's machine
+# ID is not directly accessible yet), and if the root file system is volatile.
+if [ "$ENTRY_TOKEN" = "$MACHINE_ID" ] && ! echo "$BOOT_OPTIONS" | grep -q "systemd.machine_id="; then
+    BOOT_OPTIONS="$BOOT_OPTIONS systemd.machine_id=$MACHINE_ID"
+fi
+
+# All files listed as arguments, and staged files starting with "initrd" are installed as initrds.
+shift "$INITRD_OPTIONS_SHIFT"
+for initrd in "${KERNEL_INSTALL_STAGING_AREA}"/initrd*; do
+    if [ "$initrd" = "${KERNEL_INSTALL_STAGING_AREA}/initrd*" ]; then
+        continue
+    elif [ ! -f "$initrd" ]; then
+        maybe_error "Initrd '$initrd' is not a file."
+    fi
+
+    set -- "$@" "$initrd"
+done
+
+INITRD=""
+if [ "$#" -eq 0 ]; then
+    # Find an existing initramfs if we were given nothing
+    for initrd in \
+        "$ENTRY_DIR_ABS/initrd" \
+        "$BOOT_ROOT/initramfs-$KERNEL_VERSION.img" \
+        "$BOOT_ROOT/initrd-$KERNEL_VERSION.img" \
+        "$BOOT_ROOT/initramfs.img-$KERNEL_VERSION" \
+        "$BOOT_ROOT/initrd.img-$KERNEL_VERSION" \
+        "$BOOT_ROOT/initramfs-$KERNEL_VERSION" \
+        "$BOOT_ROOT/initrd-$KERNEL_VERSION" \
+        "usr/lib/modules/$KERNEL_VERSION/initramfs.img" \
+        "usr/lib/modules/$KERNEL_VERSION/initrd.img" \
+        "usr/lib/modules/$KERNEL_VERSION/initramfs" \
+        "usr/lib/modules/$KERNEL_VERSION/initrd" \
+        "lib/modules/$KERNEL_VERSION/initramfs.img" \
+        "lib/modules/$KERNEL_VERSION/initrd.img" \
+        "lib/modules/$KERNEL_VERSION/initramfs" \
+        "lib/modules/$KERNEL_VERSION/initrd" \
+        "$BOOT_ROOT/initramfs.img" \
+        "$BOOT_ROOT/initrd.img" \
+        "$BOOT_ROOT/initramfs" \
+        "$BOOT_ROOT/initrd" \
+        ;
+    do
+        if [ -f "$initrd" ]; then
+            INITRD="$initrd"
+            break
+        fi
+    done
+
+elif [ "$#" -eq 1]; then
+    INITRD="$1"
+    set --
+
+elif [ "$#" -gt 1 ]; then
+    # Depthcharge-tools can't handle multiple initramfs files yet.
+    log "Merging initrd files"
+    cat "$@" >"$KERNEL_INSTALL_STAGING_AREA/merged-initrd.img" \
+        || maybe_error "Could not merge initrd files for depthchargectl."
+
+    INITRD="$KERNEL_INSTALL_STAGING_AREA/merged-initrd.img"
+    set --
+fi
+
+# Check possible dtbs paths
+FDTDIR=""
+for fdtdir in \
+    "$BOOT_ROOT/dtbs/$KERNEL_VERSION" \
+    "$BOOT_ROOT/dtb/$KERNEL_VERSION" \
+    "$BOOT_ROOT/dtbs-$KERNEL_VERSION" \
+    "$BOOT_ROOT/dtb-$KERNEL_VERSION" \
+    "/usr/lib/linux-image-$KERNEL_VERSION" \
+    "/usr/lib/modules/$KERNEL_VERSION/dtbs" \
+    "/usr/lib/modules/$KERNEL_VERSION/dtb" \
+    "/lib/modules/$KERNEL_VERSION/dtbs" \
+    "/lib/modules/$KERNEL_VERSION/dtb" \
+    "$BOOT_ROOT/dtbs" \
+    "$BOOT_ROOT/dtb" \
+    "/usr/share/dtbs" \
+    "/usr/share/dtb" \
+    ;
+do
+    if [ -d "$fdtdir" ]; then
+        FDTDIR="$fdtdir"
+        break
+    fi
+done
+
+# Depthchargectl write doesn't take custom files, so build image first
+IMAGE="$(
+    run_depthchargectl build \
+        --kernel "$KERNEL_IMAGE" \
+        ${INITRD:+--initramfs "$INITRD"} \
+        ${FDTDIR:+--fdtdir "$FDTDIR"} \
+        --kernel-cmdline "$BOOT_OPTIONS" \
+        --kernel-release "$KERNEL_VERSION" \
+)" || maybe_error
+
+PART_COUNT="$(depthchargectl list -c 2>/dev/null)" || maybe_error
+if [ "$PART_COUNT" -gt 1 ]; then
+    run_depthchargectl write "$IMAGE" >/dev/null \
+        || maybe_error
+
+elif [ "$PART_COUNT" -eq 1 ]; then
+    run_depthchargectl write --allow-current "$IMAGE" >/dev/null \
+        || maybe_error
+
+else
+    maybe_error "No usable Chrome OS Kernel partition found."
+
+fi
+
+exit 0
