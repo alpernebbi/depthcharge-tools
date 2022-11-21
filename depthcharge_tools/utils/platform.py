@@ -236,6 +236,17 @@ def installed_kernels(root=None, boot=None):
         fdtdirs[release] = d.resolve()
 
     for d in (
+        *root.glob("lib/modules/*/dtb"),
+        *root.glob("lib/modules/*/dtbs"),
+        *root.glob("usr/lib/modules/*/dtb"),
+        *root.glob("usr/lib/modules/*/dtbs"),
+    ):
+        if not d.is_dir():
+            continue
+        release = d.parent.name
+        fdtdirs[release] = d.resolve()
+
+    for d in (
         *boot.glob("dtb-*"),
         *boot.glob("dtbs-*"),
     ):
