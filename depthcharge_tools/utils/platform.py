@@ -170,6 +170,23 @@ def installed_kernels(root=None, boot=None):
     boot = Path(boot).resolve()
 
     for f in (
+        *root.glob("lib/modules/*/vmlinuz"),
+        *root.glob("lib/modules/*/vmlinux"),
+        *root.glob("lib/modules/*/Image"),
+        *root.glob("lib/modules/*/zImage"),
+        *root.glob("lib/modules/*/bzImage"),
+        *root.glob("usr/lib/modules/*/vmlinuz"),
+        *root.glob("usr/lib/modules/*/vmlinux"),
+        *root.glob("usr/lib/modules/*/Image"),
+        *root.glob("usr/lib/modules/*/zImage"),
+        *root.glob("usr/lib/modules/*/bzImage"),
+    ):
+        if not f.is_file():
+            continue
+        release = f.parent.name
+        kernels[release] = f.resolve()
+
+    for f in (
         *boot.glob("vmlinuz-*"),
         *boot.glob("vmlinux-*"),
     ):
