@@ -68,6 +68,9 @@ def os_release(root=None):
     root = Path(root).resolve()
 
     os_release_f = root / "etc" / "os-release"
+    if not os_release_f.exists():
+        os_release_f = root / "usr" / "lib" / "os-release"
+
     if os_release_f.exists():
         for line in os_release_f.read_text().splitlines():
             lhs, _, rhs = line.partition("=")
