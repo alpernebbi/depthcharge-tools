@@ -37,8 +37,11 @@ def cros_hwid():
         if hwid_file.exists():
             return hwid_file.read_text().strip()
 
-    # If we booted with e.g. u-boot, we don't have dt/firmware/chromeos
-    return crossystem.hwid()
+    # Try crossystem as a last resort
+    try:
+        return crossystem.hwid()
+    except:
+        pass
 
 
 def cros_fwid():
@@ -50,8 +53,11 @@ def cros_fwid():
         if fwid_file.exists():
             return fwid_file.read_text().strip()
 
-    # If we booted with e.g. u-boot, we don't have dt/firmware/chromeos
-    return crossystem.fwid()
+    # Try crossystem as a last resort
+    try:
+        return crossystem.fwid()
+    except:
+        pass
 
 
 def os_release(root=None):
