@@ -272,8 +272,7 @@ class depthchargectl_build(
     def description(self, desc=None):
         """Human-readable description for the image"""
         if desc is None and self.kernel_version is not None:
-            if self.board.image_format != "zimage":
-                desc = self.kernel_version.description
+            desc = self.kernel_version.description
 
         return desc
 
@@ -495,6 +494,7 @@ class depthchargectl_build(
         }
 
         if self.board.image_format == "fit":
+            image_format_opts["name"] = self.description
             image_format_opts["patch_dtbs"] = not self.board.loads_fit_ramdisk
 
             if self.board.fit_ramdisk_load_address is not None:
@@ -519,7 +519,6 @@ class depthchargectl_build(
                     kernel_start=self.board.image_start_address,
                     initramfs=self.initrd,
                     keyblock=self.vboot_keyblock,
-                    name=self.description,
                     output=outtmp,
                     signprivate=self.vboot_private_key,
                     signpubkey=self.vboot_public_key,
