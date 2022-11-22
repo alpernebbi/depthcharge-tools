@@ -256,6 +256,7 @@ def installed_kernels(root=None, boot=None):
     for d in (
         *boot.glob("dtbs"),
         *boot.glob("dtb"),
+        *root.glob("usr/share/dtbs"),
         *root.glob("usr/share/dtb"),
     ):
         if not d.is_dir():
