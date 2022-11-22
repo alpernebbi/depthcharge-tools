@@ -33,6 +33,10 @@ def cros_hwid():
     if hwid_file.exists():
         return hwid_file.read_text().strip("\x00")
 
+    for hwid_file in Path("/sys/bus/platform/devices").glob("GGL0001:*/HWID"):
+        if hwid_file.exists():
+            return hwid_file.read_text().strip()
+
     # If we booted with e.g. u-boot, we don't have dt/firmware/chromeos
     return crossystem.hwid()
 
@@ -41,6 +45,10 @@ def cros_fwid():
     fwid_file = Path("/proc/device-tree/firmware/chromeos/firmware-version")
     if fwid_file.exists():
         return fwid_file.read_text().strip("\x00")
+
+    for fwid_file in Path("/sys/bus/platform/devices").glob("GGL0001:*/FWID"):
+        if fwid_file.exists():
+            return fwid_file.read_text().strip()
 
     # If we booted with e.g. u-boot, we don't have dt/firmware/chromeos
     return crossystem.fwid()
