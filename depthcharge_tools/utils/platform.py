@@ -210,6 +210,21 @@ def installed_kernels(root=None, boot=None):
         break
 
     for f in (
+        *root.glob("lib/modules/*/initrd"),
+        *root.glob("lib/modules/*/initramfs"),
+        *root.glob("lib/modules/*/initrd.img"),
+        *root.glob("lib/modules/*/initramfs.img"),
+        *root.glob("usr/lib/modules/*/initrd"),
+        *root.glob("usr/lib/modules/*/initramfs"),
+        *root.glob("usr/lib/modules/*/initrd.img"),
+        *root.glob("usr/lib/modules/*/initramfs.img"),
+    ):
+        if not f.is_file():
+            continue
+        release = f.parent.name
+        initrds[release] = f.resolve()
+
+    for f in (
         *boot.glob("initrd-*.img"),
         *boot.glob("initramfs-*.img"),
     ):
