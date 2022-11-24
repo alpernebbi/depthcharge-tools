@@ -6,8 +6,8 @@ depthchargectl
 Manage the ChromeOS bootloader and its boot images
 --------------------------------------------------
 
-:date: 2022-10-19
-:version: v0.6.0
+:date: 2022-11-24
+:version: v0.6.1
 :manual_section: 1
 :manual_group: depthcharge-tools
 
