@@ -108,7 +108,19 @@ class depthchargectl_bless(
             .format(partition)
         )
 
-        if partition not in partition.disk.cros_partitions():
+        try:
+            cros_partitions = partition.disk.cros_partitions()
+        except subprocess.CalledProcessError as err:
+            self.logger.debug(
+                err,
+                exc_info=self.logger.isEnabledFor(logging.DEBUG),
+            )
+            raise ValueError(
+                "Couldn't get partitions for disk '{}'."
+                .format(partition.disk)
+            ) from err
+
+        if partition not in cros_partitions:
             raise ValueError(
                 "Partition '{}' is not a ChromeOS Kernel partition"
                 .format(partition)
