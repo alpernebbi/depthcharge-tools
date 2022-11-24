@@ -6,8 +6,8 @@ mkdepthcharge
 Build boot images for the ChromeOS bootloader
 ---------------------------------------------
 
-:date: 2022-10-19
-:version: v0.6.0
+:date: 2022-11-24
+:version: v0.6.1
 :manual_section: 1
 :manual_group: depthcharge-tools
 
