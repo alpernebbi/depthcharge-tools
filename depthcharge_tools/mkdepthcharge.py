@@ -454,20 +454,14 @@ class mkdepthcharge(
     @zimage_options.add
     @Argument(
         "--no-pad-vmlinuz", pad=False,
-        help="Don't pad the vmlinuz file for safe decompression",
+        help=argparse.SUPPRESS,
     )
     @Argument(
         "--pad-vmlinuz", pad=True,
-        help=argparse.SUPPRESS,
+        help="Pad vmlinuz for safe decompression.",
     )
-    def pad_vmlinuz(self, pad=None):
-        """Pad vmlinuz for safe decompression"""
-        if pad is None:
-            return (
-                self.image_format == "zimage"
-                and self.initramfs is not None
-            )
-
+    def pad_vmlinuz(self, pad=False):
+        """Pad vmlinuz for safe decompression."""
         return bool(pad)
 
     @zimage_options.add
@@ -887,16 +881,20 @@ class mkdepthcharge(
                 pref_address, init_size = struct.unpack(
                     "<QI", data[0x258:0x264]
                 )
-                pad_to = align_up(addr_to_offs(pref_address + init_size))
 
-                # Custom kernels may have PHYSICAL_START high enough
-                # that we can squeeze the initramfs between vmlinuz and
-                # the preferred_address. Very unlikely, but saves space.
+                # Initramfs gets corrupted if it's too close to vmlinuz
+                pad_to = align_up(data.size()) + small_pad
+
+                # KASLR takes care to avoid overwriting initramfs in
+                # self-decompression, but if that's disabled we need to
+                # put the initramfs outside the decompression buffer.
+                # But if the kernel and initramfs are small enough, they
+                # might fit before pref_address, where we can skip that.
                 low_usable = pref_address - align_up(data.size()) - small_pad
-                if initramfs.stat().st_size < low_usable:
-                    pad_to = align_up(data.size()) + small_pad
+                if self.pad_vmlinuz and initramfs.stat().st_size > low_usable:
+                    pad_to = align_up(addr_to_offs(pref_address + init_size))
 
-                if self.pad_vmlinuz and pad_to > data.size():
+                if pad_to > data.size():
                     self.logger.info(
                         "Padding vmlinuz to size {:#x}"
                         .format(pad_to)
