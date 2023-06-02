@@ -470,6 +470,25 @@ class mkdepthcharge(
 
         return bool(pad)
 
+    @zimage_options.add
+    @Argument(
+        "--no-set-init-size", init_size=False,
+        help="Don't set init_size boot param.",
+    )
+    @Argument(
+        "--set-init-size", init_size=True,
+        help=argparse.SUPPRESS,
+    )
+    def set_init_size(self, init_size=None):
+        """Set init_size boot param for safe decompression."""
+        if init_size is None:
+            return (
+                self.image_format == "zimage"
+                and self.initramfs is not None
+            )
+
+        return bool(init_size)
+
     @Group
     def vboot_options(self):
         """Depthcharge image options"""
@@ -946,6 +965,25 @@ class mkdepthcharge(
                 # this looks like how bootloaders are supposed to do it.
                 data[p+0x218:p+0x21c] = struct.pack("<I", initramfs_addr)
                 data[p+0x21c:p+0x220] = struct.pack("<I", initramfs_size)
+
+                # Kernel self-decompression first copies vmlinuz to avoid
+                # overwriting itself, ending at pref_address + init_size
+                # or so. Increasing init_size in the boot params makes
+                # it avoid overwriting our initramfs. Also needs some
+                # small padding for unknown reasons.
+                if self.set_init_size:
+                    safe_copy_end = align_up(
+                        initramfs_addr + initramfs_size
+                        + small_pad
+                        + vmlinuz.stat().st_size
+                    )
+                    if pref_address + init_size < safe_copy_end:
+                        init_size = safe_copy_end - pref_address
+                        self.logger.info(
+                            "Setting init_size = {:#x}."
+                            .format(init_size)
+                        )
+                        data[p+0x260:p+0x264] = struct.pack("<I", init_size)
 
             self.logger.info("Re-signing edited temporary image.")
             proc = vbutil_kernel(
