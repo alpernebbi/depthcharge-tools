@@ -852,6 +852,10 @@ class mkdepthcharge(
             def align_up(size, align=0x1000):
                 return ((size + align - 1) // align) * align
 
+            # Size for a small padding, sometimes necessary in some
+            # places for unknown reasons, added and set empirically.
+            small_pad = 0x40000
+
             # bzImage header has the address the kernel will decompress
             # to, and the amount of memory it needs there to work.
             # See Documentation/x86/boot.rst in Linux tree for offsets.
@@ -869,11 +873,9 @@ class mkdepthcharge(
                 # Custom kernels may have PHYSICAL_START high enough
                 # that we can squeeze the initramfs between vmlinuz and
                 # the preferred_address. Very unlikely, but saves space.
-                # Didn't work unless I padded the vmlinuz by 0x15000.
-                low_pad = 0x18000
-                low_usable = pref_address - align_up(data.size()) - low_pad
+                low_usable = pref_address - align_up(data.size()) - small_pad
                 if initramfs.stat().st_size < low_usable:
-                    pad_to = align_up(data.size()) + low_pad
+                    pad_to = align_up(data.size()) + small_pad
 
                 if self.pad_vmlinuz and pad_to > data.size():
                     self.logger.info(
