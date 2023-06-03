@@ -881,6 +881,10 @@ class mkdepthcharge(
                 pref_address, init_size = struct.unpack(
                     "<QI", data[0x258:0x264]
                 )
+                self.logger.info(
+                    "Vmlinuz pref_address is {:#x}, with init_size {:#x}."
+                    .format(pref_address, init_size)
+                )
 
                 # Initramfs gets corrupted if it's too close to vmlinuz
                 pad_to = align_up(data.size()) + small_pad
