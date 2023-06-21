@@ -28,7 +28,7 @@ the running architecture. An example invocation on a Samsung Chromebook
 Plus (v1, arm64) could be::
 
     $ mkdepthcharge -o depthcharge.img --compress lzma \
-        --cmdline "console=tty1 root=/dev/mmcblk0p2 rootwait" \
+        --cmdline "console=tty1 root=/dev/mmcblk0p2 rootwait" -- \
         /boot/vmlinuz.gz /boot/initrd.img rk3399-gru-kevin.dtb
 
 Here, mkdepthcharge would automatically extract and recompress the
