@@ -358,6 +358,7 @@ class depthchargectl(
             'vboot-private-key': str(self.vboot_private_key),
             'kernel-cmdline': " ".join(self.kernel_cmdline),
             'ignore-initramfs': str(self.ignore_initramfs),
+            'zimage-initramfs-hack': str(self.zimage_initramfs_hack),
         })
 
     @config_options.add
@@ -759,6 +760,18 @@ class depthchargectl(
             ignore = self.config.getboolean("ignore-initramfs", False)
 
         return ignore
+
+    @config_options.add
+    @Argument("--zimage-initramfs-hack", nargs=1, help=argparse.SUPPRESS)
+    def zimage_initramfs_hack(self, hack=None):
+        """Which initramfs support hack should be used for zimage format"""
+        if hack is None:
+            hack = self.config.get("zimage-initramfs-hack", "init-size")
+
+        if hack in ("None", "none"):
+            hack = None
+
+        return hack
 
     @Subparsers()
     def command(self, cmd):

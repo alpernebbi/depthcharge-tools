@@ -131,6 +131,18 @@ class depthchargectl_build(
 
         return board
 
+    @depthchargectl.zimage_initramfs_hack.copy()
+    def zimage_initramfs_hack(self, hack=None):
+        hack = super().zimage_initramfs_hack
+
+        if hack not in (None, "set-init-size", "pad-vmlinuz"):
+            raise ValueError(
+                "Unknown zimage initramfs support hack '{}'."
+                .format(hack)
+            )
+
+        return hack
+
     @Group
     def custom_kernel_options(self):
         """Custom kernel specification"""
@@ -503,7 +515,10 @@ class depthchargectl_build(
                 )
 
         elif self.board.image_format == "zimage":
-            image_format_opts["pad_vmlinuz"] = not self.board.loads_zimage_ramdisk
+            if not self.board.loads_zimage_ramdisk:
+                hack = self.zimage_initramfs_hack
+                image_format_opts["pad_vmlinuz"] = (hack == "pad-vmlinuz")
+                image_format_opts["set_init_size"] = (hack == "set-init-size")
 
         for compress in compress_list:
             self.logger.info("Trying with compression '{}'.".format(compress))

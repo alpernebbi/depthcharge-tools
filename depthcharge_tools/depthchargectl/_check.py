@@ -118,6 +118,19 @@ class depthchargectl_check(
 
         return board
 
+    @depthchargectl.zimage_initramfs_hack.copy()
+    def zimage_initramfs_hack(self, hack=None):
+        hack = super().zimage_initramfs_hack
+
+        if hack not in (None, "set-init-size", "pad-vmlinuz"):
+            raise ValueError(
+                "Unknown zimage initramfs support hack '{}'."
+                .format(hack)
+            )
+
+        return hack
+
+
     def __call__(self):
         image = self.image
 
