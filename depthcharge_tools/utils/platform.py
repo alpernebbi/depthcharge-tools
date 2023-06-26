@@ -178,6 +178,37 @@ def vboot_keys(*keydirs, system=True, root=None):
     return None, None, None, None
 
 
+def cpu_microcode(boot=None):
+    microcode = []
+
+    for f in (
+        *boot.glob("amd-ucode.img"),
+        *boot.glob("amd-uc.img"),
+    ):
+        if f.is_file():
+            microcode.append(f)
+            break
+
+    for f in (
+        *boot.glob("intel-ucode.img"),
+        *boot.glob("intel-uc.img"),
+    ):
+        if f.is_file():
+            microcode.append(f)
+            break
+
+    if not microcode:
+        for f in (
+            *boot.glob("early_ucode.cpio"),
+            *boot.glob("microcode.cpio"),
+        ):
+            if f.is_file():
+                microcode.append(f)
+                break
+
+    return microcode
+
+
 def installed_kernels(root=None, boot=None):
     kernels = {}
     initrds = {}

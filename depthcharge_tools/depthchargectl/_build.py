@@ -32,6 +32,7 @@ from depthcharge_tools.utils.pathlib import (
 )
 from depthcharge_tools.utils.platform import (
     KernelEntry,
+    cpu_microcode,
     vboot_keys,
     installed_kernels,
     root_requires_initramfs,
@@ -190,7 +191,8 @@ class depthchargectl_build(
 
         if not files and self.kernel_version is not None:
             if self.kernel == self.kernel_version.kernel:
-                files = [self.kernel_version.initrd]
+                microcode = cpu_microcode(self.boot_mountpoint)
+                files = [*microcode, self.kernel_version.initrd]
 
         if self.ignore_initramfs:
             for file in files:
