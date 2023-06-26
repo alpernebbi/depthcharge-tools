@@ -1,3 +1,9 @@
+.. SPDX-License-Identifier: GPL-2.0-or-later
+
+.. depthcharge-tools mkdepthcharge(1) manual page
+.. Copyright (C) 2019-2022 Alper Nebi Yasak <alpernebiyasak@gmail.com>
+.. See COPYRIGHT and LICENSE files for full copyright information.
+
 =============
 mkdepthcharge
 =============

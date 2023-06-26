@@ -1,4 +1,8 @@
-# vim: filetype=sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+# depthcharge-tools depthchargectl bash completions
+# Copyright (C) 2020-2022 Alper Nebi Yasak <alpernebiyasak@gmail.com>
+# See COPYRIGHT and LICENSE files for full copyright information.
 
 _depthchargectl__file() {
     COMPREPLY+=($(compgen -f -- "$cur"))
@@ -227,3 +231,5 @@ _depthchargectl_write() {
 }
 
 complete -F _depthchargectl depthchargectl
+
+# vim: filetype=sh

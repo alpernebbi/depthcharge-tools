@@ -1,4 +1,9 @@
 #compdef depthchargectl
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+# depthcharge-tools depthchargectl zsh completions
+# Copyright (C) 2020-2022 Alper Nebi Yasak <alpernebiyasak@gmail.com>
+# See COPYRIGHT and LICENSE files for full copyright information.
 
 function _depthchargectl {
     _arguments -C \

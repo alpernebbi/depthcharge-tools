@@ -1,4 +1,9 @@
 #! /usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+# depthcharge-tools depthchargectl command
+# Copyright (C) 2020-2023 Alper Nebi Yasak <alpernebiyasak@gmail.com>
+# See COPYRIGHT and LICENSE files for full copyright information.
 
 import argparse
 import collections

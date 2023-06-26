@@ -1,6 +1,10 @@
 #!/bin/sh
 # SPDX-License-Identifier: LGPL-2.1-or-later
-#
+
+# depthcharge-tools kernel-install plugin
+# Copyright (C) 2022 Alper Nebi Yasak <alpernebiyasak@gmail.com>
+# See COPYRIGHT and LICENSE files for full copyright information.
+
 # This is a modified copy of 90-loaderentry.install from systemd.
 #
 # systemd is free software; you can redistribute it and/or modify it

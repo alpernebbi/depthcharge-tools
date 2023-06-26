@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+# depthcharge-tools boards.ini update script
+# Copyright (C) 2021-2022 Alper Nebi Yasak <alpernebiyasak@gmail.com>
+# See COPYRIGHT and LICENSE files for full copyright information.
+
 #! /usr/bin/env python3
 
 import configparser
