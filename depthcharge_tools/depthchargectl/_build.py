@@ -289,7 +289,7 @@ class depthchargectl_build(
                 .format(self.board.image_format)
             )
 
-        return files
+        return sorted(files, key=lambda f: f.name)
 
     @options.add
     @Argument("--description", nargs=1)
