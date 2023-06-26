@@ -182,37 +182,38 @@ class depthchargectl_build(
         return Path(file_)
 
     @custom_kernel_options.add
-    @Argument("--initramfs", nargs=1)
-    def initrd(self, file_=None):
-        """Ramdisk image"""
+    @Argument("--initramfs", nargs='+')
+    def initrd(self, *files):
+        """Ramdisk images"""
         # Trigger more important errors first
         self.kernel
 
-        if file_ is None and self.kernel_version is not None:
+        if not files and self.kernel_version is not None:
             if self.kernel == self.kernel_version.kernel:
-                file_ = self.kernel_version.initrd
+                files = [self.kernel_version.initrd]
 
         if self.ignore_initramfs:
-            self.logger.warning(
-                "Ignoring initramfs '{}' as configured."
-                .format(file_)
-            )
+            for file in files:
+                self.logger.warning(
+                    "Ignoring initramfs '{}' as configured."
+                    .format(file)
+                )
             return None
 
         # Initramfs is optional.
-        if file_ is None and self.kernel_release is not None:
+        if not files and self.kernel_release is not None:
             self.logger.info(
                 "No initramfs file found for version '{}'."
                 .format(self.kernel_release)
             )
             return None
 
-        elif file_ is None:
+        elif not files:
             self.logger.info("No initramfs file found.")
             return None
 
         else:
-            return Path(file_)
+            return [Path(file) for file in files]
 
     @custom_kernel_options.add
     @Argument("--fdtdir", nargs=1)
@@ -432,7 +433,10 @@ class depthchargectl_build(
         # prefer that if possible.
         if seconds is None:
             if self.initrd is not None:
-                seconds = int(self.initrd.stat().st_mtime)
+                seconds = max(
+                    int(initrd.stat().st_mtime)
+                    for initrd in self.initrd
+                )
             else:
                 seconds = int(self.kernel.stat().st_mtime)
 
@@ -478,7 +482,7 @@ class depthchargectl_build(
 
         # Error early if initramfs is absolutely too big to fit
         initrd_size = (
-            self.initrd.stat().st_size
+            sum(initrd.stat().st_size for initrd in self.initrd)
             if self.initrd is not None
             else 0
         )
