@@ -47,7 +47,7 @@ from depthcharge_tools.utils.subprocess import (
 class mkdepthcharge(
     Command,
     prog="mkdepthcharge",
-    usage="%(prog)s [options] -o FILE [--] [VMLINUZ] [INITRAMFS] [DTB ...]",
+    usage="%(prog)s [options] -o FILE [--] [VMLINUZ] [INITRAMFS ...] [DTB ...]",
     add_help=False,
 ):
     """Build boot images for the ChromeOS bootloader."""
@@ -209,27 +209,33 @@ class mkdepthcharge(
         return vmlinuz
 
     @input_files.add
-    @Argument("-i", "--initramfs", nargs=1)
-    def initramfs(self, initramfs=None):
-        """Ramdisk image"""
-        files = self.files["initramfs"]
+    @Argument("-i", "--initramfs", metavar="INITRAMFS", nargs="+")
+    def initramfs(self, *files):
+        """Ramdisk images"""
+        files = [
+            *(Path(f).resolve() for f in files if f is not None),
+            *self.files["initramfs"],
+        ]
 
-        if initramfs is not None:
-            initramfs = Path(initramfs).resolve()
+        for file in files:
             self.logger.info(
                 "Using file '{}' as an initramfs."
-                .format(initramfs)
+                .format(file)
             )
-            files = [initramfs, *files]
 
         if len(files) > 1:
-            raise ValueError(
-                "Can't build with multiple initramfs"
+            self.logger.info(
+                "Concatenating initramfs files as a single initramfs."
             )
+            initramfs = self._tempfile("merged-initramfs.img")
+            with initramfs.open('xb') as merge:
+                for file in files:
+                    merge.write(file.read_bytes())
 
-        if files:
+        elif len(files) == 1:
             initramfs = self._copy(files[0])
-        else:
+
+        elif not files:
             initramfs = None
 
         return initramfs
