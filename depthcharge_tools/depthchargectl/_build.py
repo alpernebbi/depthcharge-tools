@@ -202,6 +202,10 @@ class depthchargectl_build(
                 )
             return None
 
+        if len(files) == 1 and files[0] in (None, "None", "none"):
+            self.logger.warning("Not using initramfs.")
+            return None
+
         # Initramfs is optional.
         if not files and self.kernel_release is not None:
             self.logger.info(
