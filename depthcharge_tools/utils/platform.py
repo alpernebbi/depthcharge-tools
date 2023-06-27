@@ -152,6 +152,7 @@ def vboot_keys(*keydirs, system=True, root=None):
 
         keydirs = (
             *keydirs,
+            root / "etc" / "depthcharge-tools",
             root / "usr" / "share" / "vboot" / "devkeys",
             root / "usr" / "local" / "share" / "vboot" / "devkeys",
         )
