@@ -762,7 +762,7 @@ class depthchargectl(
                 cmds = [
                     cmd for cmd in proc_cmdline()
                     if cmd.split("=", 1)[0] not in (
-                        "root", "initrd", "kern_guid",
+                        "root", "initrd", "kern_guid", "BOOT_IMAGE",
                     )
                 ]
                 cmdline_src = "/proc/cmdline"
