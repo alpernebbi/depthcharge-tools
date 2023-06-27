@@ -84,7 +84,24 @@ def os_release(root=None):
     return os_release
 
 
-def kernel_cmdline():
+def kernel_cmdline(root=None):
+    cmdline = ""
+
+    if root is None:
+        root = "/"
+    root = Path(root).resolve()
+
+    cmdline_f = root / "etc" / "kernel" / "cmdline"
+    if not cmdline_f.exists():
+        cmdline_f = root / "usr" / "lib" / "kernel" / "cmdline"
+
+    if cmdline_f.exists():
+        cmdline = cmdline_f.read_text().rstrip("\n")
+
+    return shlex.split(cmdline)
+
+
+def proc_cmdline():
     cmdline = ""
 
     cmdline_f = Path("/proc/cmdline")
@@ -100,7 +117,7 @@ def is_cros_boot():
         return True
 
     # Chrome OS firmware injects this into the kernel cmdline.
-    if "cros_secure" in kernel_cmdline():
+    if "cros_secure" in proc_cmdline():
         return True
 
     return False

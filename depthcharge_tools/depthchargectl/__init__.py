@@ -44,6 +44,8 @@ from depthcharge_tools.utils.platform import (
     dt_compatibles,
     is_cros_boot,
     is_cros_libreboot,
+    kernel_cmdline,
+    proc_cmdline,
 )
 from depthcharge_tools.utils.string import (
     parse_bytesize,
@@ -214,7 +216,7 @@ class depthchargectl(
 
             if root:
                 self.logger.info(
-                    "Using root '{}' set in user configured cmdline."
+                    "Using root '{}' set in cmdline."
                     .format(root)
                 )
                 return str(root)
@@ -743,15 +745,37 @@ class depthchargectl(
         """Command line options for the kernel"""
         # Break cyclic dependencies here
         yield []
+        cmdline_src = "given options"
 
         if len(cmds) == 0:
             cmdline = self.config.get("kernel-cmdline")
             if cmdline is not None:
                 cmds = shlex.split(cmdline)
+                cmdline_src = "configuration"
+
+        if len(cmds) == 0:
+            cmds = kernel_cmdline(self.root_mountpoint)
+            cmdline_src = "/etc/kernel/cmdline"
+
+        if len(cmds) == 0:
+            if self.root_mountpoint == Path("/").resolve():
+                cmds = [
+                    cmd for cmd in proc_cmdline()
+                    if cmd.split("=", 1)[0] not in (
+                        "root", "initrd", "kern_guid",
+                    )
+                ]
+                cmdline_src = "/proc/cmdline"
 
         flat_cmds = []
         for cmd in cmds:
             flat_cmds.extend(shlex.split(cmd))
+
+        if flat_cmds:
+            self.logger.info(
+                "Using kernel cmdline from {}: {}"
+                .format(cmdline_src, shlex.join(flat_cmds))
+            )
 
         return flat_cmds
 

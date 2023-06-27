@@ -19,7 +19,7 @@ from depthcharge_tools.utils.pathlib import (
     read_lines,
 )
 from depthcharge_tools.utils.platform import (
-    kernel_cmdline,
+    proc_cmdline,
 )
 from depthcharge_tools.utils.subprocess import (
     cgpt,
@@ -302,7 +302,7 @@ class Disks(DirectedGraph):
         return self._get_dev_disk_info(device, "partuuid")
 
     def by_kern_guid(self):
-        for arg in kernel_cmdline():
+        for arg in proc_cmdline():
             lhs, _, rhs = arg.partition("=")
             if lhs == "kern_guid":
                 return self.by_partuuid(rhs)
