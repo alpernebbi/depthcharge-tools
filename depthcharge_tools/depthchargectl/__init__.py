@@ -368,6 +368,29 @@ class depthchargectl(
             'zimage-initramfs-hack': str(self.zimage_initramfs_hack),
         })
 
+        if self.board is not None:
+            def pattern(regex):
+                try:
+                    return str(regex.pattern)
+                except:
+                    return "None"
+
+            self.config.update({
+                "arch": str(self.board.arch),
+                "codename": str(self.board.codename),
+                "boots-lz4-kernel": str(self.board.boots_lz4_kernel),
+                "boots-lzma-kernel": str(self.board.boots_lzma_kernel),
+                "dt-compatible": pattern(self.board.dt_compatible),
+                "fit-ramdisk-load-address": str(self.board.fit_ramdisk_load_address),
+                "hwid-match": pattern(self.board.hwid_match),
+                "image-format": str(self.board.image_format),
+                "image-max-size": str(self.board.image_max_size),
+                "image-start-address": str(self.board.image_start_address),
+                "loads-fit-ramdisk": str(self.board.loads_fit_ramdisk),
+                "loads-zimage-ramdisk": str(self.board.loads_zimage_ramdisk),
+                "name": str(self.board.name),
+            })
+
     @config_options.add
     @Argument("--config", nargs=1)
     def config(self, file_=None):
