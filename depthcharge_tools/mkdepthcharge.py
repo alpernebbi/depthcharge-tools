@@ -471,8 +471,14 @@ class mkdepthcharge(
         "--pad-vmlinuz", pad=True,
         help="Pad vmlinuz for safe decompression.",
     )
-    def pad_vmlinuz(self, pad=False):
+    def pad_vmlinuz(self, pad=None):
         """Pad vmlinuz for safe decompression."""
+        if pad is None:
+            pad = (
+                self.image_format == "fit"
+                and self.patch_dtbs
+            )
+
         return bool(pad)
 
     @zimage_options.add
@@ -703,6 +709,24 @@ class mkdepthcharge(
         empty = self._tempfile("empty.bin")
         empty.write_bytes(bytes(512))
 
+        # The kernel decompression overwrites parts of the buffer we
+        # control while decompressing itself. We need to make sure we
+        # don't place initramfs in that range. For that, we need to know
+        # how offsets in file correspond to addresses in memory.
+
+        def addr_to_offs(addr, load_addr=self.kernel_start):
+            return addr - load_addr + 0x10000
+
+        def offs_to_addr(offs, load_addr=self.kernel_start):
+            return offs + load_addr - 0x10000
+
+        def align_up(size, align=0x1000):
+            return ((size + align - 1) // align) * align
+
+        # Size for a small padding, sometimes necessary in some
+        # places for unknown reasons, added and set empirically.
+        small_pad = 0x40000
+
         if self.image_format == "fit":
             fit_image = self._tempfile("depthcharge.fit")
 
@@ -723,6 +747,74 @@ class mkdepthcharge(
                             return node
                     except:
                         continue
+
+            # On later 32-bit ARM Chromebooks, the KERNEL_START address
+            # can be very close to the where kernel decompresses itself
+            # that the process overwrites the initramfs. The device-tree
+            # is luckily copied away before then. We need to add some
+            # vmlinuz padding to prevent this.
+            if initramfs is not None and self.pad_vmlinuz:
+
+                # We need the decompressed kernel size, not easy to get.
+                # Try to find the compressed vmlinux inside vmlinuz,
+                # then try to decompress it.
+                data = vmlinuz.read_bytes()
+                vmlinuz_size = len(data)
+                decomp_size = -1
+
+                for fmt, magic in {
+                    "gzip":  b'\x1f\x8b\x08',
+                    "xz":    b'\xfd7zXZ\x00',
+                    "zstd":  b'(\xb5/\xfd',
+                    "lzma":  b'\x5d\x00\x00\x00',
+                    "lz4":   b'\02!L\x18',
+                    "bzip2": b'BZh',
+                    "lzop":  b'\x89\x4c\x5a',
+                }.items():
+                    offs = data.find(magic)
+                    while 0 < offs < vmlinuz_size:
+                        decomp = decompress(data[offs:], partial=True)
+                        if decomp:
+                            self.logger.info(
+                                "Found {} at {:#x} in vmlinuz, with size {:#x}."
+                                .format(fmt, offs, len(decomp))
+                            )
+                            decomp_size = max(decomp_size, len(decomp))
+                        offs = data.find(magic, offs + 1)
+
+                if decomp_size == -1:
+                    raise ValueError(
+                        "Couldn't find decompressed kernel inside vmlinuz."
+                    )
+
+                self.logger.info(
+                    "Vmlinuz size is {:#x}, {:#x} decompressed."
+                    .format(vmlinuz_size, decomp_size)
+                )
+
+                # Decompression starts at start of physical memory,
+                # calculated per AUTO_ZRELADDR. But first kernel copies
+                # itself after where the decompressed copy would end.
+                decomp_addr = self.kernel_start & 0xf8000000
+                safe_initrd_start = (
+                    decomp_addr + decomp_size + vmlinuz_size + small_pad
+                )
+                initrd_start = (
+                    self.kernel_start + vmlinuz_size
+                    + sum(dtb.stat().st_size for dtb in self.dtbs)
+                )
+
+                if initrd_start < safe_initrd_start:
+                    pad_to = align_up(
+                        vmlinuz_size
+                        + (safe_initrd_start - initrd_start)
+                    )
+                    self.logger.info(
+                        "Padding vmlinuz to {:#x}."
+                        .format(pad_to)
+                    )
+                    with vmlinuz.open("r+b") as f, mmap(f.fileno(), 0) as data:
+                        data.resize(pad_to)
 
             # The later 32-bit ARM Chromebooks use Depthcharge, but
             # their stock versions don't have the code to support FIT
@@ -862,24 +954,6 @@ class mkdepthcharge(
             self.logger.info(proc.stdout)
 
         elif self.image_format == "zimage":
-            # The bzImage overwrites parts of the buffer we control
-            # while decompressing itself. We need to make sure we don't
-            # place initramfs in that range. For that, we need to know
-            # how offsets in file correspond to addresses in memory.
-
-            def addr_to_offs(addr, load_addr=self.kernel_start):
-                return addr - load_addr + 0x10000
-
-            def offs_to_addr(offs, load_addr=self.kernel_start):
-                return offs + load_addr - 0x10000
-
-            def align_up(size, align=0x1000):
-                return ((size + align - 1) // align) * align
-
-            # Size for a small padding, sometimes necessary in some
-            # places for unknown reasons, added and set empirically.
-            small_pad = 0x40000
-
             # bzImage header has the address the kernel will decompress
             # to, and the amount of memory it needs there to work.
             # See Documentation/x86/boot.rst in Linux tree for offsets.
