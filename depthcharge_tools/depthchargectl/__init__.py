@@ -247,7 +247,7 @@ class depthchargectl(
         return str(root)
 
     @global_options.add
-    @Argument("--root-mountpoint", nargs=1, help=argparse.SUPPRESS)
+    @Argument("--root-mountpoint", nargs=1, metavar="DIR")
     def root_mountpoint(self, mnt=None):
         """Root mountpoint of the system to work on."""
         if mnt:
@@ -294,7 +294,7 @@ class depthchargectl(
         return Path("/").resolve()
 
     @global_options.add
-    @Argument("--boot-mountpoint", nargs=1, help=argparse.SUPPRESS)
+    @Argument("--boot-mountpoint", nargs=1, metavar="DIR")
     def boot_mountpoint(self, boot=None):
         """Boot mountpoint of the system to work on."""
         if boot:
