@@ -859,6 +859,9 @@ class CommandMeta(type):
         if isinstance(retval, CommandExit):
             if raise_exit:
                 raise retval
+            elif retval.returncode != 0 and hasattr(instance, "_logger"):
+                instance._logger.warning(retval.message)
+                retval = retval.output
             else:
                 retval = retval.output
 
@@ -877,6 +880,9 @@ class CommandMeta(type):
         if isinstance(retval, CommandExit):
             if raise_exit:
                 raise retval
+            elif retval.returncode != 0 and hasattr(instance, "_logger"):
+                instance._logger.warning(retval.message)
+                retval = retval.output
             else:
                 retval = retval.output
 
