@@ -233,10 +233,16 @@ class depthchargectl(
             )
             return Path(root).resolve()
 
-        self.logger.info(
-            "Using root argument '{}' as a device description."
-            .format(root)
-        )
+        if root in (None, "", "none", "None"):
+            self.logger.info(
+                "Using no root argument for the kernel cmdline."
+                .format(root)
+            )
+        else:
+            self.logger.info(
+                "Using root argument '{}' as a device description."
+                .format(root)
+            )
 
         return str(root)
 
