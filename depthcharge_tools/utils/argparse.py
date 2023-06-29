@@ -909,9 +909,7 @@ class CommandMeta(type):
                 log_error(err.__cause__)
             logger.error(err, exc_info=is_debug_level)
 
-        try:
-            output = command(__raise_CommandExit=True, **kwargs)
-
+        def print_out(output):
             if inspect.isgenerator(output):
                 try:
                     while True:
@@ -919,8 +917,18 @@ class CommandMeta(type):
                 except StopIteration as err:
                     output = err.value
 
-            if output is not None:
+            elif isinstance(output, list):
+                print(*output, sep="\n")
+
+            elif isinstance(output, tuple):
+                print(*output, sep="\n")
+
+            elif output is not None:
                 print(output)
+
+        try:
+            output = command(__raise_CommandExit=True, **kwargs)
+            print_out(output)
 
         except CommandExit as exit:
             if exit.returncode != 0:
@@ -928,9 +936,7 @@ class CommandMeta(type):
             else:
                 logger.warning(exit)
 
-            if exit.output is not None:
-                print(exit.output)
-
+            print_out(exit.output)
             sys.exit(exit.returncode)
 
         except Exception as err:
