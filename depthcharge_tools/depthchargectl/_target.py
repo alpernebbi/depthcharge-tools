@@ -217,6 +217,8 @@ class depthchargectl_target(
                 disks=disks,
                 all_disks=self.all_disks,
                 root=self.root,
+                root_mountpoint=self.root_mountpoint,
+                boot_mountpoint=self.boot_mountpoint,
                 config=self.config,
                 board=self.board,
                 tmpdir=self.tmpdir / "list",

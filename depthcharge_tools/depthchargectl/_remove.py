@@ -127,6 +127,8 @@ class depthchargectl_remove(
 
         partitions = depthchargectl.list(
             root=self.root,
+            root_mountpoint=self.root_mountpoint,
+            boot_mountpoint=self.boot_mountpoint,
             config=self.config,
             board=self.board,
             tmpdir=self.tmpdir / "list",
@@ -189,6 +191,8 @@ class depthchargectl_remove(
                     partition=part,
                     bad=True,
                     root=self.root,
+                    root_mountpoint=self.root_mountpoint,
+                    boot_mountpoint=self.boot_mountpoint,
                     config=self.config,
                     board=self.board,
                     tmpdir=self.tmpdir / "bless",
