@@ -498,12 +498,20 @@ class depthchargectl_build(
             )
             raise InitramfsSizeTooBigError()
 
+        # The earliest boards apparently have an off-by-one error while
+        # loading the chosen dtb, adding each file twice solves it.
+        dtbs = (
+            self.dtbs
+            if not self.board.loads_dtb_off_by_one else
+            [dtb for dtb in self.dtbs for _ in (0, 1)]
+        )
+
         # Skip compress="none" if inputs wouldn't fit max image size
         compress_list = self.compress
         inputs_size = sum([
             self.kernel.stat().st_size,
             initrd_size,
-            *(dtb.stat().st_size for dtb in self.dtbs),
+            *(dtb.stat().st_size for dtb in dtbs),
         ])
 
         if inputs_size > self.board.image_max_size and "none" in compress_list:
@@ -544,7 +552,7 @@ class depthchargectl_build(
                     arch=self.board.arch,
                     cmdline=self.kernel_cmdline,
                     compress=compress,
-                    dtbs=self.dtbs,
+                    dtbs=dtbs,
                     **image_format_opts,
                     kernel_start=self.board.image_start_address,
                     initramfs=self.initrd,

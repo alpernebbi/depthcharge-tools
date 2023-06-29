@@ -118,6 +118,10 @@ class Board:
         return self._config.getboolean("loads-fit-ramdisk", False)
 
     @property
+    def loads_dtb_off_by_one(self):
+        return self._config.getboolean("loads-dtb-off-by-one", False)
+
+    @property
     def fit_ramdisk_load_address(self):
         addr = self._config.get("fit-ramdisk-load-address", None)
         return parse_bytesize(addr)
@@ -392,6 +396,7 @@ class depthchargectl(
                 "image-format": str(self.board.image_format),
                 "image-max-size": str(self.board.image_max_size),
                 "image-start-address": str(self.board.image_start_address),
+                "loads-dtb-off-by-one": str(self.board.loads_dtb_off_by_one),
                 "loads-fit-ramdisk": str(self.board.loads_fit_ramdisk),
                 "loads-zimage-ramdisk": str(self.board.loads_zimage_ramdisk),
                 "name": str(self.board.name),
