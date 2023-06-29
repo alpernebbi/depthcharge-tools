@@ -579,7 +579,13 @@ class depthchargectl_build(
                 raise SizeTooBigError()
 
         self.logger.info("Copying newly built image to output.")
-        copy(outtmp, self.output)
+        try:
+            copy(outtmp, self.output)
+        except PermissionError as err:
+            raise PermissionError(
+                "Couldn't copy to '{}', permission denied."
+                .format(self.output)
+            )
 
         self.logger.warning(
             "Built depthcharge image for kernel version '{}'."
