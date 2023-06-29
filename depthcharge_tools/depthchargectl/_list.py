@@ -126,7 +126,10 @@ class depthchargectl_list(
             self.logger.info("Searching all disks.")
             disks = self.diskinfo.roots()
         elif disks:
-            self.logger.info("Searching real disks for {}.".format(disks))
+            self.logger.info(
+                "Searching real disks for {}."
+                .format(", ".join(str(d) for d in disks))
+            )
             images = []
             for d in disks:
                 if self.diskinfo.evaluate(d) is None:
@@ -151,7 +154,10 @@ class depthchargectl_list(
             disks = self.diskinfo.roots(root, boot)
 
         if disks:
-            self.logger.info("Using disks: {}.".format(disks))
+            self.logger.info(
+                "Using disks: {}."
+                .format(", ".join(str(d) for d in disks))
+            )
         else:
             raise ValueError("Could not find any matching disks.")
 
@@ -255,7 +261,7 @@ class depthchargectl_list(
             return CommandExit(
                 message=(
                     "Couldn't get partitions for disks {}."
-                    .format(error_disks)
+                    .format(", ".join(str(d) for d in error_disks))
                 ),
                 output=output,
                 returncode=1,

@@ -231,13 +231,13 @@ class depthchargectl_remove(
         if error_disks:
             error_msg.append(
                 "Couldn't disable partitions for disks {}."
-                .format(error_disks)
+                .format(", ".join(str(d) for d in error_disks))
             )
 
         if error_parts:
             error_msg.append(
                 "Couldn't disable partitions {}."
-                .format(error_parts)
+                .format(", ".join(str(d) for d in error_parts))
             )
 
         if error_msg:

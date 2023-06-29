@@ -268,7 +268,7 @@ class depthchargectl(
             mnt = mountpoints[0]
             self.logger.warning(
                 "Choosing '{}' from multiple root mountpoints: {}."
-                .format(mnt, mountpoints)
+                .format(mnt, ", ".join(str(m) for m in mountpoints))
             )
             return mnt
 
@@ -315,7 +315,7 @@ class depthchargectl(
         if len(mountpoints) > 1:
             self.logger.warning(
                 "Choosing '{}' from multiple /boot mountpoints: {}."
-                .format(mountpoints[0], mountpoints)
+                .format(mountpoints[0], ", ".join(str(m) for m in mountpoints))
             )
 
         if mountpoints:
