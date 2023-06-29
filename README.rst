@@ -91,16 +91,23 @@ This project (or at least ``depthchargectl``) is meant to be integrated
 into your operating system by its maintainers, and the best way to
 install it is through your OS' package manager whenever possible.
 
+
 Debian
 ------
-An unofficial Debian package is available in the releases_ page, with
-it's packaging source tracked in salsa_. After downloading, you can
-install with::
+An official `depthcharge-tools Debian package`_ is available upstream,
+since Debian 12 (bookworm). You can install it like any other package::
 
-    $ sudo apt install ./depthcharge-tools_*.deb
+    $ sudo apt install depthcharge-tools
 
-.. _releases: https://github.com/alpernebbi/depthcharge-tools/releases
-.. _salsa: https://salsa.debian.org/alpernebbi/depthcharge-tools
+It includes the necessary system hooks and services to make and keep
+your Chromebook bootable, enabled by default. These however do not
+trigger on the depthcharge-tools installation, but on kernel and
+initramfs changes. To trigger these hooks manually, run::
+
+    $ sudo update-initramfs -u
+
+.. _depthcharge-tools Debian package: https://packages.debian.org/sid/depthcharge-tools
+
 
 Pip
 ---
