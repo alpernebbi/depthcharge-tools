@@ -58,7 +58,23 @@ class ProcessRunner:
             if stderr is None:
                 kwargs["stderr"] = subprocess.PIPE
 
-            return subprocess.run(args, **kwargs)
+            try:
+                return subprocess.run(args, **kwargs)
+            except subprocess.CalledProcessError as err:
+                our_err = self._parse_subprocess_error(err)
+                if our_err is None:
+                    return subprocess.CompletedProcess(
+                        args=err.cmd,
+                        returncode=err.returncode,
+                        stdout=err.stdout,
+                        stderr=err.stderr,
+                    )
+                if our_err is not err:
+                    raise our_err
+                raise
+
+    def _parse_subprocess_error(self, err):
+        return err
 
 
 class GzipRunner(ProcessRunner):
@@ -262,6 +278,25 @@ class CgptRunner(ProcessRunner):
 
         return proc
 
+    def _parse_subprocess_error(self, err):
+        # Exits with nonzero status if it finds no partitions of
+        # given type even if the disk has a valid partition table
+        if not err.stderr:
+            return None
+
+        m = re.fullmatch(
+            "ERROR: Can't open (.*): Permission denied\n",
+            err.stderr,
+        )
+        if m:
+            return PermissionError(
+                "Couldn't open '{}', permission denied."
+                .format(m.groups()[0])
+            )
+
+        return err
+
+
     def get_raw_attribute(self, disk, partno):
         proc = self("show", "-A", "-i", str(partno), str(disk))
         attribute = int(proc.stdout, 16)
@@ -314,15 +349,7 @@ class CgptRunner(ProcessRunner):
             partnos = [int(shlex.split(line)[2]) for line in lines]
 
         else:
-            # Exits with nonzero status if it finds no partitions of
-            # given type even if the disk has a valid partition table
-            try:
-                proc = self("find", "-n", "-t", type, disk)
-            except subprocess.CalledProcessError as err:
-                if err.stderr:
-                    raise
-                return []
-
+            proc = self("find", "-n", "-t", type, disk)
             partnos = [int(n) for n in proc.stdout.splitlines()]
 
         return partnos
