@@ -368,6 +368,13 @@ class depthchargectl_build(
                 append_root = False
                 continue
 
+            if self.root is None:
+                self.logger.warning(
+                    "Kernel cmdline has a root '{}', keeping it."
+                    .format(rhs)
+                )
+                continue
+
             self.logger.warning(
                 "Kernel cmdline has a different root '{}', removing it."
                 .format(rhs)
