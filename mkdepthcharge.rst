@@ -12,8 +12,8 @@ mkdepthcharge
 Build boot images for the ChromeOS bootloader
 ---------------------------------------------
 
-:date: 2022-11-24
-:version: v0.6.1
+:date: 2023-06-30
+:version: v0.6.2
 :manual_section: 1
 :manual_group: depthcharge-tools
 
@@ -22,14 +22,17 @@ Build boot images for the ChromeOS bootloader
 .. |vbutil_kernel| replace:: *vbutil_kernel*\ (1)
 .. |futility| replace:: *futility*\ (1)
 
-.. |VBOOT_DEVKEYS| replace:: /usr/share/vboot/devkeys
-.. |VBOOT_KEYBLOCK| replace:: |VBOOT_DEVKEYS|/kernel.keyblock
-.. |VBOOT_SIGNPUBKEY| replace:: |VBOOT_DEVKEYS|/kernel_subkey.vbpubk
-.. |VBOOT_SIGNPRIVATE| replace:: |VBOOT_DEVKEYS|/kernel_data_key.vbprivk
+.. |CONFIG_DIR| replace:: **/etc/depthcharge-tools**
+.. |CONFIG_FILE| replace:: **/etc/depthcharge-tools/config**
+.. |CONFIGD_DIR| replace:: **/etc/depthcharge-tools/config.d**
+.. |VBOOT_DEVKEYS| replace:: **/usr/share/vboot/devkeys**
+.. |VBOOT_KEYBLOCK| replace:: **kernel.keyblock**
+.. |VBOOT_SIGNPUBKEY| replace:: **kernel_subkey.vbpubk**
+.. |VBOOT_SIGNPRIVATE| replace:: **kernel_data_key.vbprivk**
 
 SYNOPSIS
 ========
-**mkdepthcharge** **-o** *FILE* [options] [*VMLINUZ*] [*INITRAMFS*] [*DTB* ...]
+**mkdepthcharge** **-o** *FILE* [options] [*VMLINUZ*] [*INITRAMFS* ...] [*DTB* ...]
 
 
 DESCRIPTION
@@ -62,8 +65,9 @@ Input files
     Kernel executable. If a compressed file is given here, it is
     decompressed and its contents are used in its place.
 
--i INITRAMFS, --initramfs INITRAMFS
-    Ramdisk image.
+-i *INITRAMFS* [*INITRAMFS* ...], --initramfs *INITRAMFS* [*INITRAMFS* ...]
+    Ramdisk image. If multiple files are given (e.g. for CPU microcode
+    updates), they are concatenated and used as a single file.
 
 -b *DTB* [*DTB* ...], --dtbs *DTB* [*DTB* ...]
     Device-tree binary files.
@@ -110,6 +114,12 @@ Global options
     but copied to it from a temporary working directory. This option is
     mandatory.
 
+--pad-vmlinuz, --no-pad-vmlinuz
+    Pad the *VMLINUZ* file so that the kernel's self-decompression has
+    enough space to avoid overwriting the *INITRAMFS* file during boot.
+    This has different defaults and behaviour depending on the image
+    format, see explanations in their respective sections.
+
 --tmpdir DIR
     Create and keep temporary files in *DIR*. If not given, a temporary
     **mkdepthcharge-\*** directory is created in **/tmp** and removed at
@@ -131,6 +141,21 @@ FIT image options
 
 -n DESC, --name DESC
     Description of the *VMLINUZ* to put in the FIT image.
+
+--pad-vmlinuz, --no-pad-vmlinuz
+    Pad the *VMLINUZ* file so that the kernel's self-decompression has
+    enough space to avoid overwriting the *INITRAMFS* file during boot.
+    The necessary padding is calculated based on compressed and
+    decompressed kernel sizes and the **--kernel-start** argument.
+
+    On earliest boards U-Boot moves the *INITRAMFS* away to a safe place
+    before running the *VMLINUZ*, and on ARM64 boards Depthcharge itself
+    decompresses the *VMLINUZ* to a safe place. But 32-bit ARM boards
+    with Depthcharge lack FIT ramdisk support and run the *VMLINUZ*
+    in-place, so this initramfs support hack is necessary on those.
+
+    This option is enabled by default when **--patch-dtbs** is given,
+    use the **--no-pad-vmlinuz** argument to disable it.
 
 --patch-dtbs, --no-patch-dtbs
     Add **linux,initrd-start** and **linux,initrd-end** properties to
@@ -167,9 +192,30 @@ zImage image options
     The padding is usually larger than the decompressed version of the
     kernel, so it results in unbootable images for older boards with
     small image size limits. For these, it is usually necessary to use
-    custom kernels to make the parts fit as described above.
+    **--set-init-size**, or custom kernels to make the parts fit as
+    described above.
 
-    This is enabled by default, use the **--no-pad-vmlinuz** argument to
+    This is disabled by default in favour of **--set-init-size**, use
+    the **--pad-vmlinuz** argument to enable it.
+
+--set-init-size, --no-set-init-size
+    Increase the **init_size** kernel boot parameter so that the
+    kernel's self-decompression does not overwrite the *INITRAMFS* file
+    during boot. The modified value is calculated based on values in the
+    zImage header and the **--kernel-start** argument.
+
+    This only works if the kernel has **KASLR** enabled (as is the
+    default), because then the kernel itself tries to avoid overwriting
+    the *INITRAMFS* during decompression. However it does not do this
+    when first copying the *VMLINUZ* to the end of the decompression
+    buffer. Increasing **init_size** shifts copy this upwards to avoid
+    it overlapping *INITRAMFS*.
+
+    If the *VMLINUZ* and *INITRAMFS* are small enough, they may fit
+    before the first compressed copy's start. In this case changing the
+    value is unnecessary and skipped.
+
+    This is enabled by default, use the **--no-set-init-size** argument to
     disable it.
 
 Depthcharge image options
@@ -197,28 +243,29 @@ Depthcharge image options
     command line parameters to capture it. Use **--no-kern-guid** to
     disable this.
 
---keydir DIR
-    Directory containing developer keys to use. Equivalent to using
-    **--keyblock** "*DIR*\ **/kernel.keyblock**", **--signprivate**
-    "*DIR*\ **/kernel_data_key.vbprivk**", and **--signpubkey**
-    "*DIR*\ **/kernel_subkey.vbpubk**".
-
---keyblock FILE
-    Kernel key block file. If not given, the test key files distributed
-    with |vbutil_kernel| are used.
-
 --kern-guid, --no-kern-guid
     Prepend **kern_guid=%U** to kernel command-line parameters. This is
     enabled by default, use the **--no-kern-guid** argument to disable
     it.
 
---signprivate FILE
-    Private keys in .vbprivk format. If not given, the test key files
-    distributed with |vbutil_kernel| are used.
+--keydir KEYDIR
+    Directory containing verified boot keys to use. Equivalent to using
+    **--keyblock** *KEYDIR*\/|VBOOT_KEYBLOCK|, **--signprivate**
+    *KEYDIR*\/|VBOOT_SIGNPRIVATE|, and **--signpubkey** *KEYDIR*\
+    /|VBOOT_SIGNPUBKEY|.
 
---signpubkey FILE
-    Public keys in .vbpubk format. If not given, the test key files
-    distributed with |vbutil_kernel| are used.
+--keyblock FILE, --signprivate FILE, --signpubkey FILE
+    ChromiumOS verified boot keys. More specifically: kernel key block,
+    private keys in .vbprivk format, and public keys in .vbpubk format.
+
+    If not given, defaults to files set in **depthcharge-tools**
+    configuration. If those are not set, **mkdepthcharge** searches for
+    these keys in |CONFIG_DIR| and |VBOOT_DEVKEYS| directories, the
+    latter being test keys that may be distributed with |vbutil_kernel|.
+
+    You can set these in **depthcharge-tools** configuration by the
+    **vboot-keyblock**, **vboot-private-key** and **vboot-public-key**
+    options under a **depthcharge-tools** config section.
 
 
 EXIT STATUS
@@ -228,17 +275,26 @@ In general, exits with zero on success and non-zero on failure.
 
 FILES
 =====
-|VBOOT_DEVKEYS|
-    Default devkeys directory containing test keys which might have
-    been installed by |vbutil_kernel|.
+|CONFIG_FILE|, |CONFIGD_DIR|/*\ **
+    The **depthcharge-tools** configuration files. These might be used
+    to specify locations of the ChromiumOS verified boot keys as system
+    configuration.
 
-|VBOOT_KEYBLOCK|
+|CONFIG_DIR|
+    The **depthcharge-tools** configuration directory. **mkdepthcharge**
+    searches this directory for verified boot keys.
+
+|VBOOT_DEVKEYS|
+    A directory containing test keys which should have been installed by
+    |vbutil_kernel|.
+
+*KEYDIR*/|VBOOT_KEYBLOCK|
     Default kernel key block file used for signing the image.
 
-|VBOOT_SIGNPUBKEY|
+*KEYDIR*/|VBOOT_SIGNPUBKEY|
     Default public key used to verify signed images.
 
-|VBOOT_SIGNPRIVATE|
+*KEYDIR*/|VBOOT_SIGNPRIVATE|
     Default private key used for signing the image.
 
 
@@ -261,10 +317,11 @@ EXAMPLES
     on these boards doesn't process the FIT ramdisk, so the dtbs needs
     to be patched to boot with initramfs.
 
-**mkdepthcharge** **-o** *peach-pit.img* **-c** *"console=null"* **--ramdisk-load-address** *0x44000000* **--** *vmlinuz* *initramfs* *exynos5420-peach-pit.dtb*
+**mkdepthcharge** **-o** *peach-pit.img* **-c** *"console=null"* **--ramdisk-load-address** *0x44000000* **--** *vmlinuz* *initramfs* *exynos5420-peach-pit.dtb* *exynos5420-peach-pit.dtb*
     Build an image intended to work on a Samsung Chromebook 2 (11").
     This board uses a custom U-Boot, so needs an explicit ramdisk load
-    address.
+    address. Its firmware has a bug with loading the device-tree file,
+    so needs the file twice for the result to be actually bootable.
 
 SEE ALSO
 ========
