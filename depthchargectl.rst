@@ -12,8 +12,8 @@ depthchargectl
 Manage the ChromeOS bootloader and its boot images
 --------------------------------------------------
 
-:date: 2022-11-24
-:version: v0.6.1
+:date: 2023-06-30
+:version: v0.6.2
 :manual_section: 1
 :manual_group: depthcharge-tools
 
@@ -21,15 +21,18 @@ Manage the ChromeOS bootloader and its boot images
 .. |cgpt| replace:: *cgpt*\ (1)
 .. |vbutil_kernel| replace:: *vbutil_kernel*\ (1)
 
+.. |CONFIG_DIR| replace:: **/etc/depthcharge-tools**
 .. |CONFIG_FILE| replace:: **/etc/depthcharge-tools/config**
 .. |CONFIGD_DIR| replace:: **/etc/depthcharge-tools/config.d**
 .. |IMAGES_DIR| replace:: **/boot/depthcharge**
-.. |VBOOT_KEYBLOCK| replace:: **/usr/share/vboot/kernel.keyblock**
-.. |VBOOT_PUBLIC_KEY| replace:: **/usr/share/vboot/kernel_subkey.vbpubk**
-.. |VBOOT_PRIVATE_KEY| replace:: **/usr/share/vboot/kernel_data_key.vbprivk**
-.. |KERNEL_CMDLINE| replace:: **"console=tty0 quiet splash"**
 .. |INITD_DIR| replace:: **/etc/init.d**
 .. |SYSTEMD_DIR| replace:: **/usr/lib/systemd/system**
+.. |USR_CMDLINE_FILE| replace:: **/usr/lib/kernel/cmdline**
+.. |ETC_CMDLINE_FILE| replace:: **/etc/kernel/cmdline**
+.. |PROC_CMDLINE_FILE| replace:: **/proc/cmdline**
+.. |VBOOT_DEVKEYS| replace:: **/usr/share/vboot/devkeys**
+.. |USR_KI_DIR| replace:: **/usr/lib/kernel/install.d**
+.. |ETC_KI_CONF| replace:: **/etc/kernel/install.conf**
 
 
 SYNOPSIS
@@ -103,13 +106,13 @@ depthchargectl config
 ---------------------
 Retrieves the configured value for a given configuration key, primarily
 for use in scripts that integrate **depthchargectl** with the system
-upgrade process.
+upgrade process. Can also query information about boards.
 
 depthchargectl check
 --------------------
 Checks if a file is a depthcharge image that can be booted on this
 board. **depthchargectl** also keeps track of restrictions on images
-for each board. For example, most ChromeOS board can boot images
+for each board. For example, earlier ChromeOS board can boot images
 up to a specific size, e.g. 32MiB. It checks if its input is in a format
 the ChromeOS bootloader expects and satisfies these restrictions.
 
@@ -164,6 +167,13 @@ Global options
     device is given, its mountpoint is used. Defaults to the currently
     booted system's root.
 
+--root-mountpoint DIR, --boot-mountpoint DIR
+    Root and boot mountpoints of the system to work on. If not given,
+    deduced from the **--root** argument. These are helpful because the
+    **--root** argument is overloaded by the **build** subcommand, which
+    adds it as a kernel command line argument, and it can be desirable
+    to avoid that while building an image for a chroot.
+
 --tmpdir DIR
     Directory to keep temporary files. Normally **depthchargectl**
     creates a temporary directory by itself and removes it when it
@@ -194,30 +204,39 @@ this configuration to be overridden temporarily.
 
 --vboot-keyblock KEYBLOCK
     The kernel keyblock file required to sign and verify images. By
-    default, set to |VBOOT_KEYBLOCK|.
+    default, **depthchargectl** searches for these keys in |CONFIG_DIR|
+    and |VBOOT_DEVKEYS| directories.
 
 --vboot-public-key SIGNPUBKEY
     The public key required to verify images, in .vbpubk format. By
-    default, set to |VBOOT_PUBLIC_KEY|.
+    default, **depthchargectl** searches for these keys in |CONFIG_DIR|
+    and |VBOOT_DEVKEYS| directories.
 
 --vboot-private-key SIGNPRIVATE
     The private key necessary to sign images, in .vbprivk format. By
-    default, set to |VBOOT_PRIVATE_KEY|.
+    default, **depthchargectl** searches for these keys in |CONFIG_DIR|
+    and |VBOOT_DEVKEYS| directories.
 
 --kernel-cmdline *CMD* [*CMD* ...]
-    Command-line parameters for the kernel. By default, set to
-    |KERNEL_CMDLINE|.  **depthchargectl** and |mkdepthcharge| append
-    some other values to this: an appropriate **root=**\ *ROOT*, the
-    **kern_guid=%U** parameter required for the **bless** subcommand,
-    **noinitrd** if **--ignore-initramfs** is given.
+    Command-line parameters for the kernel. By default, these are read
+    from |ETC_CMDLINE_FILE|, |USR_CMDLINE_FILE| or |PROC_CMDLINE_FILE|.
+    **depthchargectl** and |mkdepthcharge| may append some other values
+    to this: an appropriate **root=**\ *ROOT*, the **kern_guid=%U**
+    parameter required for the **bless** subcommand, **noinitrd** if
+    **--ignore-initramfs** is given.
 
 --ignore-initramfs
-    Do not include *initramfs* in the built images. For some boards,
-    **depthchargectl** cannot build an image that includes an initramfs
-    so it exits with an error if your OS kernel has a corresponding one.
-    If you know that your OS kernel can boot on this board without an
-    initramfs, you can specify this option to build an initramfs-less
-    image.
+    Do not include *initramfs* in the built images, ignore the initramfs
+    checks for the **root=**\ *ROOT* argument, and add **noinitrd** to
+    the kernel cmdline. If you know that your OS kernel can boot on this
+    board without an initramfs (perhaps because it has a built-in one),
+    you can specify this option to build an initramfs-less image.
+
+--zimage-initramfs-hack
+    Choose which initramfs support hack will be used for the zimage
+    format. Either **set-init-size** (the default), **pad-vmlinuz**
+    for kernels without **KASLR**, or **none** if depthcharge ever
+    gets native support for safely loading zimage initramfs.
 
 depthchargectl bless options
 ----------------------------
@@ -245,7 +264,7 @@ depthchargectl build options
 --root ROOT
     Root device to add to kernel cmdline. By default, this is acquired
     from **/etc/fstab** or a filesystem UUID is derived from the mounted
-    root. If "none" is passed, no root parameter is added.
+    root. If **none** is passed, no root parameter is added.
 
 --compress *TYPE* [*TYPE* ...]
     Compression types to attempt. By default, all compression types that
@@ -272,9 +291,10 @@ building the image, instead of letting **depthchargectl** deduce them:
     Kernel executable. Usually **/boot/vmlinuz-**\ *VERSION* by default,
     but depends on your OS.
 
---initramfs FILE
+--initramfs *FILE* [*FILE* ...]
     Ramdisk image. Usually **/boot/initrd.img-**\ *VERSION* by default,
-    but depends on your OS.
+    but depends on your OS. If **none** is passed, no initramfs is
+    added.
 
 --fdtdir DIR
     Directory to search device-tree binaries for the board. Usually
@@ -441,6 +461,10 @@ depthchargectl target exit status
 
 FILES
 =====
+|CONFIG_DIR|
+    Configuration directory. **depthchargectl** searches this directory
+    for configuration files and ChromiumOS verified boot keys.
+
 |CONFIG_FILE|
     System configuration file. The "Configuration options" explained
     above can be set here to have them as long-term defaults. It's also
@@ -449,15 +473,29 @@ FILES
 |CONFIGD_DIR|/*\ **
     These files are considered appended to the **config** file.
 
-|SYSTEMD_DIR|/depthchargectl-bless.service
-    A systemd service that runs the **depthchargectl bless** on
-    successful boots.
+|ETC_CMDLINE_FILE|, |USR_CMDLINE_FILE|, |PROC_CMDLINE_FILE|
+    Files from which **depthchargectl** may deduce a default kernel
+    command line.
 
-|INITD_DIR|/depthchargectl-bless
+|SYSTEMD_DIR|\ **/depthchargectl-bless.service**
+    A systemd service that runs **depthchargectl bless** on successful
+    boots.
+
+|USR_KI_DIR|\ **/90-depthcharge-tools.install**
+    A systemd kernel-install plugin that can automatically manage your
+    system if **layout=depthcharge-tools** is set in |ETC_KI_CONF|.
+
+|INITD_DIR|\ **/depthchargectl-bless**
     An init service that runs **depthchargectl bless** on successful
     boots.
 
-|IMAGES_DIR|/*\ **.img
+|VBOOT_DEVKEYS|
+    A directory containing test keys which should have been installed by
+    |vbutil_kernel|. **depthchargectl** also searches this directory if
+    no verified boot keys are set in configuration or found in config
+    directories.
+
+|IMAGES_DIR|/*\ **\ **.img**
     The most recently built images for each kernel version.
 
 
