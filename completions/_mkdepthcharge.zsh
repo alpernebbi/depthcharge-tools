@@ -8,7 +8,7 @@
 function _mkdepthcharge {
     _arguments -S \
         {-d,--vmlinuz}'[Kernel executable]:vmlinuz file:_files' \
-        {-i,--initramfs}'[Ramdisk image]:initrd file:_files' \
+        {-i,--initramfs}'[Ramdisk image]:*:initrd files:_files' \
         {-b,--dtbs}'[Device-tree binary files]:*:dtbs files:_files' \
         {-h,--help}'[Show a help message.]' \
         {-v,--verbose}'[Print more detailed output.]' \
@@ -25,6 +25,8 @@ function _mkdepthcharge {
         --no-patch-dtbs'[Do not add linux,initrd properties to device-tree binary files.]' \
         --pad-vmlinuz'[Pad the vmlinuz file for safe decompression]' \
         --no-pad-vmlinuz'[Do not pad the vmlinuz file for safe decompression]' \
+        --set-init-size'[Set init-size boot param for safe decompression]' \
+        --no-set-init-size'[Do not set init-size boot param for safe decompression]' \
         '*'{-c,--cmdline}'[Command-line parameters for the kernel.]:*:kernel cmdline:{_mkdepthcharge__cmdline}' \
         --kern-guid'[Prepend kern_guid=%U to the cmdline.]' \
         --no-kern-guid'[Do not prepend kern_guid=%U to the cmdline.]' \

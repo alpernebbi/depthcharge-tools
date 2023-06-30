@@ -12,6 +12,8 @@ function _depthchargectl {
         {-V,--version}'[Print program version.]' \
         --tmpdir'[Directory to keep temporary files.]:temp dir:_directories' \
         --root'[Root device or mountpoint of the system to work on]:root device:{_depthchargectl__root; _depthchargectl__disk}' \
+        --root-mountpoint'[Root mountpoint of the system to work on]:root mountpoint:_directories' \
+        --boot-mountpoint'[Boot mountpoint of the system to work on]:boot mountpoint:_directories' \
         --config'[Additional configuration file to read]:config file:_files' \
         --board'[Assume running on the specified board]:board codenames:{_depthchargectl__board;}' \
         --images-dir'[Directory to store built images]:images dir:_directories' \
@@ -20,6 +22,7 @@ function _depthchargectl {
         --vboot-private-key'[Private key file to include in images]:vbprivk file:_files' \
         --kernel-cmdline'[Command line options for the kernel]:kernel cmdline:{_depthchargectl__cmdline;}' \
         --ignore-initramfs'[Do not include initramfs in images]' \
+        --zimage-initramfs-hack'[Initramfs support hack choice for zimage format]:zimage hack:(set-init-size pad-vmlinuz none)' \
         '1:command:(bless build config check list remove target write)' \
         '*::arg:->args' \
         ;
@@ -42,7 +45,7 @@ function _depthchargectl {
                 {-o,--output}'[Output image to path instead of storing in images-dir]:output path:_files' \
                 --kernel-release'[Release name for the kernel used in image name]:kernel release:{_depthchargectl__kernel;}' \
                 --kernel'[Kernel executable]:kernel:_files' \
-                --initramfs'[Ramdisk image]:initramfs:_files' \
+                --initramfs'[Ramdisk image]:*:initramfs:_files' \
                 --fdtdir'[Directory to search device-tree binaries for the board]:fdtdir:_directories' \
                 --dtbs'[Device-tree binary files to use instead of searching fdtdir]:*:dtb files:_files' \
                 ':kernel version:{_depthchargectl__kernel}' \
@@ -137,6 +140,11 @@ function _depthchargectl__cmdline {
 function _depthchargectl__root {
     local root=($(findmnt --fstab -n -o SOURCE "/"))
     _describe root root
+} 2>/dev/null
+
+function _depthchargectl__boot {
+    local boot=($(findmnt --fstab -n -o SOURCE "/boot"))
+    _describe boot boot
 } 2>/dev/null
 
 _depthchargectl "$@"
