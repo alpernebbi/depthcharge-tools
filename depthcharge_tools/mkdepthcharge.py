@@ -392,6 +392,25 @@ class mkdepthcharge(
         if self.arch in Architecture.x86:
             return 0x100000
 
+    @options.add
+    @Argument(
+        "--no-pad-vmlinuz", pad=False,
+        help=argparse.SUPPRESS,
+    )
+    @Argument(
+        "--pad-vmlinuz", pad=True,
+        help="Pad vmlinuz for safe decompression.",
+    )
+    def pad_vmlinuz(self, pad=None):
+        """Pad vmlinuz for safe decompression."""
+        if pad is None:
+            pad = (
+                self.image_format == "fit"
+                and self.patch_dtbs
+            )
+
+        return bool(pad)
+
     @Group
     def fit_options(self):
         """FIT image options"""
@@ -461,25 +480,6 @@ class mkdepthcharge(
     @Group
     def zimage_options(self):
         """zImage format options"""
-
-    @zimage_options.add
-    @Argument(
-        "--no-pad-vmlinuz", pad=False,
-        help=argparse.SUPPRESS,
-    )
-    @Argument(
-        "--pad-vmlinuz", pad=True,
-        help="Pad vmlinuz for safe decompression.",
-    )
-    def pad_vmlinuz(self, pad=None):
-        """Pad vmlinuz for safe decompression."""
-        if pad is None:
-            pad = (
-                self.image_format == "fit"
-                and self.patch_dtbs
-            )
-
-        return bool(pad)
 
     @zimage_options.add
     @Argument(
