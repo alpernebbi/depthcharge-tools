@@ -168,6 +168,7 @@ Currently the following configuration options are available::
     ignore-initramfs: Do not include an initramfs in the image
     images-dir: Directory to store built images
     kernel-cmdline: Kernel commandline parameters to use
+    zimage-initramfs-hack = How to support initramfs on x86 boards
 
 For longer explanations check the manual pages of each command for
 options named the same as these.
