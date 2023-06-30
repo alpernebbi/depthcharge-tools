@@ -4,7 +4,7 @@
 # Copyright (C) 2021 Alper Nebi Yasak <alpernebiyasak@gmail.com>
 # See COPYRIGHT and LICENSE files for full copyright information.
 
-include LICENSE *.rst
+include COPYRIGHT LICENSE *.rst
 recursive-include completions *
 recursive-include init.d *
 recursive-include systemd *
