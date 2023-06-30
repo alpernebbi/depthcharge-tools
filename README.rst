@@ -21,7 +21,7 @@ but everything will attempt to work on other boards based on my best
 guesses.
 
 .. _depthcharge: https://chromium.googlesource.com/chromiumos/platform/depthcharge
-.. _the format depthcharge expects: https://www.chromium.org/chromium-os/chromiumos-design-docs/disk-format#TOC-Google-Chrome-OS-devices
+.. _the format depthcharge expects: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/disk_format.md#Google-ChromeOS-devices
 .. _Debian: https://www.debian.org/
 
 
