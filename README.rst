@@ -109,6 +109,21 @@ initramfs changes. To trigger these hooks manually, run::
 .. _depthcharge-tools Debian package: https://packages.debian.org/sid/depthcharge-tools
 
 
+Alpine Linux
+------------
+Thanks to the efforts in supporting `postmarketOS on ChromeOS Devices`_,
+there is an official `depthcharge-tools package for Alpine Linux`_. You
+should be able to install it as::
+
+    $ sudo apk add depthcharge-tools
+
+However, this doesn't include any system hooks or services to keep your
+Chromebook bootable.
+
+.. _postmarketOS on ChromeOS Devices: https://wiki.postmarketos.org/wiki/Chrome_OS_devices
+.. _depthcharge-tools package for Alpine Linux: https://pkgs.alpinelinux.org/package/edge/testing/x86/depthcharge-tools
+
+
 Pip
 ---
 Python binary wheels are uploaded to PyPI_, and it should be possible to
