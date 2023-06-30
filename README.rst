@@ -218,13 +218,6 @@ it's available to both normal users and root::
     $ sudo chmod +x /usr/local/bin/depthchargectl
 
 
-Contributing
-============
-I only own two chromebooks, so I need your help to make it work with all
-others. Pull requests, bug reports, or even pointers in the right
-direction for existing issues are all welcome.
-
-
 License
 =======
 Copyright (C) 2019-2023 Alper Nebi Yasak <alpernebiyasak@gmail.com>
