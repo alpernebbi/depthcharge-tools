@@ -32,6 +32,11 @@ _depthchargectl__root() {
     COMPREPLY+=($(compgen -W "$root" -- "$cur"))
 } 2>/dev/null
 
+_depthchargectl__boot() {
+    local boot="$(findmnt --fstab -n -o SOURCE "/boot")"
+    COMPREPLY+=($(compgen -W "$boot" -- "$cur"))
+} 2>/dev/null
+
 _depthchargectl__cmdline() {
     local cmdline="$(cat /proc/cmdline | sed -e 's/\(cros_secure\|kern_guid\)[^ ]* //g')"
     COMPREPLY+=($(compgen -W "$cmdline" -- "$cur"))
@@ -71,6 +76,8 @@ _depthchargectl() {
 
     case "$prev" in
         --root) _depthchargectl__root; _depthchargectl__disk; return ;;
+        --root-mountpoint) _depthchargectl__file; return ;;
+        --boot-mountpoint) _depthchargectl__file; return ;;
         --tmpdir) _depthchargectl__file; return ;;
         --config) _depthchargectl__file; return ;;
         --board) _depthchargectl__boards; return ;;
@@ -80,6 +87,7 @@ _depthchargectl() {
         --vboot-private-key) _depthchargectl__file; return ;;
         --kernel-cmdline) _depthchargectl__cmdline; return ;;
         --ignore-initramfs) : ;;
+        --zimage-initramfs-hack) COMPREPLY+=($(compgen -W "set-init-size pad-vmlinuz none" -- "$cur")) ;;
         --) ;;
         *) ;;
     esac

@@ -33,6 +33,7 @@ _mkdepthcharge() {
         -C --compress -n --name --kernel-start
         --ramdisk-load-address --patch-dtbs --no-patch-dtbs
         --pad-vmlinuz --no-pad-vmlinuz
+        --set-init-size --no-set-init-size
         -c --cmdline --kern-guid --no-kern-guid --bootloader
         --keydir --keyblock --signprivate --signpubkey
     )
