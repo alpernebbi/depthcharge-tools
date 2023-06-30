@@ -809,7 +809,7 @@ class depthchargectl(
         if flat_cmds:
             self.logger.info(
                 "Using kernel cmdline from {}: {}"
-                .format(cmdline_src, shlex.join(flat_cmds))
+                .format(cmdline_src, " ".join(flat_cmds))
             )
 
         return flat_cmds
