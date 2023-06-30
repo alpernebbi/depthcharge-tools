@@ -22,6 +22,7 @@ setuptools.setup(
     author='Alper Nebi Yasak',
     author_email='alpernebiyasak@gmail.com',
     license='GPL2+',
+    license_files=["LICENSE", "COPYRIGHT"],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
