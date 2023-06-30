@@ -205,6 +205,18 @@ partitions, and you need special care while invoking as root::
     1  1  0  /dev/mmcblk0p4
     0  0  15 /dev/mmcblk0p6
 
+Or you can add a similar invocation to the /usr/local/bin files, so that
+it's available to both normal users and root::
+
+    $ sudo tee /usr/local/bin/depthchargectl <<EOF
+    #!/bin/sh
+    export PYTHONDONTWRITEBYTECODE=1
+    export PYTHONPATH=/path/to/depthcharge-tools
+    exec python3 -m depthcharge_tools.depthchargectl "\$@"
+    EOF
+
+    $ sudo chmod +x /usr/local/bin/depthchargectl
+
 
 Contributing
 ============
