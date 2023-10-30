@@ -623,7 +623,7 @@ class mkdepthcharge(
         return kern_guid
 
     @vboot_options.add
-    @Argument("--kern-ver", nargs=1,
+    @Argument("--kernel-version", nargs=1,
               help="Set the kernel version parameter.")
     def kern_ver(self, version=1):
         """Kernel version for rollback protection."""
