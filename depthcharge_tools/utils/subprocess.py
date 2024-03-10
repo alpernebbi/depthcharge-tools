@@ -402,7 +402,7 @@ class FdtgetRunner(ProcessRunner):
 
         # str.split takes too much memory
         def split(s):
-            for m in re.finditer("(\S*)\s", s):
+            for m in re.finditer(r"(\S*)\s", s):
                 yield m.group()
 
         if type in (None, int):
