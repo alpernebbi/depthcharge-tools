@@ -57,7 +57,7 @@ def parse_bytesize(val):
 
     try:
         s = str(val)
-        suffix = re.search("[a-zA-Z\s]*\Z", s)[0].strip()
+        suffix = re.search(r"[a-zA-Z\s]*\Z", s)[0].strip()
         number = s.rpartition(suffix)[0].strip()
         multiplier = bytesize_suffixes[suffix]
         return int(ast.literal_eval(number)) * multiplier

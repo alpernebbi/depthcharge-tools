@@ -77,16 +77,16 @@ class Board:
 
         # Try to detect non-regex values and extend them to match any
         # rev/sku, but if a rev/sku is given match only the given one.
-        if pattern and re.fullmatch("[\w,-]+", pattern):
+        if pattern and re.fullmatch(r"[\w,-]+", pattern):
             prefix, rev, sku = re.fullmatch(
-                "(.*?)(-rev\d+)?(-sku\d+)?",
+                r"(.*?)(-rev\d+)?(-sku\d+)?",
                 pattern,
             ).groups()
 
             pattern = "{}{}{}".format(
                 prefix,
-                rev or "(-rev\d+)?",
-                sku or "(-sku\d+)?",
+                rev or r"(-rev\d+)?",
+                sku or r"(-sku\d+)?",
             )
 
         if pattern:

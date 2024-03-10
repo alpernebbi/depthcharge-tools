@@ -169,7 +169,7 @@ class update_config(
                 block["hwidmatch"] = None
 
             else:
-                m = re.match("^\^?\(?([0-9A-Z]+)[^0-9A-Za-z]", hwidmatch)
+                m = re.match(r"^\^?\(?([0-9A-Z]+)[^0-9A-Za-z]", hwidmatch)
                 if m:
                     codename = m.group(1).lower()
                 else:
@@ -340,7 +340,7 @@ class update_config(
                 elif line.startswith("string"):
                     type_ = lambda s: str.strip(s, "'\"")
 
-                m = re.match("default (\S+|\".+\")$", line)
+                m = re.match(r'default (\S+|".+")$', line)
                 try:
                     value = type_(m.group(1).strip("'\""))
                 except ValueError:
@@ -352,7 +352,7 @@ class update_config(
                         defaults[config][None] = value
                     value = None
 
-                m = re.match("default (\S+|\".+\") if ([0-9A-Z_]+)", line)
+                m = re.match(r'default (\S+|".+") if ([0-9A-Z_]+)', line)
                 try:
                     value = type_(m.group(1))
                     cond = m.group(2)
@@ -397,12 +397,12 @@ class update_config(
                 if config is None:
                     continue
 
-                m = re.match("select (\S+|\".+\")$", line)
+                m = re.match(r'select (\S+|".+")$', line)
                 if m:
                     value = m.group(1).strip("'\"")
                     selects[config][None].append(value)
 
-                m = re.match("select (\S+|\".+\") if ([0-9A-Z_]+)", line)
+                m = re.match(r'select (\S+|".+") if ([0-9A-Z_]+)', line)
                 if m:
                     value = m.group(1)
                     cond = m.group(2)
@@ -1076,8 +1076,8 @@ class update_config(
             board_c = board_c.read_text() if board_c.is_file() else ""
             if block.get("KERNEL_FIT", False):
                 m = re.search(
-                    'fit_(?:add|set)_compat(?:_by_rev)?\('
-                    '"([^"]+?)(?:-rev[^-]+|-sku[^-]+)*"',
+                    r'fit_(?:add|set)_compat(?:_by_rev)?\('
+                    r'"([^"]+?)(?:-rev[^-]+|-sku[^-]+)*"',
                     board_c,
                 )
                 if m:
