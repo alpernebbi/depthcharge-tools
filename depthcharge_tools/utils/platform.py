@@ -340,8 +340,10 @@ def installed_kernels(root=None, boot=None):
         fdtdirs[release] = d.resolve()
 
     for d in (
+        *root.glob("lib/firmware/*/device-tree"),
         *root.glob("lib/modules/*/dtb"),
         *root.glob("lib/modules/*/dtbs"),
+        *root.glob("usr/lib/firmware/*/device-tree"),
         *root.glob("usr/lib/modules/*/dtb"),
         *root.glob("usr/lib/modules/*/dtbs"),
     ):
