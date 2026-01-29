@@ -8,9 +8,11 @@
 import glob
 import logging
 import pathlib
-import pkg_resources
 import re
 import subprocess
+from importlib import metadata, resources
+
+from packaging.version import InvalidVersion, Version
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -18,22 +20,24 @@ logger.addHandler(logging.NullHandler())
 
 def get_version():
     version = None
-    pkg_path = pkg_resources.resource_filename(__name__, '')
-    pkg_path = pathlib.Path(pkg_path).resolve()
+    pkg_path = resources.files(__name__)
 
     try:
-        self = pkg_resources.require(__name__)[0]
-        version = self.version
+        version = metadata.version(__name__)
 
-    except pkg_resources.DistributionNotFound:
-        setup_py = pkg_path.parent / "setup.py"
-        if setup_py.exists():
-            version = re.findall(
-                'version=(\'.+\'|".+"),',
-                setup_py.read_text(),
-            )[0].strip('"\'')
+    except metadata.PackageNotFoundError:
+        if isinstance(pkg_path, pathlib.Path):
+            setup_py = pkg_path.parent / "setup.py"
+            if setup_py.exists():
+                version = re.findall(
+                    'version=(\'.+\'|".+"),',
+                    setup_py.read_text(),
+                )[0].strip('"\'')
 
-    if (pkg_path.parent / ".git").exists():
+    if (
+        isinstance(pkg_path, pathlib.Path)
+        and (pkg_path.parent / ".git").exists()
+    ):
         proc = subprocess.run(
             ["git", "-C", pkg_path, "describe"],
             stdout=subprocess.PIPE,
@@ -44,20 +48,22 @@ def get_version():
             tag, *local = proc.stdout.split("-")
 
             if local:
-                version = "{}+{}".format(tag, ".".join(local))
+                git_version = "{}+{}".format(tag, ".".join(local))
             else:
-                version = tag
+                git_version = tag
+            try:
+                return Version(git_version)
+            except InvalidVersion:
+                pass
 
     if version is not None:
-        return pkg_resources.parse_version(version)
+        return Version(version)
 
 __version__ = get_version()
 
-config_ini = pkg_resources.resource_string(__name__, "config.ini")
-config_ini = config_ini.decode("utf-8")
+config_ini = resources.files(__name__).joinpath("config.ini").read_text()
 
-boards_ini = pkg_resources.resource_string(__name__, "boards.ini")
-boards_ini = boards_ini.decode("utf-8")
+boards_ini = resources.files(__name__).joinpath("boards.ini").read_text()
 
 config_files = [
     *glob.glob("/etc/depthcharge-tools/config"),

@@ -73,8 +73,7 @@ the work::
 
 Installation
 ============
-This depends on the ``pkg_resources`` Python package which is usually
-distributed with ``setuptools``. The tools can run a number of programs
+The tools can run a number of programs
 when necessary, which should be considered dependencies:
 
 - ``futility`` (``vbutil_kernel``), ``cgpt``, ``crossystem``
