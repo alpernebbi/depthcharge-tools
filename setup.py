@@ -43,7 +43,8 @@ setuptools.setup(
     package_data={
         "depthcharge_tools": ["config.ini", "boards.ini"],
     },
+    python_requires=">=3.9",
     install_requires=[
-        'setuptools',
+        'packaging',
     ],
 )
