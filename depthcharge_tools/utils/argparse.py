@@ -436,6 +436,9 @@ class Argument(_MethodDecorator):
         option_strings = self._args
         kwargs = self.__kwargs
 
+        if "nargs" in kwargs and kwargs["nargs"] == 0 and not option_strings:
+            return
+
         return parent.add_argument(*option_strings, **kwargs)
 
     def __property_from_kwargs(name):
