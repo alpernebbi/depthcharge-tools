@@ -436,6 +436,14 @@ class Argument(_MethodDecorator):
         option_strings = self._args
         kwargs = self.__kwargs
 
+        if kwargs["dest"] == argparse.SUPPRESS and kwargs["help"] == argparse.SUPPRESS:
+            # Hack to suppress diskinfo being passed to Python argparse
+            return
+
+        if "nargs" in kwargs and kwargs["nargs"] == 0 and not option_strings:
+            # Hack to suppress optional positional arguments being passed to Python argparse
+            return
+
         return parent.add_argument(*option_strings, **kwargs)
 
     def __property_from_kwargs(name):
