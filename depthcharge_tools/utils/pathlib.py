@@ -31,7 +31,13 @@ def decompress(src, dest=None, partial=False):
 
     for runner in (gzip, zstd, xz, lz4, lzma, bzip2, lzop):
         try:
-            return runner.decompress(src, dest)
+            out = runner.decompress(src, dest)
+            if out in (None, "", b""):
+                continue
+            if isinstance(out, Path) and out.stat().st_size == 0:
+                out.unlink(missing_ok=True)
+                continue
+            return out
 
         except FileNotFoundError:
             if dest:
