@@ -42,7 +42,7 @@ bytesize_suffixes = dict(bytesize_suffixes())
 
 
 def parse_bytesize(val):
-    if val is None:
+    if val in (None, 'None', 'none'):
         return None
 
     try:
