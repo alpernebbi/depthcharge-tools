@@ -389,9 +389,6 @@ class mkdepthcharge(
         if addr is not None:
             return parse_bytesize(addr)
 
-        if self.arch in Architecture.x86:
-            return 0x100000
-
     @options.add
     @Argument(
         "--no-pad-vmlinuz", pad=False,
@@ -954,6 +951,12 @@ class mkdepthcharge(
             self.logger.info(proc.stdout)
 
         elif self.image_format == "zimage":
+            if not isinstance(self.kernel_start, int):
+                raise ValueError(
+                    "Can't build zimage without kernel start address, "
+                    "usually either 0x100000 or 0x4000000."
+                )
+
             # bzImage header has the address the kernel will decompress
             # to, and the amount of memory it needs there to work.
             # See Documentation/x86/boot.rst in Linux tree for offsets.
