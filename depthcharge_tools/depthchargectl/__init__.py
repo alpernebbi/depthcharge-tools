@@ -65,7 +65,10 @@ class Board:
 
     @property
     def codename(self):
-        return self._config.get("codename")
+        codename = self._config.get("codename")
+        if codename is None:
+            codename = "none"
+        return codename
 
     @property
     def arch(self):
@@ -368,7 +371,7 @@ class depthchargectl(
         # Update the values in the configparser object so that the
         # config subcommand can query e.g. the autodetected board.
         self.config.update({
-            'board': self.board.codename if self.board else "none",
+            'board': str(self.board.codename) if self.board else "none",
             'images-dir': str(self.images_dir),
             'vboot-keyblock': str(self.vboot_keyblock),
             'vboot-public-key': str(self.vboot_public_key),
