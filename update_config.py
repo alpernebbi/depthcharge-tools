@@ -1071,7 +1071,10 @@ class update_config(
             board["codename"] = codename
 
             if block.get("KERNEL_SIZE", None):
-                board["image-max-size"] = str(block["KERNEL_SIZE"])
+                size = block["KERNEL_SIZE"]
+                if size % (1024*1024) == 0:
+                    size = "{} MiB".format(size // (1024*1024))
+                board["image-max-size"] = str(size)
 
             if block.get("KERNEL_START", None):
                 board["image-start-address"] = hex(block["KERNEL_START"])
