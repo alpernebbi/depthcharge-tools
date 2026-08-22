@@ -1073,6 +1073,9 @@ class update_config(
             if block.get("KERNEL_SIZE", None):
                 board["image-max-size"] = str(block["KERNEL_SIZE"])
 
+            if block.get("KERNEL_START", None):
+                board["image-start-address"] = hex(block["KERNEL_START"])
+
             if block.get("KERNEL_FIT", False):
                 board["image-format"] = "fit"
             elif block.get("KERNEL_ZIMAGE", False):
