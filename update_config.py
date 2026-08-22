@@ -846,6 +846,7 @@ class update_config(
             ("chipset-ipq4019", ["gale"]),
             ("chipset-ipq8064", ["storm"]),
             ("chipset-rk3288", ["veyron"]),
+            ("chipset-rk3399", ["gru"]),
             ("chipset-tegra124", ["nyan"]),
             ("storm", ["arkham", "whirlwind"]),
             ("veyron", ["veyron_mickey", "veyron_rialto"]),
