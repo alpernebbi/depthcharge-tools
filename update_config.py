@@ -789,8 +789,9 @@ class update_config(
         # coreboot Kconfigs I'm too lazy to parse, etc.
         for parent, children in [
             ("amd64", ["chipset-pinetrail", "chipset-snb", "chipset-ivb",
-                       "chipset-hsw", "chipset-cnl", "chipset-icl",
-                       "chipset-rpl", "reven"]),
+                       "chipset-hsw", "chipset-bdw", "chipset-bsw",
+                       "chipset-cnl", "chipset-icl", "chipset-adln",
+                       "chipset-apl", "chipset-rpl", "reven"]),
             ("chipset-adl", ["adlrvp", "shadowmountain"]),
             ("chipset-bdw", ["baseboard-auron"]),
             ("chipset-cml", ["cmlrvp"]),
