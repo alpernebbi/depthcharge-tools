@@ -794,6 +794,7 @@ class update_config(
                        "chipset-apl", "chipset-rpl", "reven"]),
             ("chipset-adl", ["adlrvp", "shadowmountain"]),
             ("chipset-bdw", ["baseboard-auron"]),
+            ("chipset-bsw", ["strago"]),
             ("chipset-cml", ["cmlrvp"]),
             ("chipset-cnl", ["cnlrvp"]),
             ("chipset-glk", ["glkrvp"]),
