@@ -113,7 +113,12 @@ class update_config(
 
         https://dl.google.com/dl/edgedl/chromeos/recovery/recovery.conf
         """
-        return Path(path) if path else None
+        if path is not None:
+            return Path(path)
+
+        path = Path("recovery.conf")
+        if path.exists():
+            return path
 
     @property
     @lru_cache
@@ -237,7 +242,13 @@ class update_config(
 
         https://chromium.googlesource.com/chromiumos/overlays/board-overlays
         """
-        return Path(path) if path else None
+        if path is not None:
+            return Path(path)
+
+        cros_path = Path("~/git/googlesource.com/chromiumos").expanduser()
+        path = cros_path / "overlays" / "board-overlays"
+        if path.is_dir():
+            return path
 
     def get_project_config_boards(self, d):
         children = set()
@@ -263,7 +274,13 @@ class update_config(
 
         https://chromium.googlesource.com/chromiumos/project
         """
-        return Path(path) if path else None
+        if path is not None:
+            return Path(path)
+
+        cros_path = Path("~/git/googlesource.com/chromiumos").expanduser()
+        path = cros_path / "project"
+        if path.is_dir():
+            return Path(path)
 
     def parse_defconfig(self, text):
         values = dict()
@@ -302,7 +319,13 @@ class update_config(
 
         https://chromium.googlesource.com/chromiumos/platform/depthcharge
         """
-        return Path(path) if path else None
+        if path is not None:
+            return Path(path)
+
+        cros_path = Path("~/git/googlesource.com/chromiumos").expanduser()
+        path = cros_path / "platform" / "depthcharge"
+        if path.is_dir():
+            return path
 
     def parse_kconfig_defaults(self, text):
         defaults = {}
@@ -472,7 +495,13 @@ class update_config(
 
         https://chromium.googlesource.com/chromiumos/third_party/coreboot
         """
-        return Path(path) if path else None
+        if path is not None:
+            return Path(path)
+
+        cros_path = Path("~/git/googlesource.com/chromiumos").expanduser()
+        path = cros_path / "third_party" / "coreboot"
+        if path.is_dir():
+            return path
 
     @property
     @lru_cache
