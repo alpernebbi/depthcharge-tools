@@ -448,6 +448,20 @@ class update_config(
             board_d.update(defconfig)
             boards[board] = board_d
 
+        # board/*/defconfig were later moved to configs/config.*
+        for defconfig_f in self.depthcharge_repo.glob("configs/config.*"):
+            defconfig = self.parse_defconfig(defconfig_f.read_text())
+            board = defconfig_f.name[len("config."):]
+
+            board_d = {}
+            board_d.update(defaults.get(None, {}))
+            for cond, config in defaults.items():
+                if cond and defconfig.get(cond, None):
+                    board_d.update(config)
+
+            board_d.update(defconfig)
+            boards[board] = board_d
+
         return boards
 
     @options.add
