@@ -31,6 +31,25 @@ from depthcharge_tools.utils.pathlib import (
 )
 
 
+def filtermax(iterable, key=lambda x: x):
+    try:
+        xs = iter(iterable)
+        out = [next(xs)]
+        best = key(out[0])
+    except StopIteration:
+        return []
+
+    for x in xs:
+        score = key(x)
+        if score == best:
+            out.append(x)
+        elif score > best:
+            out = [x]
+            best = score
+
+    return out
+
+
 class update_config(
     Command,
     prog="update_config.py",
@@ -931,6 +950,12 @@ class update_config(
                 if board_relations.ancestors(p).intersection(parents):
                     parents.remove(p)
 
+            # Prefer longest chains
+            parents = filtermax(
+                parents,
+                key = lambda p: len(board_relations.ancestors(p)),
+            )
+
             if len(parents) > 1:
                 self.logger.warning(
                     "Board '{}' has multiple parents: '{}'"
@@ -939,11 +964,7 @@ class update_config(
             elif len(parents) == 0:
                 return None
 
-            # Prefer longer chains
-            return max(
-                parents,
-                key=lambda p: len(board_relations.ancestors(p)),
-            )
+            return min(parents, key=len)
 
         aliases = {}
         def add_alias(alias, board):
