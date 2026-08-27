@@ -941,8 +941,18 @@ class update_config(
             "chipset-stnyridge": "stoneyridge",
         }
 
+        known_parents = {
+            "baseboard-brya": "chipset-adl",
+            "gru": "chipset-rk3399",
+            "dragonegg": "baseboard-dragonegg",
+            "glkrvp": "baseboard-glkrvp",
+        }
+
         @lru_cache(maxsize=None)
         def get_parent(board):
+            if board in known_parents:
+                return known_parents[board]
+
             # Projects can be the sole parent of actual boards (e.g.
             # freon was to a lot of boards) so don't use them as parents
             # at all, despite breaking e.g. termina/tael parentage.
