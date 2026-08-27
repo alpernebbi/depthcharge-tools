@@ -941,6 +941,7 @@ class update_config(
             "chipset-stnyridge": "stoneyridge",
         }
 
+        @lru_cache(maxsize=None)
         def get_parent(board):
             # Projects can be the sole parent of actual boards (e.g.
             # freon was to a lot of boards) so don't use them as parents
