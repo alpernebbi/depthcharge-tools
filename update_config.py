@@ -927,6 +927,10 @@ class update_config(
             # freon was to a lot of boards) so don't use them as parents
             # at all, despite breaking e.g. termina/tael parentage.
             parents = board_relations.parents(board) - nonboards
+            for p in set(parents):
+                if board_relations.ancestors(p).intersection(parents):
+                    parents.remove(p)
+
             if len(parents) > 1:
                 self.logger.warning(
                     "Board '{}' has multiple parents: '{}'"
