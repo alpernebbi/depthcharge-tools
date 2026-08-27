@@ -957,14 +957,17 @@ class update_config(
             )
 
             if len(parents) > 1:
+                parent = min(parents, key=len)
                 self.logger.warning(
-                    "Board '{}' has multiple parents: '{}'"
-                    .format(board, parents)
+                    "Board '{}' has multiple parents: '{}', chose: '{}'"
+                    .format(board, parents, parent)
                 )
-            elif len(parents) == 0:
-                return None
+            elif parents:
+                parent = parents.pop()
+            else:
+                parent = None
 
-            return min(parents, key=len)
+            return parent
 
         aliases = {}
         def add_alias(alias, board):
