@@ -1252,7 +1252,7 @@ class update_config(
 
         # Trim unreleased boards that don't have names, hwid-matches
         max_depth = max(b.count('/') for b in config.sections())
-        for _ in range(0, max_depth):
+        for i in range(1, max_depth):
             tbd = []
             for section in graph(config).leaves():
                 c = config[section]
@@ -1268,6 +1268,11 @@ class update_config(
                     .format(section)
                 )
                 del config[section]
+
+            self.logger.warning(
+                "({} boards removed during iteration {})"
+                .format(len(tbd), i)
+            )
 
         with self.output.open("w") as output_f:
             config.write(output_f)
