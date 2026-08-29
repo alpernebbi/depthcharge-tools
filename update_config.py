@@ -1251,27 +1251,21 @@ class update_config(
                     })
 
         # Trim unreleased boards that don't have names, hwid-matches
-        max_depth = max(b.count('/') for b in config.sections())
-        for i in range(1, max_depth):
-            tbd = []
-            for section in graph(config).leaves():
-                c = config[section]
-                if "hwid-match" not in c and "name" not in c:
-                    tbd.append(section)
+        deleted = []
+        for section in reversed(config.sections()):
+            if len(g.children(section)) > 0:
+                continue
 
-            if not tbd:
-                break
-
-            for section in sorted(tbd):
-                self.logger.warning(
-                    "Skipping unreleased board '{}'."
-                    .format(section)
-                )
+            c = config[section]
+            if "hwid-match" not in c and "name" not in c:
+                g.remove_node(section)
                 del config[section]
+                deleted.append(section)
 
+        for section in sorted(deleted):
             self.logger.warning(
-                "({} boards removed during iteration {})"
-                .format(len(tbd), i)
+                "Skipping unreleased board '{}'."
+                .format(section)
             )
 
         with self.output.open("w") as output_f:
