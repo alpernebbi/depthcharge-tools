@@ -836,7 +836,8 @@ class update_config(
         # Relations from older versions no longer in main branches,
         # coreboot Kconfigs I'm too lazy to parse, etc.
         for parent, children in [
-            ("amd64", ["chipset-pinetrail", "chipset-snb", "chipset-ivb",
+            ("amd64", ["chipset-pinetrail", "chipset-snb",
+                       "chipset-ivb", "chipset-skl", "chipset-byt",
                        "chipset-hsw", "chipset-bdw", "chipset-bsw",
                        "chipset-cnl", "chipset-icl", "chipset-adln",
                        "chipset-apl", "chipset-rpl", "reven"]),
@@ -948,6 +949,14 @@ class update_config(
             "gru": "chipset-rk3399",
             "dragonegg": "baseboard-dragonegg",
             "glkrvp": "baseboard-glkrvp",
+            "auron": "chipset-bdw",
+            "beltino": "chipset-hsw",
+            "glados": "chipset-skl",
+            "jecht": "chipset-bdw",
+            "kunimitsu": "chipset-skl",
+            "rambi": "chipset-byt",
+            "slippy": "chipset-hsw",
+            "strago": "chipset-bsw",
         }
 
         @lru_cache(maxsize=None)
