@@ -1268,6 +1268,33 @@ class update_config(
                 .format(section)
             )
 
+        # Consolidate configs to higher parents
+        for section in reversed(config.sections()):
+            c = config[section]
+            cs = sorted(g.children(section))
+            if len(cs) == 0:
+                continue
+
+            pairs = {
+                k: set(
+                    config.get(cc, k, fallback=KeyError)
+                    for cc in cs
+                    if cc in config.sections()
+                )
+                for k in config[cs[0]].keys()
+                if k not in ("hwid-match", "name", "codename")
+            }
+
+            for k, v in pairs.items():
+                if not len(v) == 1 or v == {KeyError}:
+                    continue
+                for cc in cs:
+                    try:
+                        del config[cc][k]
+                    except:
+                        pass
+                c[k] = v.pop()
+
         with self.output.open("w") as output_f:
             config.write(output_f)
 
