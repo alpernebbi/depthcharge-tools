@@ -66,7 +66,7 @@ class update_config(
     committed to the repository is the canonical one.
     """
 
-    logger = logging.getLogger(__name__)
+    _logger = logging.getLogger(__name__)
 
     @Group
     def options(self):
@@ -93,7 +93,7 @@ class update_config(
     def verbosity(self, verbosity=0):
         """Print more detailed output."""
         level = logging.WARNING - int(verbosity) * 10
-        self.logger.setLevel(level)
+        self._logger.setLevel(level)
         return verbosity
 
     def parse_recovery_conf_block(self, block):
@@ -197,7 +197,7 @@ class update_config(
                 if m:
                     codename = m.group(1).lower()
                 else:
-                    self.logger.warning(
+                    self._logger.warning(
                         "Could not parse codename for hwidmatch '{}'."
                         .format(hwidmatch)
                     )
@@ -634,7 +634,7 @@ class update_config(
                 repo_name = self.read_profiles_repo_name(board_d)
 
             if repo_name is None:
-                self.logger.warning(
+                self._logger.warning(
                     "Couldn't find a canonical name for board dir '{}'."
                     .format(board_d.name)
                 )
@@ -980,7 +980,7 @@ class update_config(
 
             if len(parents) > 1:
                 parent = min(parents, key=len)
-                self.logger.warning(
+                self._logger.warning(
                     "Board '{}' has multiple parents: '{}', chose: '{}'"
                     .format(board, parents, parent)
                 )
@@ -1263,7 +1263,7 @@ class update_config(
                 deleted.append(section)
 
         for section in sorted(deleted):
-            self.logger.warning(
+            self._logger.warning(
                 "Skipping unreleased board '{}'."
                 .format(section)
             )
