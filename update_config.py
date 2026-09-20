@@ -1097,7 +1097,7 @@ class update_config(
 
             for i, block in enumerate(blocks):
                 if len(blocks) > 1:
-                    name_i = "{}/{}".format(name, i)
+                    name_i = "{}/{:03}".format(name, i)
                     config.add_section(name_i)
                     board = config[name_i]
 
