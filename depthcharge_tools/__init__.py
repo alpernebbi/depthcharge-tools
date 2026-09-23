@@ -61,9 +61,8 @@ def get_version():
 
 __version__ = get_version()
 
-config_ini = importlib.resources.files(__name__).joinpath("config.ini").read_text()
-
-boards_ini = importlib.resources.files(__name__).joinpath("boards.ini").read_text()
+config_ini = importlib.resources.read_text(__name__, "config.ini")
+boards_ini = importlib.resources.read_text(__name__, "boards.ini")
 
 config_files = [
     *glob.glob("/etc/depthcharge-tools/config"),
