@@ -436,8 +436,14 @@ class Argument(_MethodDecorator):
         option_strings = self._args
         kwargs = self.__kwargs
 
-        if "nargs" in kwargs and kwargs["nargs"] == 0 and not option_strings:
-            return
+        # Work around argparse rejecting nargs=0 for positional args
+        if kwargs.get("nargs") == 0 and not option_strings:
+            arg = parent.add_argument(
+                *option_strings,
+                **kwargs | {"nargs": "?"},
+            )
+            arg.nargs = 0
+            return arg
 
         return parent.add_argument(*option_strings, **kwargs)
 
