@@ -58,6 +58,36 @@ class Board:
         self._config = config
 
     @property
+    def ancestors(self):
+        parent = ""
+        for item in self._config.name.split('/'):
+            parent = f"{parent}/{item}" if parent else item
+            if parent == self._config.name:
+                return
+            elif parent in self._config.parser:
+                yield Board(self._config.parser[parent])
+
+    @property
+    def parent(self):
+        parent = None
+        for item in self.ancestors:
+            parent = item
+        return parent
+
+    @property
+    def descendants(self):
+        for child in self._config.parser.sections():
+            if child.startswith(self._config.name + "/"):
+                yield Board(self._config.parser[child])
+
+    @property
+    def children(self):
+        for child in self._config.parser.sections():
+            if child.startswith(self._config.name + "/"):
+                if self._config.name.count('/') + 1 == child.count('/'):
+                    yield Board(self._config.parser[child])
+
+    @property
     def name(self):
         name = self._config.get("name")
         if name is None:
