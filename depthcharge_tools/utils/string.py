@@ -76,7 +76,7 @@ def rev_sku_regex(pattern):
 
     # Try to detect non-regex values and extend them to match any
     # rev/sku, but if a rev/sku is given match only the given one.
-    if re.fullmatch(r"[\w,-]+", pattern):
+    if re.fullmatch(r"google,[\w,-]+", pattern):
         prefix, rev, sku = re.fullmatch(
             r"(.*?)(-rev\d+)?(-sku\d+)?",
             pattern,
