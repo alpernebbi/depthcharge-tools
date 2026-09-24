@@ -256,17 +256,24 @@ class depthchargectl_build(
                     "but this board needs a dtb."
                 )
 
-            self.logger.info(
-                "Searching '{}' for dtbs compatible with pattern '{}'."
-                .format(self.fdtdir, self.board.dt_compatible.pattern)
-            )
+            dt_patterns = sorted(set(
+                board.dt_compatible
+                for board in (self.board, *self.board.descendants)
+            ), key=lambda regex: regex.pattern)
+
+            for regex in dt_patterns:
+                self.logger.info(
+                    "Searching '{}' for dtbs compatible with pattern '{}'."
+                    .format(self.fdtdir, regex.pattern)
+                )
 
             def is_compatible(dt_file):
                 return any(
-                    self.board.dt_compatible.fullmatch(compat)
+                    pattern.fullmatch(compat)
                     for compat in fdtget.get(
                         dt_file, "/", "compatible", default="",
                     ).split()
+                    for pattern in dt_patterns
                 )
 
             files = list(filter(
