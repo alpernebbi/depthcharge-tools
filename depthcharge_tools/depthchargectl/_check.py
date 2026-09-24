@@ -182,12 +182,18 @@ class depthchargectl_check(
             if "images" not in nodes and "configurations" not in nodes:
                 raise ImageFormatError(image, self.board.image_format)
 
+            dt_patterns = sorted(set(
+                board.dt_compatible
+                for board in (self.board, *self.board.descendants)
+            ), key=lambda regex: regex.pattern)
+
             def is_compatible(dt_file, conf_path):
                 return any(
-                    self.board.dt_compatible.fullmatch(compat)
+                    pattern.fullmatch(compat)
                     for compat in fdtget.get(
                         dt_file, conf_path, "compatible", default="",
                     ).split()
+                    for pattern in dt_patterns
                 )
 
             self.logger.info("Checking included DTB binaries.")
