@@ -67,3 +67,25 @@ def parse_bytesize(val):
             "Cannot convert '{}' to a byte-size."
             .format(val)
         )
+
+
+def rev_sku_regex(pattern):
+    pattern = str(pattern)
+    if pattern in ("", "None", "none"):
+        return None
+
+    # Try to detect non-regex values and extend them to match any
+    # rev/sku, but if a rev/sku is given match only the given one.
+    if re.fullmatch(r"[\w,-]+", pattern):
+        prefix, rev, sku = re.fullmatch(
+            r"(.*?)(-rev\d+)?(-sku\d+)?",
+            pattern,
+        ).groups()
+
+        return re.compile("{}{}{}".format(
+            prefix,
+            rev or r"(-rev\d+)?",
+            sku or r"(-sku\d+)?",
+        ))
+
+    return re.compile(pattern)

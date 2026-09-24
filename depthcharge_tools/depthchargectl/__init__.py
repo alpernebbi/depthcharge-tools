@@ -49,6 +49,7 @@ from depthcharge_tools.utils.platform import (
 )
 from depthcharge_tools.utils.string import (
     parse_bytesize,
+    rev_sku_regex,
 )
 
 
@@ -76,24 +77,8 @@ class Board:
 
     @property
     def dt_compatible(self):
-        pattern = self._config.get("dt-compatible")
-
-        # Try to detect non-regex values and extend them to match any
-        # rev/sku, but if a rev/sku is given match only the given one.
-        if pattern and re.fullmatch(r"[\w,-]+", pattern):
-            prefix, rev, sku = re.fullmatch(
-                r"(.*?)(-rev\d+)?(-sku\d+)?",
-                pattern,
-            ).groups()
-
-            pattern = "{}{}{}".format(
-                prefix,
-                rev or r"(-rev\d+)?",
-                sku or r"(-sku\d+)?",
-            )
-
-        if pattern:
-            return re.compile(pattern)
+        compatible = self._config.get("dt-compatible")
+        return rev_sku_regex(compatible)
 
     @property
     def hwid_match(self):
