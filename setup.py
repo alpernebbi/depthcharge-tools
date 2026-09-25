@@ -24,7 +24,7 @@ setuptools.setup(
     license='GPL-2.0-or-later',
     license_files=["LICENSE", "COPYRIGHT"],
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Environment :: Console',
         'Intended Audience :: Developers',
         'Operating System :: POSIX :: Linux',
