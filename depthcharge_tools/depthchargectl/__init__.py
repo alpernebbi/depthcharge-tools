@@ -853,7 +853,7 @@ class depthchargectl(
 
         return hack
 
-    @Subparsers()
+    @Subparsers(metavar="[command]", help="(Defaults to list)")
     def command(self, cmd):
         """Supported subcommands"""
 
