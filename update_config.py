@@ -1286,7 +1286,7 @@ class update_config(
         # Consolidate configs to higher parents
         for section in reversed(config.sections()):
             c = config[section]
-            cs = sorted(g.children(section))
+            cs = sorted(s for s in g.children(section) if s in c)
             if len(cs) == 0:
                 continue
 
