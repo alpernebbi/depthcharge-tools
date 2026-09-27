@@ -959,6 +959,19 @@ class update_config(
             "rambi": "chipset-byt",
             "slippy": "chipset-hsw",
             "strago": "chipset-bsw",
+            "link": "chipset-ivb",
+            "eve": "poppy",
+            "nautilus": "poppy",
+            "beetley": "blipper",
+            "whiterun": "winterhold",
+            "esche": "burnet",
+            "cozmo": "icarus",
+            "pico": "icarus",
+            "limozeen": "lazor",
+            "icarus": "jacuzzi",
+            "willow": "jacuzzi",
+            "kenzo": "juniper",
+            "phasma": "tarkin",
         }
 
         @lru_cache(maxsize=None)
