@@ -202,7 +202,11 @@ class update_config(
                         .format(hwidmatch)
                     )
 
-            if codename:
+            if not codename:
+                continue
+
+            key = lambda b: (b["hwidmatch"], b["name"])
+            if key(block) not in (key(b) for b in boards[codename]):
                 boards[codename].append(block)
 
         return dict(boards)
