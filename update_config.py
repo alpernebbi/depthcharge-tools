@@ -168,15 +168,11 @@ class update_config(
             # This might be a parent board, but the best fallback we have
             codename = block.get("file").split("_")[2]
 
-            if hwidmatch == "duplicate of rabbid":
-                codename = "rabbid"
+            if hwidmatch.lower().startswith("duplicate of "):
+                codename = hwidmatch[len("duplicate of "):].lower()
                 block["hwidmatch"] = None
-            elif hwidmatch == "duplicate of C433":
-                codename = "shyvana"
-                block["hwidmatch"] = None
-            elif hwidmatch == "Duplicate of BARLA":
-                codename = "barla"
-                block["hwidmatch"] = None
+                if codename == "c433":
+                    codename = "shyvana"
 
             elif hwidmatch.strip("^(").startswith("ACER ZGB"):
                 pass # x86-zgb, x86-zgb-he
