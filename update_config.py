@@ -875,6 +875,8 @@ class update_config(
                        "chipset-rk3399"]),
             ("chipset-qcs404", ["mistral"]),
             ("chipset-tegra210", ["foster", "smaug"]),
+            ("puff", ["ambassador"]),
+            ("fizz", ["excelsior"]),
         ]:
             for child in children:
                 board_relations.add_edge(parent, child)
