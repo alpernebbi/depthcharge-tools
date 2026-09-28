@@ -30,6 +30,7 @@ function _mkdepthcharge {
         '*'{-c,--cmdline}'[Command-line parameters for the kernel.]:*:kernel cmdline:{_mkdepthcharge__cmdline}' \
         --kern-guid'[Prepend kern_guid=%U to the cmdline.]' \
         --no-kern-guid'[Do not prepend kern_guid=%U to the cmdline.]' \
+        --kernel-version'[Set the kernel version parameter.]' \
         --bootloader'[Bootloader stub binary to use.]:bootloader file:_files' \
         --keydir'[Directory containing vboot keys to use.]:keys dir:_directories' \
         --keyblock'[The key block file (.keyblock).]:keyblock file:_files' \

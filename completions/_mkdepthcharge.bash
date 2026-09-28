@@ -34,7 +34,7 @@ _mkdepthcharge() {
         --ramdisk-load-address --patch-dtbs --no-patch-dtbs
         --pad-vmlinuz --no-pad-vmlinuz
         --set-init-size --no-set-init-size
-        -c --cmdline --kern-guid --no-kern-guid --bootloader
+        -c --cmdline --kern-guid --no-kern-guid --kernel-version --bootloader
         --keydir --keyblock --signprivate --signpubkey
     )
 
@@ -56,6 +56,7 @@ _mkdepthcharge() {
         --ramdisk-load-address) : ;;
         -c|--cmdline)   _mkdepthcharge__cmdline ;;
         --tmpdir)       _mkdepthcharge__file ;;
+        --kernel-version) : ;;
         --bootloader)   _mkdepthcharge__file ;;
         --keydir)       _mkdepthcharge__file ;;
         --keyblock)     _mkdepthcharge__file ;;
