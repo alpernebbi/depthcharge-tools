@@ -307,6 +307,7 @@ class CgptRunner(ProcessRunner):
 
     def get_flags(self, disk, partno):
         attribute = self.get_raw_attribute(disk, partno)
+        verity_error_counter = (attribute >> 9) & 0x1
         successful = (attribute >> 8) & 0x1
         tries = (attribute >> 4) & 0xF
         priority = (attribute >> 0) & 0xF
@@ -316,9 +317,10 @@ class CgptRunner(ProcessRunner):
             "S": successful,
             "P": priority,
             "T": tries,
+            "E": verity_error_counter,
         }
 
-    def set_flags(self, disk, partno, A=None, S=None, P=None, T=None):
+    def set_flags(self, disk, partno, A=None, S=None, P=None, T=None, E=None):
         flag_args = []
         if A is not None:
             flag_args += ["-A", str(int(A))]
@@ -328,6 +330,8 @@ class CgptRunner(ProcessRunner):
             flag_args += ["-P", str(int(P))]
         if T is not None:
             flag_args += ["-T", str(int(T))]
+        if E is not None:
+            flag_args += ["-E", str(int(E))]
 
         self("add", *flag_args, "-i", str(partno), str(disk))
 

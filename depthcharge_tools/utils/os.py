@@ -540,6 +540,7 @@ class CrosPartition(Partition):
             "successful": flags["S"],
             "priority": flags["P"],
             "tries": flags["T"],
+            "verity_error_counter": flags["E"],
         }
 
     @flags.setter
@@ -549,14 +550,16 @@ class CrosPartition(Partition):
             S = value.get("successful", None)
             P = value.get("priority", None)
             T = value.get("tries", None)
+            E = value.get("verity_error_counter", None)
 
         else:
             A = getattr(value, "attribute", None)
             S = getattr(value, "successful", None)
             P = getattr(value, "priority", None)
             T = getattr(value, "tries", None)
+            E = getattr(value, "verity_error_counter", None)
 
-        cgpt.set_flags(self.disk.path, self.partno, A=A, S=S, P=P, T=T)
+        cgpt.set_flags(self.disk.path, self.partno, A=A, S=S, P=P, T=T, E=E)
 
     @property
     def successful(self):
@@ -581,6 +584,14 @@ class CrosPartition(Partition):
     @priority.setter
     def priority(self, value):
         self.flags = {"priority": value}
+
+    @property
+    def verity_error_counter(self):
+        return self.flags["verity_error_counter"]
+
+    @verity_error_counter.setter
+    def verity_error_counter(self, value):
+        self.flags = {"verity_error_counter": value}
 
     def prioritize(self):
         return cgpt.prioritize(self.disk.path, self.partno)
