@@ -9,12 +9,14 @@ import collections
 import glob
 import platform
 import re
-import shlex
 
 from pathlib import Path
 
 from depthcharge_tools.utils.pathlib import (
     decompress,
+)
+from depthcharge_tools.utils.string import (
+    kernel_cmdline_split,
 )
 from depthcharge_tools.utils.subprocess import (
     crossystem,
@@ -98,7 +100,7 @@ def kernel_cmdline(root=None):
     if cmdline_f.exists():
         cmdline = cmdline_f.read_text().rstrip("\n")
 
-    return shlex.split(cmdline)
+    return kernel_cmdline_split(cmdline)
 
 
 def proc_cmdline():
@@ -108,7 +110,7 @@ def proc_cmdline():
     if cmdline_f.exists():
         cmdline = cmdline_f.read_text().rstrip("\n")
 
-    return shlex.split(cmdline)
+    return kernel_cmdline_split(cmdline)
 
 
 def is_cros_boot():

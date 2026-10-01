@@ -41,6 +41,46 @@ def bytesize_suffixes():
 bytesize_suffixes = dict(bytesize_suffixes())
 
 
+# We have to avoid shlex.split() because it mangles inner quotes
+# e.g. 'dyndbg="file test.c +p"' becomes ["dyndbg=file test.c +p"].
+def kernel_cmdline_split(cmdline):
+    if not cmdline:
+        return []
+
+    if not isinstance(cmdline, str):
+        raise ValueError(
+            "Kernel command line to split must be a string: '{!r}'"
+            .format(cmdline)
+        )
+
+    cmds = []
+    quoted = False
+    for cmd in cmdline.split(" "):
+        if quoted:
+            cmds[-1] = f"{cmds[-1]} {cmd}"
+        else:
+            cmds.append(cmd)
+        if '"' in cmd:
+            quoted = not quoted
+
+    return cmds
+
+
+def kernel_cmdline_join(cmds):
+    for cmd in cmds:
+        if not isinstance(cmd, str):
+            raise ValueError(
+                "Kernel command line arguments must be a string: '{!r}'"
+                .format(cmd)
+            )
+
+    return " ".join(
+        part
+        for cmd in cmds
+        for part in kernel_cmdline_split(cmd)
+    )
+
+
 def parse_bytesize(val):
     if val in (None, 'None', 'none'):
         return None

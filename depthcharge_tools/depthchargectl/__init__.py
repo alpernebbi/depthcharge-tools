@@ -14,7 +14,6 @@ import logging
 import os
 import platform
 import re
-import shlex
 import tempfile
 
 from pathlib import Path
@@ -48,6 +47,8 @@ from depthcharge_tools.utils.platform import (
     proc_cmdline,
 )
 from depthcharge_tools.utils.string import (
+    kernel_cmdline_join,
+    kernel_cmdline_split,
     parse_bytesize,
     rev_sku_regex,
 )
@@ -391,7 +392,7 @@ class depthchargectl(
             'vboot-keyblock': str(self.vboot_keyblock),
             'vboot-public-key': str(self.vboot_public_key),
             'vboot-private-key': str(self.vboot_private_key),
-            'kernel-cmdline': " ".join(self.kernel_cmdline),
+            'kernel-cmdline': kernel_cmdline_join(self.kernel_cmdline),
             'ignore-initramfs': str(self.ignore_initramfs),
             'zimage-initramfs-hack': str(self.zimage_initramfs_hack),
         })
@@ -802,7 +803,7 @@ class depthchargectl(
         if len(cmds) == 0:
             cmdline = self.config.get("kernel-cmdline")
             if cmdline is not None:
-                cmds = shlex.split(cmdline)
+                cmds = kernel_cmdline_split(cmdline)
                 cmdline_src = "configuration"
 
         if len(cmds) == 0:
@@ -822,12 +823,12 @@ class depthchargectl(
 
         flat_cmds = []
         for cmd in cmds:
-            flat_cmds.extend(shlex.split(cmd))
+            flat_cmds.extend(kernel_cmdline_split(cmd))
 
         if flat_cmds:
             self.logger.info(
                 "Using kernel cmdline from {}: {}"
-                .format(cmdline_src, " ".join(flat_cmds))
+                .format(cmdline_src, kernel_cmdline_join(flat_cmds))
             )
 
         return flat_cmds

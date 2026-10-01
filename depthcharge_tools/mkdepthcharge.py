@@ -32,6 +32,8 @@ from depthcharge_tools.utils.platform import (
     vboot_keys,
 )
 from depthcharge_tools.utils.string import (
+    kernel_cmdline_join,
+    kernel_cmdline_split,
     parse_bytesize,
 )
 from depthcharge_tools.utils.subprocess import (
@@ -595,14 +597,14 @@ class mkdepthcharge(
         elif len(cmd) == 1 and isinstance(cmd[0], str):
             cmdline = cmd[0]
         elif isinstance(cmd, (list, tuple)):
-            cmdline = " ".join(cmd)
+            cmdline = kernel_cmdline_join(cmd)
 
         # The firmware replaces any '%U' in the kernel cmdline with the
         # PARTUUID of the partition it booted from. Chrome OS uses
         # kern_guid=%U in their cmdline and it's useful information, so
         # prepend it to cmdline.
         if (self.kern_guid is None) or self.kern_guid:
-            cmdline = " ".join(("kern_guid=%U", cmdline))
+            cmdline = kernel_cmdline_join(("kern_guid=%U", cmdline))
 
         return cmdline
 
