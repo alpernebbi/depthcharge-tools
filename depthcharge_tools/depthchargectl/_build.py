@@ -10,7 +10,6 @@ import collections
 import configparser
 import logging
 import os
-import shlex
 import textwrap
 
 from pathlib import Path
