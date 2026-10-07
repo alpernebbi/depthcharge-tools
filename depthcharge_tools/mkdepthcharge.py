@@ -676,6 +676,16 @@ class mkdepthcharge(
 
         return file_
 
+    @vboot_options.add
+    @Argument("--tpm-kernel-version", nargs=1)
+    def tpm_kernver(self, version=1):
+        """Kernel version number for rollback protection."""
+        if not version.isdigit():
+            raise ValueError(
+                "Kernel version argument must be a positive integer."
+            )
+        return version
+
     def __call__(self):
         vmlinuz = self.vmlinuz
         initramfs = self.initramfs
@@ -935,7 +945,7 @@ class mkdepthcharge(
 
             self.logger.info("Packing files as depthcharge image.")
             proc = vbutil_kernel(
-                "--version", "1",
+                "--version", self.tpm_kernver,
                 "--arch", self.arch.vboot,
                 "--vmlinuz", fit_image,
                 "--config", cmdline_file,
@@ -949,7 +959,7 @@ class mkdepthcharge(
         elif self.image_format == "zimage" and initramfs is None:
             self.logger.info("Packing files as depthcharge image.")
             proc = vbutil_kernel(
-                "--version", "1",
+                "--version", self.tpm_kernver,
                 "--arch", self.arch.vboot,
                 "--vmlinuz", vmlinuz,
                 "--config", cmdline_file,
@@ -1008,7 +1018,7 @@ class mkdepthcharge(
             self.logger.info("Packing files as temporary image.")
             temp_img = self._tempfile("temp.img")
             proc = vbutil_kernel(
-                "--version", "1",
+                "--version", self.tpm_kernver,
                 "--arch", self.arch.vboot,
                 "--vmlinuz", vmlinuz,
                 "--config", cmdline_file,

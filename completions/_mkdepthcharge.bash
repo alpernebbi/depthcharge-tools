@@ -36,6 +36,7 @@ _mkdepthcharge() {
         --set-init-size --no-set-init-size
         -c --cmdline --kern-guid --no-kern-guid --bootloader
         --keydir --keyblock --signprivate --signpubkey
+        --tpm-kernel-version
     )
 
     case "$prev" in
@@ -61,6 +62,7 @@ _mkdepthcharge() {
         --keyblock)     _mkdepthcharge__file ;;
         --signprivate)  _mkdepthcharge__file ;;
         --signpubkey)   _mkdepthcharge__file ;;
+        --tpm-kernel-version) : ;;
         --)             _mkdepthcharge__file ;;
         *)
             COMPREPLY+=($(compgen -W "${opts[*]}" -- "$cur"))
