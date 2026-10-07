@@ -914,6 +914,14 @@ class mkdepthcharge(
                 "type", "kernel_noload",
             )
 
+            # Depthcharge boots the default configuration when none matches
+            # the board's compatible string. Avoid booting a with wrong dtb.
+            if len(dtbs) > 1:
+                self.logger.info(
+                    "Patching FIT to remove default configuration."
+                )
+                fdtput.delete(fit_image, "/configurations", "default")
+
             if (
                 initramfs is not None
                 and self.patch_dtbs
