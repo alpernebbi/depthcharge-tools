@@ -487,6 +487,15 @@ class FdtputRunner(ProcessRunner):
 
         self(*options, str(dt_file), str(node), str(prop), *value_args)
 
+    def create(self, dt_file, node='/'):
+        self("--create", str(dt_file), str(node))
+
+    def delete(self, dt_file, node='/', prop=None):
+        self("--delete", str(dt_file), str(node), str(prop))
+
+    def remove(self, dt_file, node=None):
+        self("--remove", str(dt_file), str(node))
+
 
 class FileRunner(ProcessRunner):
     def __init__(self):
