@@ -120,10 +120,18 @@ class mkdepthcharge(
             decomp = self._decompress(f)
             ftype = guess_filetype(decomp)
 
+            # Linux files
+            if ftype in ("linux-x86", "linux-arm64", "linux-arm"):
+                self.logger.info(
+                    "File '{}' identified as a vmlinuz."
+                    .format(f)
+                )
+                vmlinuz.append(decomp)
+
             # Portable Executable and ELF files
             if ftype in ("pe", "elf"):
                 self.logger.info(
-                    "File '{}' identified as a vmlinuz."
+                    "File '{}' identified as an executable."
                     .format(f)
                 )
                 vmlinuz.append(decomp)
@@ -336,14 +344,13 @@ class mkdepthcharge(
         # We should be able to make an image for other architectures, but
         # the default should be whatever board the kernel is for.
         if arch is None:
-            with self.vmlinuz.open("rb") as f:
-                head = f.read(4096)
+            ftype = guess_filetype(self.vmlinuz)
 
-            if head[0x202:0x206] == b"HdrS":
+            if ftype == "linux-x86":
                 arch = Architecture("x86")
-            elif head[0x38:0x3c] == b"ARM\x64":
+            elif ftype == "linux-arm64":
                 arch = Architecture("arm64")
-            elif head[0x34:0x38] == b"\x45\x45\x45\x45":
+            elif ftype == "linux-arm":
                 arch = Architecture("arm")
 
             self.logger.info(

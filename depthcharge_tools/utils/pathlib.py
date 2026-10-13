@@ -99,6 +99,15 @@ def guess_filetype(path):
     if not head:
         return "empty"
 
+    if len(head) > 0x206 and head[0x202:0x206] == b"HdrS":
+        return "linux-x86"
+
+    if len(head) > 0x3c and head[0x38:0x3c] == b"ARM\x64":
+        return "linux-arm64"
+
+    if len(head) > 0x38 and head[0x34:0x38] == b"\x45\x45\x45\x45":
+        return "linux-arm"
+
     for magic, filetype in {
         b"MZ":                  "pe",
         b"\x7fELF":             "elf",
