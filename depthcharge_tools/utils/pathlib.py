@@ -125,6 +125,13 @@ def guess_filetype(path):
         b"070701":              "cpio",
         b"070702":              "cpio",
         b"070707":              "cpio",
+        b'\x1f\x8b':            "gzip",
+        b'\xfd7zXZ\x00':        "xz",
+        b'(\xb5/\xfd':          "zstd",
+        b'\x5d\x00\x00\x00':    "lzma",
+        b'\02!L\x18':           "lz4",
+        b'BZh':                 "bzip2",
+        b'\x89\x4c\x5a':        "lzop",
     }.items():
         if head.startswith(magic):
             return filetype
