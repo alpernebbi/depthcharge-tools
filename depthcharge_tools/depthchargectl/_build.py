@@ -255,10 +255,13 @@ class depthchargectl_build(
                     "but this board needs a dtb."
                 )
 
-            dt_patterns = sorted(set(
-                board.dt_compatible
-                for board in (self.board, *self.board.descendants)
-            ), key=lambda regex: regex.pattern)
+            if self.board.dt_compatible.pattern == "google,.*":
+                dt_patterns = [self.board.dt_compatible]
+            else:
+                dt_patterns = sorted(set(
+                    board.dt_compatible
+                    for board in (self.board, *self.board.descendants)
+                ), key=lambda regex: regex.pattern)
 
             for regex in dt_patterns:
                 self.logger.info(
