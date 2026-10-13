@@ -680,11 +680,16 @@ class mkdepthcharge(
     @Argument("--tpm-kernel-version", nargs=1)
     def tpm_kernver(self, version=1):
         """Kernel version number for rollback protection."""
-        if not version.isdigit():
-            raise ValueError(
-                "Kernel version argument must be a positive integer."
-            )
-        return version
+        try:
+            version = parse_bytesize(version)
+            if version > 0:
+                return version
+        except:
+            pass
+
+        raise ValueError(
+            "Kernel version argument must be a positive integer."
+        )
 
     def __call__(self):
         vmlinuz = self.vmlinuz
