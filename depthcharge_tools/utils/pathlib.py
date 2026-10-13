@@ -80,8 +80,14 @@ def guess_filetype(path):
     except:
         return "error"
 
-    if not path.is_file():
-        return "error"
+    if path.is_block_device():
+        return "blockdev"
+    if path.is_char_device():
+        return "chardev"
+    if path.is_mount():
+        return "mount"
+    if path.is_dir():
+        return "directory"
 
     head = None
     try:
