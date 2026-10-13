@@ -79,9 +79,16 @@ class mkdepthcharge(
     # Debian packs the arm64 kernel uncompressed, but the bindeb-pkg
     # kernel target packs it as gzip. So we'll try to decompress inputs.
     def _decompress(self, f):
+        ftype = guess_filetype(f)
+        if ftype not in (
+            "gzip", "xz", "zstd", "lzma", "lz4", "bzip2", "lzop",
+            "unknown",
+        ):
+            return f
+
         self.logger.info(
-            "Trying to decompress file '{}'."
-            .format(f)
+            "Trying to decompress file '{}' (of type '{}'?)."
+            .format(f, ftype)
         )
 
         decomp = decompress(f, self._tempfile(f.name))
