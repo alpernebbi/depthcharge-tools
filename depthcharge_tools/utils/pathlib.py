@@ -72,3 +72,36 @@ def read_lines(path):
             return []
     except:
         return []
+
+
+def guess_filetype(path):
+    try:
+        path = Path(path).resolve()
+    except:
+        return "error"
+
+    if not path.is_file():
+        return "error"
+
+    head = None
+    try:
+        with path.open("rb") as fd:
+            head = fd.read(4096)
+    except:
+        return "error"
+
+    if not head:
+        return "empty"
+
+    for magic, filetype in {
+        b"MZ":                  "pe",
+        b"\x7fELF":             "elf",
+        b"\xd0\x0d\xfe\xed":    "dtb",
+        b"070701":              "cpio",
+        b"070702":              "cpio",
+        b"070707":              "cpio",
+    }.items():
+        if head.startswith(magic):
+            return filetype
+
+    return "unknown"

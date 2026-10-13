@@ -26,6 +26,7 @@ from depthcharge_tools.utils.argparse import (
 from depthcharge_tools.utils.pathlib import (
     copy,
     decompress,
+    guess_filetype,
 )
 from depthcharge_tools.utils.platform import (
     Architecture,
@@ -117,11 +118,10 @@ class mkdepthcharge(
         for f in files:
             # Decompress files to run detection on content.
             decomp = self._decompress(f)
-            with decomp.open("rb") as f_:
-                head = f_.read(4096)
+            ftype = guess_filetype(decomp)
 
             # Portable Executable and ELF files
-            if head.startswith(b"MZ") or head.startswith(b"ELF"):
+            if ftype in ("pe", "elf"):
                 self.logger.info(
                     "File '{}' identified as a vmlinuz."
                     .format(f)
@@ -129,11 +129,7 @@ class mkdepthcharge(
                 vmlinuz.append(decomp)
 
             # Cpio files
-            elif (
-                head.startswith(b"070701")
-                or head.startswith(b"070702")
-                or head.startswith(b"070707")
-            ):
+            elif ftype == "cpio":
                 self.logger.info(
                     "File '{}' identified as an initramfs."
                     .format(f)
@@ -146,7 +142,7 @@ class mkdepthcharge(
                     decomp.unlink()
 
             # Device-tree blobs
-            elif head.startswith(b"\xd0\x0d\xfe\xed"):
+            elif ftype == "dtb":
                 self.logger.info(
                     "File '{}' identified as a device-tree blob."
                     .format(f)
