@@ -950,7 +950,7 @@ class mkdepthcharge(
 
             self.logger.info("Packing files as depthcharge image.")
             proc = vbutil_kernel(
-                "--version", self.tpm_kernver,
+                "--version", str(self.tpm_kernver),
                 "--arch", self.arch.vboot,
                 "--vmlinuz", fit_image,
                 "--config", cmdline_file,
@@ -964,7 +964,7 @@ class mkdepthcharge(
         elif self.image_format == "zimage" and initramfs is None:
             self.logger.info("Packing files as depthcharge image.")
             proc = vbutil_kernel(
-                "--version", self.tpm_kernver,
+                "--version", str(self.tpm_kernver),
                 "--arch", self.arch.vboot,
                 "--vmlinuz", vmlinuz,
                 "--config", cmdline_file,
@@ -1023,7 +1023,7 @@ class mkdepthcharge(
             self.logger.info("Packing files as temporary image.")
             temp_img = self._tempfile("temp.img")
             proc = vbutil_kernel(
-                "--version", self.tpm_kernver,
+                "--version", str(self.tpm_kernver),
                 "--arch", self.arch.vboot,
                 "--vmlinuz", vmlinuz,
                 "--config", cmdline_file,
