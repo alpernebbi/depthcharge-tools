@@ -6,6 +6,7 @@
 # See COPYRIGHT and LICENSE files for full copyright information.
 
 import shutil
+import struct
 import subprocess
 
 from pathlib import Path
@@ -119,8 +120,45 @@ def guess_filetype(path):
             return "elf-arm64"
         return "elf"
 
+    ftype = None
+    coff = None
+    if head.startswith(b"MZ") and len(head) > 0x40:
+        ftype = "pe"
+        coff = struct.unpack('<I', head[0x3c:0x40])[0]
+        if len(head) < coff+6:
+            return ftype
+
+    if head.startswith(b"PE\x00\x00"):
+        ftype = "coff"
+        coff = 0
+        if len(head) < coff+6:
+            return ftype
+
+    if coff is not None:
+        suffix = None
+        arch = struct.unpack('<H', head[coff+0x04:coff+0x06])[0]
+        if arch == 0x8664:
+            suffix = "amd64"
+        elif arch == 0xaa64:
+            suffix = "arm64"
+        elif arch in (0x01c0, 0x01c2, 0x01c4):
+            suffix = "arm"
+        elif arch == 0x014c:
+            suffix = "x86"
+
+        optsize = struct.unpack('<H', head[coff+0x14:coff+0x16])[0]
+        if optsize > 0x5e and len(head) > (coff + 0x5e):
+            subsys = struct.unpack('<H', head[coff+0x5c:coff+0x5e])[0]
+            if subsys == 0x0a:
+                ftype = "efi"
+            if subsys == 0x0b:
+                ftype = "efi-driver"
+            if subsys == 0x0c:
+                ftype = "efi-driver"
+
+        return f"{ftype}-{suffix}" if suffix else ftype
+
     for magic, filetype in {
-        b"MZ":                  "pe",
         b"\xd0\x0d\xfe\xed":    "dtb",
         b"070701":              "cpio",
         b"070702":              "cpio",
