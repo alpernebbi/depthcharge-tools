@@ -346,11 +346,11 @@ class mkdepthcharge(
         if arch is None:
             ftype = guess_filetype(self.vmlinuz)
 
-            if ftype == "linux-x86":
+            if ftype in ("linux-x86", "elf-x86", "elf-amd64"):
                 arch = Architecture("x86")
-            elif ftype == "linux-arm64":
+            elif ftype in ("linux-arm64", "elf-arm64"):
                 arch = Architecture("arm64")
-            elif ftype == "linux-arm":
+            elif ftype in ("linux-arm", "elf-arm"):
                 arch = Architecture("arm")
 
             self.logger.info(

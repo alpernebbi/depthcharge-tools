@@ -108,9 +108,19 @@ def guess_filetype(path):
     if len(head) > 0x38 and head[0x34:0x38] == b"\x45\x45\x45\x45":
         return "linux-arm"
 
+    if head.startswith(b"\x7fELF") and len(head) > 0x14:
+        if head[0x12:0x14] == b"\x03\x00":
+            return "elf-x86"
+        if head[0x12:0x14] == b"\x28\x00":
+            return "elf-arm"
+        if head[0x12:0x14] == b"\x3e\x00":
+            return "elf-amd64"
+        if head[0x12:0x14] == b"\xb7\x00":
+            return "elf-arm64"
+        return "elf"
+
     for magic, filetype in {
         b"MZ":                  "pe",
-        b"\x7fELF":             "elf",
         b"\xd0\x0d\xfe\xed":    "dtb",
         b"070701":              "cpio",
         b"070702":              "cpio",
