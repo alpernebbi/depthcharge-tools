@@ -138,6 +138,7 @@ class depthchargectl_remove(
             vboot_private_key=self.vboot_private_key,
             kernel_cmdline=self.kernel_cmdline,
             ignore_initramfs=self.ignore_initramfs,
+            zimage_initramfs_hack=self.zimage_initramfs_hack,
             verbosity=self.verbosity,
         )
 
@@ -202,6 +203,7 @@ class depthchargectl_remove(
                     vboot_private_key=self.vboot_private_key,
                     kernel_cmdline=self.kernel_cmdline,
                     ignore_initramfs=self.ignore_initramfs,
+                    zimage_initramfs_hack=self.zimage_initramfs_hack,
                     verbosity=self.verbosity,
                 )
             except Exception as err:
