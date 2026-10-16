@@ -172,6 +172,81 @@ class depthchargectl_write(
             "Bless argument must be either good, oneshot, or bad."
         )
 
+    @Group
+    def build_options(self):
+        """Image build options"""
+        # Resolve image argument through its Group first
+        self.positionals
+
+        if any((
+            self.kernel_release,
+            self.kernel,
+            self.initrd,
+            self.fdtdir,
+            self.dtbs,
+            self.description,
+            self.compress,
+            self.timestamp,
+            self.output,
+        )) and self.image is not None:
+            raise ValueError(
+                "Image build options are incompatible with image argument."
+            )
+
+    @build_options.add
+    @Argument("--kernel-release", nargs=1)
+    def kernel_release(self, name=None):
+        """Release name for the kernel used in image."""
+        return name
+
+    @build_options.add
+    @Argument("--kernel", nargs=1)
+    def kernel(self, file_=None):
+        """Kernel executable."""
+        return file_
+
+    @build_options.add
+    @Argument("--initramfs", nargs='+')
+    def initrd(self, *files):
+        """Ramdisk images."""
+        return files
+
+    @build_options.add
+    @Argument("--fdtdir", nargs=1)
+    def fdtdir(self, dir_=None):
+        """Directory to search device-tree binaries for the board."""
+        return dir_
+
+    @build_options.add
+    @Argument("--dtbs", nargs="+", metavar="FILE")
+    def dtbs(self, *files):
+        """Device-tree binary files to use instead of searching fdtdir."""
+        return files
+
+    @build_options.add
+    @Argument("--description", nargs=1)
+    def description(self, desc=None):
+        """Human-readable description for the image."""
+        return desc
+
+    @build_options.add
+    @Argument("--compress", nargs="+", metavar="TYPE")
+    def compress(self, *compress):
+        """Compression types to attempt."""
+        return compress
+
+    @build_options.add
+    @Argument("--timestamp", nargs=1)
+    def timestamp(self, seconds=None):
+        """Build timestamp for the image"""
+        return seconds
+
+    @build_options.add
+    @Argument("-o", "--output", nargs=1)
+    def output(self, path=None):
+        """Output image to path instead of storing in images-dir"""
+        return path
+
     def __call__(self):
         if self.board is None:
             self.logger.warning(
@@ -216,6 +291,15 @@ class depthchargectl_write(
             try:
                 image = depthchargectl.build_(
                     kernel_version=self.kernel_version,
+                    kernel_release=self.kernel_release,
+                    kernel=self.kernel,
+                    initrd=self.initrd,
+                    fdtdir=self.fdtdir,
+                    dtbs=self.dtbs,
+                    description=self.description,
+                    output=self.output,
+                    compress=self.compress,
+                    timestamp=self.timestamp,
                     root=self.root,
                     root_mountpoint=self.root_mountpoint,
                     boot_mountpoint=self.boot_mountpoint,
