@@ -137,10 +137,24 @@ class FunctionBindAction(argparse.Action):
             bound = self.signature.bind(n + 1)
 
         else:
+            prebound = self.signature.bind_partial(
+                *self.f_args,
+            )
+            overrides = self.signature.bind_partial(
+                *self.f_args,
+                *values,
+            )
+            kwargs = {
+                k: v for k, v in self.f_kwargs.items()
+                if (
+                    k not in overrides.arguments
+                    or k in prebound.arguments
+                )
+            }
             bound = self.signature.bind(
                 *self.f_args,
                 *values,
-                **self.f_kwargs,
+                **kwargs,
             )
 
         setattr(namespace, self.dest, bound)
