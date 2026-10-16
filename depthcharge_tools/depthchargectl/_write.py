@@ -145,16 +145,32 @@ class depthchargectl_write(
         return target
 
     @options.add
-    @Argument("--no-prioritize", prioritize=False)
-    def prioritize(self, prioritize=True):
-        """Don't set any flags on the partition."""
-        return prioritize
-
-    @options.add
     @Argument("--allow-current", allow=True)
     def allow_current(self, allow=False):
         """Allow overwriting the currently booted partition."""
         return allow
+
+    @options.add
+    @Argument("--no-prioritize", bless=None,
+              help="Don't set any flags on the partition.")
+    @Argument("--oneshot", bless="oneshot",
+              help="Set the partition to be tried once.")
+    @Argument("--bad", bless="bad",
+              help="Set the partition as unbootable.")
+    @Argument("--bless", bless="good",
+              help="Set the partition as always bootable.")
+    def bless(self, bless=True):
+        """Set partition as bootable after writing"""
+        if bless in ("good", "oneshot", "bad"):
+            return bless
+        if bless is True:
+            return "oneshot"
+        if bless in (False, None):
+            return None
+
+        raise ValueError(
+            "Bless argument must be either good, oneshot, or bad."
+        )
 
     def __call__(self):
         if self.board is None:
@@ -272,15 +288,28 @@ class depthchargectl_write(
             .format(image, target)
         )
 
-        if self.prioritize:
-            self.logger.info(
-                "Setting '{}' as the highest-priority bootable part."
-                .format(target)
-            )
+        if self.bless is not None:
+            if self.bless == "good":
+                self.logger.info(
+                    "Setting '{}' as the highest-priority bootable part."
+                    .format(target)
+                )
+            elif self.bless == "oneshot":
+                self.logger.info(
+                    "Setting '{}' as the highest-priority once-bootable part."
+                    .format(target)
+                )
+            elif self.bless == "bad":
+                self.logger.info(
+                    "Setting '{}' as an unbootable part."
+                    .format(target)
+                )
+
             try:
                 depthchargectl.bless(
                     partition=target,
-                    oneshot=True,
+                    oneshot=(self.bless == "oneshot"),
+                    bad=(self.bless == "bad"),
                     root=self.root,
                     root_mountpoint=self.root_mountpoint,
                     boot_mountpoint=self.boot_mountpoint,
@@ -298,14 +327,20 @@ class depthchargectl_write(
                 )
             except Exception as err:
                 raise CommandExit(
-                    "Failed to set '{}' as the highest-priority bootable part."
+                    "Failed to set flags on partition '{}'."
                     .format(target)
                 ) from err
 
-            self.logger.warning(
-                "Set partition '{}' as next to boot."
-                .format(target)
-            )
+            if self.bless in ("good", "oneshot"):
+                self.logger.warning(
+                    "Set partition '{}' as next to boot."
+                    .format(target)
+                )
+            elif self.bless == "bad":
+                self.logger.info(
+                    "Set partition '{}' as unbootable."
+                    .format(target)
+                )
 
         return target
 
