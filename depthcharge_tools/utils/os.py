@@ -403,6 +403,16 @@ class Partition:
             disk = None
             path = Path(path).resolve()
 
+        # Allow "disk.img#1" etc. specifying a partition in a disk image
+        if path is not None and not path.exists():
+            match = (
+                re.fullmatch(r"(.*)\W([0-9]+)", path.name)
+            )
+            if match and path.with_name(match.group(1)).exists():
+                diskname, partno = match.groups()
+                partno = int(partno)
+                disk = Disk(path.with_name(diskname), dev=dev, sys=sys)
+
         if (
             disk is None
             and partno is None
