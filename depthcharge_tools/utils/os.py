@@ -475,6 +475,17 @@ class Partition:
                 blocks = int(size_f.read_text())
                 return blocks * 512
 
+    def writable(self):
+        try:
+            if self.path is None:
+                with self.disk.path.open("r+b") as disk:
+                    return True
+            else:
+                with self.path.open("r+b") as part:
+                    return True
+        except:
+            return False
+
     def write_bytes(self, data):
         data = bytes(data)
 
