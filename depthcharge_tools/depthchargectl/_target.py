@@ -259,6 +259,13 @@ class depthchargectl_target(
                     )
                     continue
 
+            if not p.writable():
+                self.logger.warning(
+                    "Skipping partition '{}' as not writable."
+                    .format(p)
+                )
+                continue
+
             self.logger.info("Partition '{}' is usable.".format(p))
             good_partitions.append(
                 CrosPartition(p.disk.path, partno=p.partno),
