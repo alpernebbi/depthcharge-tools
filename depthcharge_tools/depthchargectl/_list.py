@@ -236,7 +236,7 @@ class depthchargectl_list(
         for disk in self.disks:
             try:
                 parts.extend(disk.cros_partitions())
-            except subprocess.CalledProcessError as err:
+            except (subprocess.CalledProcessError, PermissionError) as err:
                 error_disks.append(disk)
                 self.logger.debug(
                     "Couldn't get partitions for disk '{}'."
