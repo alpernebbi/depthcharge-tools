@@ -30,15 +30,26 @@ from depthcharge_tools.utils.string import (
 from depthcharge_tools.depthchargectl import depthchargectl
 
 
-class NotABlockDeviceError(CommandExit):
+class NotWritablePartitionError(CommandExit):
     def __init__(self, device):
         message = (
-            "Target '{}' is not a valid block device."
+            "Target partition '{}' is not writable."
             .format(device)
         )
 
         self.device = device
         super().__init__(message=message, returncode=2)
+
+
+class NotWritableDiskError(CommandExit):
+    def __init__(self, device):
+        message = (
+            "Target disk '{}' is not writable."
+            .format(device)
+        )
+
+        self.device = device
+        super().__init__(message=message, returncode=3)
 
 
 class NotCrosPartitionError(CommandExit):
@@ -178,12 +189,11 @@ class depthchargectl_target(
             part = partitions[0]
 
             self.logger.info("Checking if target partition is writable.")
-            if part.path is not None and not part.path.is_block_device():
-                raise NotABlockDeviceError(part.path)
-
-            self.logger.info("Checking if targeted partition's disk is writable.")
-            if not part.disk.path.is_block_device():
-                raise NotABlockDeviceError(part.disk.path)
+            if not part.writable():
+                if part.path is not None:
+                    raise NotWritablePartitionError(part.path)
+                else:
+                    raise NotWritableDiskError(part.disk.path)
 
             self.logger.info(
                 "Checking if targeted partition's type is Chrome OS Kernel."
