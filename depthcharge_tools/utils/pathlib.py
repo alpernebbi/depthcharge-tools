@@ -121,22 +121,26 @@ def guess_filetype(path):
         return "elf"
 
     ftype = None
+    pemagic = None
     coff = None
-    if head.startswith(b"MZ") and len(head) > 0x40:
-        ftype = "pe"
-        coff = struct.unpack('<I', head[0x3c:0x40])[0]
-        if len(head) < coff+6:
-            return ftype
+    if head.startswith(b"MZ"):
+        ftype = "mz"
+        if len(head) > 0x40:
+            pemagic = struct.unpack('<I', head[0x3c:0x40])[0]
 
     if head.startswith(b"PE\x00\x00"):
-        ftype = "coff"
-        coff = 0
-        if len(head) < coff+6:
+        pemagic = 0
+
+    if pemagic and len(head) > pemagic + 4:
+        if head[pemagic:pemagic+4] == b"PE\x00\x00":
+            ftype = "pe"
+        coff = pemagic + 4
+        if len(head) < coff + 20:
             return ftype
 
     if coff is not None:
         suffix = None
-        arch = struct.unpack('<H', head[coff+0x04:coff+0x06])[0]
+        arch = struct.unpack('<H', head[coff:coff+2])[0]
         if arch == 0x8664:
             suffix = "amd64"
         elif arch == 0xaa64:
@@ -146,9 +150,10 @@ def guess_filetype(path):
         elif arch == 0x014c:
             suffix = "x86"
 
-        optsize = struct.unpack('<H', head[coff+0x14:coff+0x16])[0]
-        if optsize > 0x5e and len(head) > (coff + 0x5e):
-            subsys = struct.unpack('<H', head[coff+0x5c:coff+0x5e])[0]
+        optsize = struct.unpack('<H', head[coff+16:coff+18])[0]
+        opthdr = coff + 20
+        if optsize > 70 and len(head) > (opthdr + 70):
+            subsys = struct.unpack('<H', head[opthdr+68:opthdr+70])[0]
             if subsys == 0x0a:
                 ftype = "efi"
             if subsys == 0x0b:
