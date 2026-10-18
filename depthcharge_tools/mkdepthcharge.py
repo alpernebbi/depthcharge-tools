@@ -136,12 +136,44 @@ class mkdepthcharge(
                 vmlinuz.append(decomp)
 
             # Portable Executable and ELF files
-            if ftype in ("pe", "elf"):
+            elif ftype.startswith("pe-") or ftype.startswith("elf-"):
                 self.logger.info(
                     "File '{}' identified as an executable."
                     .format(f)
                 )
                 vmlinuz.append(decomp)
+
+            # MS-DOS binaries
+            elif ftype == "mz":
+                raise ValueError(
+                    "Depthcharge cannot boot DOS MZ binaries."
+                )
+
+            # EFI binaries
+            elif ftype.startswith("efi-"):
+                raise ValueError(
+                    "Depthcharge cannot boot EFI binaries."
+                )
+
+            # UKI addons containing no kernel, but initramfs, dtb, etc.
+            elif ftype.startswith("uki-addon-"):
+                self.logger.info(
+                    "File '{}' identified as an UKI PE addon."
+                    .format(f)
+                )
+                raise NotImplementedError(
+                    "Support for UKI addons are not implemented."
+                )
+
+            # UKI binaries containing kernel, initramfs, dtb, etc.
+            elif ftype.startswith("uki-"):
+                self.logger.info(
+                    "File '{}' identified as an unified kernel image."
+                    .format(f)
+                )
+                raise NotImplementedError(
+                    "Support for UKI executables are not implemented."
+                )
 
             # Cpio files
             elif ftype == "cpio":
@@ -353,11 +385,11 @@ class mkdepthcharge(
         if arch is None:
             ftype = guess_filetype(self.vmlinuz)
 
-            if ftype in ("linux-x86", "elf-x86", "elf-amd64"):
+            if ftype.endswith("-x86") or ftype.endswith("-amd64"):
                 arch = Architecture("x86")
-            elif ftype in ("linux-arm64", "elf-arm64"):
+            elif ftype.endswith("-arm64"):
                 arch = Architecture("arm64")
-            elif ftype in ("linux-arm", "elf-arm"):
+            elif ftype.endswith("-arm"):
                 arch = Architecture("arm")
 
             self.logger.info(
