@@ -232,3 +232,65 @@ def pe_sections(path):
             size = struct.unpack('<L', data[sect+16:sect+20])[0]
             pos = struct.unpack('<L', data[sect+20:sect+24])[0]
             yield (name, data[pos:pos+size])
+
+
+def unukify(path):
+    ftype = None
+    parts = {
+        "linux": None,
+        "initrd": [],
+        "dtb": None,
+        "dtbauto": [],
+        "cmdline": [],
+        "osrel": {},
+        "uname": "",
+        "ucode": [],
+    }
+
+    for name, data in pe_sections(path):
+        if name == ".linux":
+            ftype = "uki"
+            if parts["linux"] is None:
+                parts["linux"] = data
+            else:
+                raise ValueError(
+                    "UKI image cannot have multiple .linux sections"
+                )
+
+        elif name == ".initrd":
+            ftype = ftype or "uki-addon"
+            parts["initrd"].append(data)
+
+        elif name == ".dtb":
+            ftype = ftype or "uki-addon"
+            parts["dtb"] = data
+
+        elif name == ".dtbauto":
+            ftype = ftype or "uki-addon"
+            parts["dtbauto"].append(data)
+
+        elif name == ".cmdline":
+            ftype = ftype or "uki-addon"
+            parts["cmdline"].append(data.rstrip(b"\x00").decode())
+
+        elif name == ".osrel":
+            for line in data.rstrip(b"\x00").decode().splitlines():
+                lhs, eq, rhs = line.partition("=")
+                if eq == "=":
+                    parts["osrel"][lhs] = rhs
+
+        elif name == ".uname":
+            parts["uname"] = data.rstrip(b"\x00").decode()
+
+        elif name == ".ucode":
+            ftype = ftype or "uki-addon"
+            parts["ucode"].append(data)
+
+        elif name == ".profile":
+            # Only parse default profile
+            break
+
+    if ftype is None:
+        return None
+
+    return parts
