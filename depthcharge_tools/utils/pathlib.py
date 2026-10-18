@@ -161,6 +161,28 @@ def guess_filetype(path):
             if subsys == 0x0c:
                 ftype = "efi-driver"
 
+        nsections = struct.unpack('<H', head[coff+2:coff+4])[0]
+        sections = opthdr + optsize
+        if (sections + nsections * 40) > len(head):
+            with path.open("rb") as fd:
+                head = fd.read(sections + nsections * 40)
+
+        if ftype == "efi":
+            snames = []
+            for i in range(0, nsections):
+                sect = sections + i * 40
+                snames.append(head[sect:sect+8])
+            if b".linux\x00\x00" in snames:
+                ftype = "uki"
+            elif (
+                b".cmdline" in snames
+                or b".dtb\x00\x00\x00\x00" in snames
+                or b".dtbauto" in snames
+                or b".ucode\x00\x00" in snames
+                or b".initrd\x00" in snames
+            ):
+                ftype = "uki-addon"
+
         return f"{ftype}-{suffix}" if suffix else ftype
 
     for magic, filetype in {
