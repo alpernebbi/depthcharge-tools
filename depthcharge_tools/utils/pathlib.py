@@ -9,6 +9,7 @@ import shutil
 import struct
 import subprocess
 
+from mmap import mmap, ACCESS_READ
 from pathlib import Path
 
 from depthcharge_tools.utils.subprocess import (
@@ -202,3 +203,32 @@ def guess_filetype(path):
             return filetype
 
     return "unknown"
+
+
+def pe_sections(path):
+    path = Path(path).resolve()
+    ftype = guess_filetype(path)
+    if not (
+        ftype.startswith("pe-")
+        or ftype.startswith("efi-")
+        or ftype.startswith("uki-")
+    ):
+        return
+
+    with path.open("rb") as f, mmap(f.fileno(), 0, access=ACCESS_READ) as data:
+        pemagic = 0
+        if data[:2] == b"MZ":
+            ftype = "mz"
+            pemagic = struct.unpack('<I', data[0x3c:0x40])[0]
+
+        coff = pemagic + 4
+        optsize = struct.unpack('<H', data[coff+16:coff+18])[0]
+        opthdr = coff + 20
+        nsections = struct.unpack('<H', data[coff+2:coff+4])[0]
+        sections = opthdr + optsize
+        for i in range(0, nsections):
+            sect = sections + i * 40
+            name = data[sect:sect+8].decode().rstrip("\0")
+            size = struct.unpack('<L', data[sect+16:sect+20])[0]
+            pos = struct.unpack('<L', data[sect+20:sect+24])[0]
+            yield (name, data[pos:pos+size])
