@@ -156,9 +156,17 @@ class mkdepthcharge(
         cmdline = []
         uname = []
 
-        files = [Path(f).resolve() for f in files]
+        vmz = self.vmlinuz
+        vmz = [vmz] if vmz else []
 
-        for f in files:
+        files = [
+            *((Path(f).resolve(), "vmlinuz") for f in vmz),
+            *((Path(f).resolve(), "initramfs") for f in self.initramfs),
+            *((Path(f).resolve(), "dtb") for f in self.dtbs),
+            *((Path(f).resolve(), "unknown") for f in files),
+        ]
+
+        for f, hint in files:
             # Decompress files to run detection on content.
             decomp = self._decompress(f)
             ftype = guess_filetype(decomp)
@@ -245,6 +253,28 @@ class mkdepthcharge(
                 )
                 dtbs.append(decomp)
 
+            elif hint == "vmlinuz":
+                self.logger.info(
+                    "Using file '{}' as a vmlinuz."
+                    .format(f)
+                )
+                vmlinuz.append(decomp)
+
+            elif hint == "initramfs":
+                self.logger.info(
+                    "Using file '{}' as an initramfs."
+                    .format(f)
+                )
+                # Keep initramfs compressed
+                initramfs.append(f)
+
+            elif hint == "dtb":
+                self.logger.info(
+                    "Using file '{}' as a device-tree blob."
+                    .format(f)
+                )
+                dtbs.append(decomp)
+
             # Failed to detect, assume in the order in usage string
             elif len(vmlinuz) == 0:
                 self.logger.info(
@@ -288,25 +318,13 @@ class mkdepthcharge(
     @Argument("-d", "--vmlinuz", nargs=1)
     def vmlinuz(self, vmlinuz=None):
         """Kernel executable"""
+        # Process these in self.files
+        yield vmlinuz
         files = self.files["vmlinuz"]
-
-        if vmlinuz is not None:
-            vmlinuz = Path(vmlinuz).resolve()
-            self.logger.info(
-                "Using file '{}' as a vmlinuz."
-                .format(vmlinuz)
-            )
-            files = [self._decompress(vmlinuz), *files]
 
         if len(files) == 0:
             raise ValueError(
                 "vmlinuz argument is required."
-            )
-
-        elif len(files) == 1:
-            self.logger.info(
-                "Using file '{}' as a vmlinuz."
-                .format(files[0])
             )
 
         elif len(files) > 1:
@@ -322,31 +340,10 @@ class mkdepthcharge(
     @Argument("-i", "--initramfs", metavar="INITRAMFS", nargs="+")
     def initramfs(self, *files):
         """Ramdisk images"""
-        files = [
-            *(Path(f).resolve() for f in files if f is not None),
-            *self.files["initramfs"],
-        ]
-
-        for file in files:
-            self.logger.info(
-                "Using file '{}' as an initramfs."
-                .format(file)
-            )
-
-        if len(files) > 1:
-            self.logger.info(
-                "Concatenating initramfs files as a single initramfs."
-            )
-            initramfs = self._tempfile("merged-initramfs.img")
-            with initramfs.open('xb') as merge:
-                for file in files:
-                    merge.write(file.read_bytes())
-
-        elif len(files) == 1:
-            initramfs = self._copy(files[0])
-
-        elif not files:
-            initramfs = None
+        # Process these in self.files
+        yield files
+        files = self.files["initramfs"]
+        initramfs = [self._copy(img) for img in files]
 
         return initramfs
 
@@ -354,17 +351,10 @@ class mkdepthcharge(
     @Argument("-b", "--dtbs", metavar="DTB", nargs="+")
     def dtbs(self, *dtbs):
         """Device-tree binary file"""
+        # Process these in self.files
+        yield dtbs
         files = self.files["dtbs"]
-
-        dtbs = [Path(dtb).resolve() for dtb in dtbs]
-        for dtb in dtbs:
-            self.logger.info(
-                "Using file '{}' as a device-tree blob."
-                .format(dtb)
-            )
-
-        dtbs = [self._decompress(dtb) for dtb in dtbs]
-        dtbs = [self._copy(dtb) for dtb in (*dtbs, *files)]
+        dtbs = [self._copy(dtb) for dtb in files]
 
         return dtbs
 
@@ -811,6 +801,20 @@ class mkdepthcharge(
 
         if bootloader is not None:
             bootloader = copy(bootloader, tmpdir)
+
+        if not initramfs:
+            initramfs = None
+        elif len(initramfs) == 1:
+            initramfs = initramfs[0]
+        elif len(initramfs) > 1:
+            self.logger.info(
+                "Concatenating initramfs files as a single initramfs."
+            )
+            tmp_initramfs = self._tempfile("merged-initramfs.img")
+            with tmp_initramfs.open('xb') as merge:
+                for img in initramfs:
+                    merge.write(img.read_bytes())
+            initramfs = tmp_initramfs
 
         # Depthcharge on arm64 with FIT supports these two compressions.
         if self.compress == "lz4":
