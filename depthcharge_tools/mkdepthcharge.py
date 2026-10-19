@@ -145,11 +145,6 @@ class mkdepthcharge(
     @Group
     def input_files(self):
         """Input files"""
-
-    @input_files.add
-    @Argument(help=argparse.SUPPRESS)
-    def files(self, *files):
-        """Input files (vmlinuz, initramfs, dtbs)"""
         vmlinuz = []
         initramfs = []
         dtbs = []
@@ -163,7 +158,7 @@ class mkdepthcharge(
             *((Path(f).resolve(), "vmlinuz") for f in vmz),
             *((Path(f).resolve(), "initramfs") for f in self.initramfs),
             *((Path(f).resolve(), "dtb") for f in self.dtbs),
-            *((Path(f).resolve(), "unknown") for f in files),
+            *((Path(f).resolve(), "unknown") for f in self.files),
         ]
 
         for f, hint in files:
@@ -338,6 +333,41 @@ class mkdepthcharge(
             )
         uname = unames.pop() if unames else None
 
+        if not vmlinuz:
+            raise ValueError(
+                "vmlinuz argument is required."
+            )
+
+        elif len(vmlinuz) == 1:
+            vmlinuz = self._copy(vmlinuz[0])
+
+        elif len(vmlinuz) > 1:
+            raise ValueError(
+                "Can't build with multiple kernels"
+            )
+
+        if not initramfs:
+            initramfs = None
+
+        elif len(initramfs) == 1:
+            initramfs = self._copy(initramfs[0])
+
+        elif len(initramfs) > 1:
+            self.logger.info(
+                "Concatenating initramfs files as a single initramfs."
+            )
+            tmp_initramfs = self._tempfile("merged-initramfs.img")
+            with tmp_initramfs.open('xb') as merge:
+                for img in initramfs:
+                    merge.write(img.read_bytes())
+            initramfs = tmp_initramfs
+
+        dtbs = [self._copy(dtb) for dtb in dtbs]
+
+        self.vmlinuz = vmlinuz
+        self.initramfs = initramfs
+        self.dtbs = dtbs
+
         return {
             "vmlinuz": vmlinuz,
             "initramfs": initramfs,
@@ -347,47 +377,27 @@ class mkdepthcharge(
         }
 
     @input_files.add
+    @Argument(help=argparse.SUPPRESS)
+    def files(self, *files):
+        """Input files (vmlinuz, initramfs, dtbs)"""
+        return files
+
+    @input_files.add
     @Argument("-d", "--vmlinuz", nargs=1)
     def vmlinuz(self, vmlinuz=None):
         """Kernel executable"""
-        # Process these in self.files
-        yield vmlinuz
-        files = self.files["vmlinuz"]
-
-        if len(files) == 0:
-            raise ValueError(
-                "vmlinuz argument is required."
-            )
-
-        elif len(files) > 1:
-            raise ValueError(
-                "Can't build with multiple kernels"
-            )
-
-        vmlinuz = self._copy(files[0])
-
         return vmlinuz
 
     @input_files.add
     @Argument("-i", "--initramfs", metavar="INITRAMFS", nargs="+")
     def initramfs(self, *files):
         """Ramdisk images"""
-        # Process these in self.files
-        yield files
-        files = self.files["initramfs"]
-        initramfs = [self._copy(img) for img in files]
-
-        return initramfs
+        return files
 
     @input_files.add
     @Argument("-b", "--dtbs", metavar="DTB", nargs="+")
     def dtbs(self, *dtbs):
         """Device-tree binary file"""
-        # Process these in self.files
-        yield dtbs
-        files = self.files["dtbs"]
-        dtbs = [self._copy(dtb) for dtb in files]
-
         return dtbs
 
     @Group
@@ -466,6 +476,8 @@ class mkdepthcharge(
     @Argument("-A", "--arch", nargs=1)
     def arch(self, arch=None):
         """Architecture to build for."""
+        # Process input files first
+        self.input_files
 
         # We should be able to make an image for other architectures, but
         # the default should be whatever board the kernel is for.
@@ -569,7 +581,7 @@ class mkdepthcharge(
         # description is left blank. Other images get "unavailable"
         # as their description, so it looks better if we match that.
         if desc is None and self.image_format == "fit":
-            desc = self.files["uname"] or "unavailable"
+            desc = self.input_files["uname"] or "unavailable"
 
         return desc
 
@@ -620,6 +632,9 @@ class mkdepthcharge(
     )
     def set_init_size(self, init_size=None):
         """Set init_size boot param for safe decompression."""
+        # Process input files first
+        self.input_files
+
         if init_size is None:
             return (
                 self.image_format == "zimage"
@@ -721,7 +736,7 @@ class mkdepthcharge(
 
         # Try cmdlines from UKI if given
         if len(cmd) == 0:
-            cmd = self.files["cmdline"]
+            cmd = self.input_files["cmdline"]
 
         # If the cmdline is empty vbutil_kernel returns an error. We can use
         # "--" instead of putting a newline or a space into the cmdline.
@@ -758,6 +773,9 @@ class mkdepthcharge(
     @Argument("--bootloader", nargs=1)
     def bootloader(self, file_=None):
         """Bootloader stub binary to use."""
+        # Process input files first
+        self.input_files
+
         if file_ is not None:
             file_ = Path(file_).resolve()
 
@@ -825,6 +843,9 @@ class mkdepthcharge(
         )
 
     def __call__(self):
+        # Process input files first
+        self.input_files
+
         vmlinuz = self.vmlinuz
         initramfs = self.initramfs
         bootloader = self.bootloader
@@ -833,20 +854,6 @@ class mkdepthcharge(
 
         if bootloader is not None:
             bootloader = copy(bootloader, tmpdir)
-
-        if not initramfs:
-            initramfs = None
-        elif len(initramfs) == 1:
-            initramfs = initramfs[0]
-        elif len(initramfs) > 1:
-            self.logger.info(
-                "Concatenating initramfs files as a single initramfs."
-            )
-            tmp_initramfs = self._tempfile("merged-initramfs.img")
-            with tmp_initramfs.open('xb') as merge:
-                for img in initramfs:
-                    merge.write(img.read_bytes())
-            initramfs = tmp_initramfs
 
         # Depthcharge on arm64 with FIT supports these two compressions.
         if self.compress == "lz4":
