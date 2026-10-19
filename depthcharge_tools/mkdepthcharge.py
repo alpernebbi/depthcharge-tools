@@ -200,13 +200,15 @@ class mkdepthcharge(
             # MS-DOS binaries
             elif ftype == "mz":
                 raise ValueError(
-                    "Depthcharge cannot boot DOS MZ binaries."
+                    "Depthcharge cannot boot DOS MZ executable '{}'."
+                    .format(f)
                 )
 
             # EFI binaries
             elif ftype.startswith("efi-"):
                 raise ValueError(
-                    "Depthcharge cannot boot EFI binaries."
+                    "Depthcharge cannot boot EFI executable '{}'."
+                    .format(f)
                 )
 
             # UKI addons containing no kernel, but initramfs, dtb, etc.
@@ -285,46 +287,46 @@ class mkdepthcharge(
 
             elif hint == "vmlinuz":
                 self.logger.info(
-                    "Using file '{}' as a vmlinuz."
-                    .format(f)
+                    "Using file '{}' (of type '{}') as a vmlinuz."
+                    .format(f, ftype)
                 )
                 vmlinuz.append(decomp)
 
             elif hint == "initramfs":
                 self.logger.info(
-                    "Using file '{}' as an initramfs."
-                    .format(f)
+                    "Using file '{}' (of type '{}') as an initramfs."
+                    .format(f, ftype)
                 )
                 # Keep initramfs compressed
                 initramfs.append(f)
 
             elif hint == "dtb":
                 self.logger.info(
-                    "Using file '{}' as a device-tree blob."
-                    .format(f)
+                    "Using file '{}' (of type '{}') as a device-tree blob."
+                    .format(f, ftype)
                 )
                 dtbs.append(decomp)
 
             # Failed to detect, assume in the order in usage string
             elif len(vmlinuz) == 0:
                 self.logger.info(
-                    "Assuming file '{}' is a vmlinuz."
-                    .format(f)
+                    "Assuming file '{}' (of type '{}') is a vmlinuz."
+                    .format(f, ftype)
                 )
                 vmlinuz.append(decomp)
 
             elif len(initramfs) == 0:
                 self.logger.info(
-                    "Assuming file '{}' is an initramfs."
-                    .format(f)
+                    "Assuming file '{}' (of type '{}') is an initramfs."
+                    .format(f, ftype)
                 )
                 # Keep initramfs compressed
                 initramfs.append(f)
 
             else:
                 self.logger.info(
-                    "Assuming file '{}' is a device-tree blob."
-                    .format(f)
+                    "Assuming file '{}' (of type '{}') is a device-tree blob."
+                    .format(f, ftype)
                 )
                 dtbs.append(decomp)
 
