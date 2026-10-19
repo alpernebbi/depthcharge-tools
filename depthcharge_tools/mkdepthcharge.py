@@ -166,8 +166,29 @@ class mkdepthcharge(
             decomp = self._decompress(f)
             ftype = guess_filetype(decomp)
 
+            if ftype == "error":
+                self.logger.warning(
+                    "Cannot read file '{}', skipping."
+                    .format(f)
+                )
+                continue
+
+            elif ftype == "empty":
+                self.logger.warning(
+                    "Cannot use empty file '{}', skipping."
+                    .format(f)
+                )
+                continue
+
+            elif ftype in ("blockdev", "chardev", "mount", "directory"):
+                self.logger.warning(
+                    "Cannot use non-file '{}' (of type '{}'), skipping."
+                    .format(f, ftype)
+                )
+                continue
+
             # Linux files
-            if ftype in ("linux-x86", "linux-arm64", "linux-arm"):
+            elif ftype in ("linux-x86", "linux-arm64", "linux-arm"):
                 self.logger.info(
                     "File '{}' identified as a vmlinuz."
                     .format(f)
@@ -199,6 +220,19 @@ class mkdepthcharge(
                     .format(f)
                 )
 
+            # Unknown architecture
+            elif ftype in ("pe", "efi", "efi-driver"):
+                raise ValueError(
+                    "Cannot support executable '{}' of unknown architecture"
+                    .format(f)
+                )
+
+            # EFI drivers
+            elif ftype.startswith("efi-driver-"):
+                raise ValueError(
+                    "Depthcharge cannot make use of EFI driver '{}'."
+                    .format(f)
+                )
             # EFI binaries
             elif ftype.startswith("efi-"):
                 raise ValueError(
