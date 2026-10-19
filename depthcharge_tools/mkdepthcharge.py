@@ -177,6 +177,11 @@ class mkdepthcharge(
                     "File '{}' identified as a vmlinuz."
                     .format(f)
                 )
+                if hint not in ("vmlinuz", "unknown"):
+                    raise ValueError(
+                        "Cannot use '{}' (of type '{}') as a {} file."
+                        .format(f, ftype, hint)
+                    )
                 vmlinuz.append(decomp)
 
             # Portable Executable and ELF files
@@ -185,6 +190,11 @@ class mkdepthcharge(
                     "File '{}' identified as an executable."
                     .format(f)
                 )
+                if hint not in ("vmlinuz", "unknown"):
+                    raise ValueError(
+                        "Cannot use '{}' (of type '{}') as a {} file."
+                        .format(f, ftype, hint)
+                    )
                 vmlinuz.append(decomp)
 
             # MS-DOS binaries
@@ -205,6 +215,11 @@ class mkdepthcharge(
                     "File '{}' identified as an UKI PE addon."
                     .format(f)
                 )
+                if hint == "vmlinuz":
+                    raise ValueError(
+                        "Cannot use '{}' (of type '{}') as a vmlinuz file."
+                        .format(f, ftype)
+                    )
                 parts = self._unukify(decomp)
                 initramfs.extend(parts["initrd"])
                 dtbs.extend(parts["dtbauto"])
@@ -221,6 +236,11 @@ class mkdepthcharge(
                     "File '{}' identified as an unified kernel image."
                     .format(f)
                 )
+                if hint not in ("vmlinuz", "unknown"):
+                    raise ValueError(
+                        "Cannot use '{}' (of type '{}') as a {} file."
+                        .format(f, ftype, hint)
+                    )
                 parts = self._unukify(decomp)
                 vmlinuz.append(parts["linux"])
                 initramfs.extend(parts["initrd"])
@@ -238,6 +258,11 @@ class mkdepthcharge(
                     "File '{}' identified as an initramfs."
                     .format(f)
                 )
+                if hint not in ("initramfs", "unknown"):
+                    raise ValueError(
+                        "Cannot use '{}' (of type '{}') as a {} file."
+                        .format(f, ftype, hint)
+                    )
                 # Keep initramfs compressed
                 initramfs.append(f)
 
@@ -251,6 +276,11 @@ class mkdepthcharge(
                     "File '{}' identified as a device-tree blob."
                     .format(f)
                 )
+                if hint not in ("dtb", "unknown"):
+                    raise ValueError(
+                        "Cannot use '{}' (of type '{}') as a {} file."
+                        .format(f, ftype, hint)
+                    )
                 dtbs.append(decomp)
 
             elif hint == "vmlinuz":
