@@ -244,6 +244,12 @@ class mkdepthcharge(
                 "vmlinuz argument is required."
             )
 
+        elif len(files) == 1:
+            self.logger.info(
+                "Using file '{}' as a vmlinuz."
+                .format(files[0])
+            )
+
         elif len(files) > 1:
             raise ValueError(
                 "Can't build with multiple kernels"
