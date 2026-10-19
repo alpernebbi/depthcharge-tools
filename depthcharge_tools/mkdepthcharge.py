@@ -27,6 +27,7 @@ from depthcharge_tools.utils.pathlib import (
     copy,
     decompress,
     guess_filetype,
+    unukify,
 )
 from depthcharge_tools.utils.platform import (
     Architecture,
@@ -100,6 +101,39 @@ class mkdepthcharge(
 
         return decomp or f
 
+    # Split Unified Kernel Image into files we can use as arguments
+    def _unukify(self, uki):
+        parts = unukify(uki)
+        if not parts:
+            return {}
+
+        if parts["linux"] is not None:
+            linux = self._tempfile("uki-linux")
+            linux.write_bytes(parts["linux"])
+            parts["linux"] = linux
+
+        for idx, data in enumerate(parts["initrd"]):
+            initrd = self._tempfile("uki-initrd.img")
+            initrd.write_bytes(data)
+            parts["initrd"][idx] = initrd
+
+        if parts["dtb"] is not None:
+            linux = self._tempfile("uki-default.dtb")
+            linux.write_bytes(parts["dtb"])
+            parts["dtb"] = linux
+
+        for idx, data in enumerate(parts["dtbauto"]):
+            initrd = self._tempfile("uki-auto.dtb")
+            initrd.write_bytes(data)
+            parts["dtbauto"][idx] = initrd
+
+        for idx, data in enumerate(parts["ucode"]):
+            initrd = self._tempfile("uki-ucode.img")
+            initrd.write_bytes(data)
+            parts["ucode"][idx] = initrd
+
+        return parts
+
     # Copy inputs to tmpdir because mkimage wants modifiable files.
     def _copy(self, f):
         if self.tmpdir not in f.parents:
@@ -119,6 +153,8 @@ class mkdepthcharge(
         vmlinuz = []
         initramfs = []
         dtbs = []
+        cmdline = []
+        uname = []
 
         files = [Path(f).resolve() for f in files]
 
@@ -161,9 +197,15 @@ class mkdepthcharge(
                     "File '{}' identified as an UKI PE addon."
                     .format(f)
                 )
-                raise NotImplementedError(
-                    "Support for UKI addons are not implemented."
-                )
+                parts = self._unukify(decomp)
+                initramfs.extend(parts["initrd"])
+                dtbs.extend(parts["dtbauto"])
+                if parts["dtb"]:
+                    dtbs.insert(0, parts["dtb"])
+                for img in parts["ucode"]:
+                    initramfs.insert(0, img)
+                cmdline.extend(parts["cmdline"])
+                uname.append(parts["uname"])
 
             # UKI binaries containing kernel, initramfs, dtb, etc.
             elif ftype.startswith("uki-"):
@@ -171,9 +213,16 @@ class mkdepthcharge(
                     "File '{}' identified as an unified kernel image."
                     .format(f)
                 )
-                raise NotImplementedError(
-                    "Support for UKI executables are not implemented."
-                )
+                parts = self._unukify(decomp)
+                vmlinuz.append(parts["linux"])
+                initramfs.extend(parts["initrd"])
+                dtbs.extend(parts["dtbauto"])
+                if parts["dtb"]:
+                    dtbs.insert(0, parts["dtb"])
+                for img in parts["ucode"]:
+                    initramfs.insert(0, img)
+                cmdline.extend(parts["cmdline"])
+                uname.append(parts["uname"])
 
             # Cpio files
             elif ftype == "cpio":
@@ -219,10 +268,20 @@ class mkdepthcharge(
                 )
                 dtbs.append(decomp)
 
+        unames = set(uname)
+        if len(unames) > 1:
+            raise ValueError(
+                "Given UKI files have different unames: {}"
+                .format(uname)
+            )
+        uname = unames.pop() if unames else None
+
         return {
             "vmlinuz": vmlinuz,
             "initramfs": initramfs,
             "dtbs": dtbs,
+            "cmdline": cmdline,
+            "uname": uname,
         }
 
     @input_files.add
@@ -488,7 +547,7 @@ class mkdepthcharge(
         # description is left blank. Other images get "unavailable"
         # as their description, so it looks better if we match that.
         if desc is None and self.image_format == "fit":
-            desc = "unavailable"
+            desc = self.files["uname"] or "unavailable"
 
         return desc
 
@@ -637,6 +696,10 @@ class mkdepthcharge(
     @Argument("-c", "--cmdline", append=True, nargs="+")
     def cmdline(self, *cmd):
         """Command-line parameters for the kernel."""
+
+        # Try cmdlines from UKI if given
+        if len(cmd) == 0:
+            cmd = self.files["cmdline"]
 
         # If the cmdline is empty vbutil_kernel returns an error. We can use
         # "--" instead of putting a newline or a space into the cmdline.
