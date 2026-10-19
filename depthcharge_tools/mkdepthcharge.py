@@ -524,6 +524,10 @@ class mkdepthcharge(
                 arch = Architecture("arm64")
             elif ftype.endswith("-arm"):
                 arch = Architecture("arm")
+            else:
+                raise ValueError(
+                    "Can't build images without an architecture specified."
+                )
 
             self.logger.info(
                 "Assuming CPU architecture '{}' from vmlinuz file."
