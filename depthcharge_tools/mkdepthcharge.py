@@ -150,6 +150,7 @@ class mkdepthcharge(
         dtbs = []
         cmdline = []
         uname = []
+        osname = None
 
         vmz = self.vmlinuz
         vmz = [vmz] if vmz else []
@@ -260,6 +261,8 @@ class mkdepthcharge(
                     initramfs.insert(0, img)
                 cmdline.extend(parts["cmdline"])
                 uname.append(parts["uname"])
+                if parts["osrel"]:
+                    osname = parts["osrel"].get("NAME", osname)
 
             # UKI binaries containing kernel, initramfs, dtb, etc.
             elif ftype.startswith("uki-"):
@@ -282,6 +285,8 @@ class mkdepthcharge(
                     initramfs.insert(0, img)
                 cmdline.extend(parts["cmdline"])
                 uname.append(parts["uname"])
+                if parts["osrel"]:
+                    osname = parts["osrel"].get("NAME", osname)
 
             # Cpio files
             elif ftype == "cpio":
@@ -402,12 +407,16 @@ class mkdepthcharge(
         self.initramfs = initramfs
         self.dtbs = dtbs
 
+        if osname:
+            osname = osname.strip('"')
+
         return {
             "vmlinuz": vmlinuz,
             "initramfs": initramfs,
             "dtbs": dtbs,
             "cmdline": cmdline,
             "uname": uname,
+            "osname": osname,
         }
 
     @input_files.add
@@ -619,7 +628,16 @@ class mkdepthcharge(
         # description is left blank. Other images get "unavailable"
         # as their description, so it looks better if we match that.
         if desc is None and self.image_format == "fit":
-            desc = self.input_files["uname"] or "unavailable"
+            osname = self.input_files["osname"]
+            uname = self.input_files["uname"]
+            if uname and osname:
+                desc = f"{osname}, with Linux {uname}"
+            elif osname:
+                desc = osname
+            elif uname:
+                desc = f"Linux {uname}"
+            else:
+                desc = "unavailable"
 
         return desc
 
