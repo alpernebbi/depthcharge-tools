@@ -253,16 +253,54 @@ class mkdepthcharge(
                         .format(f, ftype)
                     )
                 parts = self._unukify(decomp)
-                initramfs.extend(parts["initrd"])
-                dtbs.extend(parts["dtbauto"])
+
+                if parts["initrd"]:
+                    initramfs.extend(parts["initrd"])
+                    self.logger.info(
+                        "Using {} initramfs images from UKI addon."
+                        .format(len(parts["initrd"]))
+                    )
+
+                if parts["dtbauto"]:
+                    dtbs.extend(parts["dtbauto"])
+                    self.logger.info(
+                        "Using {} auto dtbs from UKI addon: '{}'"
+                        .format(len(parts["dtbauto"]))
+                    )
+
                 if parts["dtb"]:
                     dtbs.insert(0, parts["dtb"])
-                for img in parts["ucode"]:
-                    initramfs.insert(0, img)
-                cmdline.extend(parts["cmdline"])
-                uname.append(parts["uname"])
+                    self.logger.info("Using fixed dtb from UKI addon.")
+
+                if parts["ucode"]:
+                    for img in parts["ucode"]:
+                        initramfs.insert(0, img)
+                    self.logger.info(
+                        "Using {} microcode images from UKI addon."
+                        .format(len(parts["ucode"]))
+                    )
+
+                if parts["cmdline"]:
+                    cmdline.extend(parts["cmdline"])
+                    self.logger.info(
+                        "Can use cmdline fragment from UKI addon: '{}'"
+                        .format(kernel_cmdline_join(parts["cmdline"]))
+                    )
+
+                if parts["uname"]:
+                    uname.append(parts["uname"])
+                    self.logger.info(
+                        "Can use uname string from UKI addon: '{}'"
+                        .format(parts["uname"])
+                    )
+
                 if parts["osrel"]:
                     osname = parts["osrel"].get("NAME", osname)
+                    self.logger.info(
+                        "Can use OS name from UKI addon: '{}'"
+                        .format(osname)
+                    )
+
 
             # UKI binaries containing kernel, initramfs, dtb, etc.
             elif ftype.startswith("uki-"):
@@ -275,18 +313,59 @@ class mkdepthcharge(
                         "Cannot use '{}' (of type '{}') as a {} file."
                         .format(f, ftype, hint)
                     )
+
                 parts = self._unukify(decomp)
-                vmlinuz.append(parts["linux"])
-                initramfs.extend(parts["initrd"])
-                dtbs.extend(parts["dtbauto"])
+
+                if parts["linux"]:
+                    vmlinuz.append(parts["linux"])
+                    self.logger.info("Using vmlinuz from UKI.")
+
+                if parts["initrd"]:
+                    initramfs.extend(parts["initrd"])
+                    self.logger.info(
+                        "Using {} initramfs images from UKI."
+                        .format(len(parts["initrd"]))
+                    )
+
+                if parts["dtbauto"]:
+                    dtbs.extend(parts["dtbauto"])
+                    self.logger.info(
+                        "Using {} auto-dtbs from UKI."
+                        .format(len(parts["dtbauto"]))
+                    )
+
                 if parts["dtb"]:
                     dtbs.insert(0, parts["dtb"])
-                for img in parts["ucode"]:
-                    initramfs.insert(0, img)
-                cmdline.extend(parts["cmdline"])
-                uname.append(parts["uname"])
+                    self.logger.info("Using fixed dtb from UKI.")
+
+                if parts["ucode"]:
+                    for img in parts["ucode"]:
+                        initramfs.insert(0, img)
+                    self.logger.info(
+                        "Using {} microcode images from UKI."
+                        .format(len(parts["ucode"]))
+                    )
+
+                if parts["cmdline"]:
+                    cmdline.extend(parts["cmdline"])
+                    self.logger.info(
+                        "Can use cmdline from UKI: '{}'"
+                        .format(kernel_cmdline_join(parts["cmdline"]))
+                    )
+
+                if parts["uname"]:
+                    uname.append(parts["uname"])
+                    self.logger.info(
+                        "Can use uname string from UKI: '{}'"
+                        .format(parts["uname"])
+                    )
+
                 if parts["osrel"]:
                     osname = parts["osrel"].get("NAME", osname)
+                    self.logger.info(
+                        "Can use OS name from UKI: '{}'"
+                        .format(osname)
+                    )
 
             # Cpio files
             elif ftype == "cpio":
