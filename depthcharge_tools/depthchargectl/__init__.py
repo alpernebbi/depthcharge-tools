@@ -631,6 +631,34 @@ class depthchargectl(
             )
             return board
 
+        prefix = re.match(r"^([A-Z0-9]+)[^A-Z0-9]", hwid or "")
+        if prefix:
+            prefix = prefix.group(1).lower()
+        def prefix_match(item):
+            sectname, board = item
+            return prefix == board.codename
+
+        if prefix is not None:
+            matches = tuple(filter(prefix_match, boards.items()))
+        else:
+            matches = ()
+
+        if matches:
+            sectname, board = matches[0]
+
+            if is_cros_libreboot():
+                libreboot_name = "{}/libreboot".format(sectname)
+                libreboot_board = boards.get(libreboot_name, None)
+                if libreboot_board:
+                    sectname = libreboot_name
+                    board = libreboot_board
+
+            self.logger.info(
+                "Detected board '{}' ('{}') by HWID prefix."
+                .format(board.name, board.codename)
+            )
+            return board
+
         compatibles = dt_compatibles()
         def compat_preference(item):
             if item is None:
