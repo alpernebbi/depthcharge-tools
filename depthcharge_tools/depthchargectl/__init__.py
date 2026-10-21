@@ -602,6 +602,9 @@ class depthchargectl(
 
             return board
 
+        match = None
+        method = None
+
         hwid = cros_hwid()
         def hwid_match(item):
             sectname, board = item
@@ -612,24 +615,9 @@ class depthchargectl(
 
         if hwid is not None:
             matches = tuple(filter(hwid_match, boards.items()))
-        else:
-            matches = ()
-
-        if matches:
-            sectname, board = matches[0]
-
-            if is_cros_libreboot():
-                libreboot_name = "{}/libreboot".format(sectname)
-                libreboot_board = boards.get(libreboot_name, None)
-                if libreboot_board:
-                    sectname = libreboot_name
-                    board = libreboot_board
-
-            self.logger.info(
-                "Detected board '{}' ('{}') by HWID."
-                .format(board.name, board.codename)
-            )
-            return board
+            if matches:
+                match = matches[0]
+                method = "HWID"
 
         prefix = re.match(r"^([A-Z0-9]+)[^A-Z0-9]", hwid or "")
         if prefix:
@@ -638,26 +626,11 @@ class depthchargectl(
             sectname, board = item
             return prefix == board.codename
 
-        if prefix is not None:
+        if match is None and prefix is not None:
             matches = tuple(filter(prefix_match, boards.items()))
-        else:
-            matches = ()
-
-        if matches:
-            sectname, board = matches[0]
-
-            if is_cros_libreboot():
-                libreboot_name = "{}/libreboot".format(sectname)
-                libreboot_board = boards.get(libreboot_name, None)
-                if libreboot_board:
-                    sectname = libreboot_name
-                    board = libreboot_board
-
-            self.logger.info(
-                "Detected board '{}' ('{}') by HWID prefix."
-                .format(board.name, board.codename)
-            )
-            return board
+            if matches:
+                match = matches[0]
+                method = "HWID prefix"
 
         compatibles = dt_compatibles()
         def compat_preference(item):
@@ -674,10 +647,9 @@ class depthchargectl(
             else:
                 return (float("inf"), -1)
 
-        if compatibles is not None:
+        if match is None and compatibles is not None:
             match = min((None, *boards.items()), key=compat_preference)
-        else:
-            match = None
+            method = "device-tree compatibles"
 
         if match is not None:
             sectname, board = match
@@ -690,8 +662,8 @@ class depthchargectl(
                     board = libreboot_board
 
             self.logger.info(
-                "Detected board '{}' ('{}') by device-tree compatibles."
-                .format(board.name, board.codename)
+                "Detected board '{}' ('{}') by {}."
+                .format(board.name, board.codename, method)
             )
             return board
 
