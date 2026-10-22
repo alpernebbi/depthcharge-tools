@@ -605,11 +605,17 @@ class depthchargectl(
         match_hwid = None
         match_pre = None
         match_dt = None
+        match_dtsuf = None
 
         hwid = cros_hwid() or ""
         prefix = re.match(r"^([A-Z0-9]+)[^A-Z0-9]", hwid) if hwid else None
         prefix = prefix.group(1).lower() if prefix else None
         compatibles = dt_compatibles() or []
+
+        dtsuf = None
+        for c in compatibles:
+            m = re.match(r"google,([a-z0-9]+)(-rev\d+)?(-sku\d+)?", c)
+            dtsuf = m.group(1).lower() if m else dtsuf
 
         def compat_preference(item):
             if item is None:
@@ -640,10 +646,15 @@ class depthchargectl(
             if compatibles and b.dt_compatible:
                 match_dt = min(match_dt, (s, b), key=compat_preference)
 
+            if dtsuf and b.codename == dtsuf:
+                if match_dtsuf is None:
+                    match_dtsuf = (s, b)
+
         for match, method in (
             (match_hwid, "HWID"),
             (match_pre, "HWID prefix"),
             (match_dt, "device-tree compatibles"),
+            (match_dtsuf, "device-tree compatible suffix"),
         ):
             if match is None:
                 continue
