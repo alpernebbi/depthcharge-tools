@@ -602,37 +602,15 @@ class depthchargectl(
 
             return board
 
-        match = None
-        method = None
+        match_hwid = None
+        match_pre = None
+        match_dt = None
 
-        hwid = cros_hwid()
-        def hwid_match(item):
-            sectname, board = item
-            try:
-                return bool(re.match(board.hwid_match, hwid))
-            except:
-                return False
+        hwid = cros_hwid() or ""
+        prefix = re.match(r"^([A-Z0-9]+)[^A-Z0-9]", hwid) if hwid else None
+        prefix = prefix.group(1).lower() if prefix else None
+        compatibles = dt_compatibles() or []
 
-        if hwid is not None:
-            matches = tuple(filter(hwid_match, boards.items()))
-            if matches:
-                match = matches[0]
-                method = "HWID"
-
-        prefix = re.match(r"^([A-Z0-9]+)[^A-Z0-9]", hwid or "")
-        if prefix:
-            prefix = prefix.group(1).lower()
-        def prefix_match(item):
-            sectname, board = item
-            return prefix == board.codename
-
-        if match is None and prefix is not None:
-            matches = tuple(filter(prefix_match, boards.items()))
-            if matches:
-                match = matches[0]
-                method = "HWID prefix"
-
-        compatibles = dt_compatibles()
         def compat_preference(item):
             if item is None:
                 return (len(compatibles), 0)
@@ -647,11 +625,25 @@ class depthchargectl(
             else:
                 return (float("inf"), -1)
 
-        if match is None and compatibles is not None:
-            match = min((None, *boards.items()), key=compat_preference)
-            method = "device-tree compatibles"
+        for s, b in boards.items():
+            if hwid and b.hwid_match and b.hwid_match.match(hwid):
+                match_hwid = (s, b)
+                break
 
-        if match is not None:
+            if prefix and b.codename == prefix:
+                if match_pre is None:
+                    match_pre = (s, b)
+
+            if compatibles and b.dt_compatible:
+                match_dt = min(match_dt, (s, b), key=compat_preference)
+
+        for match, method in (
+            (match_hwid, "HWID"),
+            (match_pre, "HWID prefix"),
+            (match_dt, "device-tree compatibles"),
+        ):
+            if match is None:
+                continue
             sectname, board = match
 
             if is_cros_libreboot():
