@@ -619,6 +619,9 @@ class depthchargectl(
             if board.dt_compatible is None:
                 return (float("inf"), 0)
 
+            if board.dt_compatible.pattern == "google,.*":
+                return (float("inf"), 1)
+
             for i, c in enumerate(compatibles):
                 if board.dt_compatible.fullmatch(c):
                     return (i, -len(sectname.split("/")))
