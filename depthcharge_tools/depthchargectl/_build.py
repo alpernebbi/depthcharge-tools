@@ -36,6 +36,9 @@ from depthcharge_tools.utils.platform import (
     installed_kernels,
     root_requires_initramfs,
 )
+from depthcharge_tools.utils.string import (
+    rev_sku_regex
+)
 from depthcharge_tools.utils.subprocess import (
     fdtget,
 )
@@ -258,10 +261,13 @@ class depthchargectl_build(
             if self.board.dt_compatible.pattern == "google,.*":
                 dt_patterns = [self.board.dt_compatible]
             else:
-                dt_patterns = sorted(set(
-                    board.dt_compatible
-                    for board in (self.board, *self.board.descendants)
-                ), key=lambda regex: regex.pattern)
+                dt_patterns = set()
+                for b in (self.board, *self.board.descendants):
+                    dt_patterns.add(b.dt_compatible)
+                    if "chipset" in b.codename or "generic" in b.codename:
+                        continue
+                    dt_patterns.add(rev_sku_regex(f"google,{b.codename}"))
+                dt_patterns = sorted(dt_patterns, key=lambda r: r.pattern)
 
             for regex in dt_patterns:
                 self.logger.info(
