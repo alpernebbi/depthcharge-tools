@@ -291,8 +291,8 @@ class depthchargectl_build(
 
             if len(files) == 0:
                 raise ValueError(
-                    "No dtb file compatible with pattern '{}' found in '{}'."
-                    .format(self.board.dt_compatible.pattern, self.fdtdir)
+                    "No dtb file compatible with board found in '{}'."
+                    .format(self.fdtdir)
                 )
 
         else:
