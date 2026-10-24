@@ -699,6 +699,27 @@ class mkdepthcharge(
         return type_
 
     @fit_options.add
+    @Argument("--compress-dtbs", nargs=1)
+    def compress_dtbs(self, type_=None):
+        """Compress dtb files before packing."""
+
+        if type_ is None and self.image_format == "fit":
+            type_ = "none"
+
+        if type_ not in (None, "none", "lz4", "lzma"):
+            raise ValueError(
+                "DTB compression type '{}' is not supported."
+                .format(type_)
+            )
+
+        if self.patch_dtbs and type_ not in (None, "none"):
+            raise NotImplementedError(
+                "DTB patching and compression are mutually exclusive"
+            )
+
+        return type_
+
+    @fit_options.add
     @Argument("-n", "--name", nargs=1)
     def name(self, desc=None):
         """Description of vmlinuz to put in the FIT."""
@@ -1039,6 +1060,29 @@ class mkdepthcharge(
 
             dtb_args = []
             for dtb in dtbs:
+                if self.compress_dtbs in (None, "none"):
+                    pass
+                elif self.compress_dtbs == "gzip":
+                    tmp = self._tempfile(f"{dtb.name}.gz")
+                    self.logger.info(
+                        "Compressing '{}' with gzip."
+                        .format(dtb.name)
+                    )
+                    dtb = gzip.compress(dtb, tmp)
+                elif self.compress_dtbs == "lz4":
+                    tmp = self._tempfile(f"{dtb.name}.lz4")
+                    self.logger.info(
+                        "Compressing '{}' with lz4."
+                        .format(dtb.name)
+                    )
+                    dtb = lz4.compress(dtb, tmp)
+                elif self.compress_dtbs == "lzma":
+                    tmp = self._tempfile(f"{dtb.name}.lzma")
+                    self.logger.info(
+                        "Compressing '{}' with lzma."
+                        .format(dtb.name)
+                    )
+                    dtb = lzma.compress(dtb, tmp)
                 dtb_args += ["-b", dtb]
 
             # The subimage nodes can be <type>@1 or <type>-1.
@@ -1225,6 +1269,42 @@ class mkdepthcharge(
                     "Patching FIT to remove default configuration."
                 )
                 fdtput.delete(fit_image, "/configurations", "default")
+
+            # Later ARM64 boards support compressing dtb files, but we
+            # must extract their compatibles strings into config nodes.
+            if self.compress_dtbs not in (None, "none"):
+                compats = {}
+                for dtb in dtbs:
+                    compat = fdtget.get(dtb, "/", "compatible")
+                    compats.update({
+                        dtb.name: compat,
+                        f"{dtb.name}.gz": compat,
+                        f"{dtb.name}.lz4": compat,
+                        f"{dtb.name}.lzma": compat,
+                        dtb.stem: compat,
+                        f"{dtb.stem}.gz": compat,
+                        f"{dtb.stem}.lz4": compat,
+                        f"{dtb.stem}.lzma": compat,
+                    })
+
+                confs = fdtget.subnodes(fit_image, "/configurations")
+                for conf in confs:
+                    node = f"/configurations/{conf}"
+                    desc = fdtget.get(fit_image, node, "description")
+                    compat = compats.get(desc)
+                    if not compat:
+                        compat = compats.get(f"{desc}.dtb")
+                        continue
+                    fdtput.put(fit_image, node, "compatible", compat)
+
+                images = fdtget.subnodes(fit_image, "/images")
+                for img in images:
+                    if img.startswith("fdt-"):
+                        node = f"/images/{img}"
+                        fdtput.put(
+                            fit_image, node,
+                            "compression", self.compress_dtbs,
+                        )
 
             if (
                 initramfs is not None
