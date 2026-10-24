@@ -40,6 +40,7 @@ from depthcharge_tools.utils.platform import (
     Architecture,
     vboot_keys,
     cros_hwid,
+    cros_fwid,
     dt_compatibles,
     is_cros_boot,
     is_cros_libreboot,
@@ -604,14 +605,19 @@ class depthchargectl(
 
         match_hwid = None
         match_pre = None
+        match_fwsuf = None
         match_dt = None
         match_dtsuf = None
 
         hwid = cros_hwid() or ""
         prefix = re.match(r"^([A-Z0-9]+)[^A-Z0-9]", hwid) if hwid else None
         prefix = prefix.group(1).lower() if prefix else None
-        compatibles = dt_compatibles() or []
 
+        fwid = cros_fwid() or ""
+        fwsuf = re.match(r"^Google_([a-zA-Z0-9]+)(.[0-9]+)*", fwid)
+        fwsuf = fwsuf.group(1).lower() if fwsuf else None
+
+        compatibles = dt_compatibles() or []
         dtsuf = None
         for c in compatibles:
             m = re.match(r"google,([a-z0-9]+)(-rev\d+)?(-sku\d+)?", c)
@@ -643,6 +649,10 @@ class depthchargectl(
                 if match_pre is None:
                     match_pre = (s, b)
 
+            if fwsuf and b.codename == fwsuf:
+                if match_fwsuf is None:
+                    match_fwsuf = (s, b)
+
             if compatibles and b.dt_compatible:
                 match_dt = min(match_dt, (s, b), key=compat_preference)
 
@@ -653,6 +663,7 @@ class depthchargectl(
         for match, method in (
             (match_hwid, "HWID"),
             (match_pre, "HWID prefix"),
+            (match_fwsuf, "firmware version suffix"),
             (match_dt, "device-tree compatibles"),
             (match_dtsuf, "device-tree compatible suffix"),
         ):
