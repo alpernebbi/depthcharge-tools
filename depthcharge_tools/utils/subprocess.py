@@ -106,8 +106,12 @@ class Lz4Runner(ProcessRunner):
     def __init__(self):
         super().__init__("lz4", encoding=None)
 
-    def compress(self, src, dest=None):
-        proc = self("-z", "-9", stdin=src, stdout=dest)
+    def compress(self, src, dest=None, legacy=False):
+        args = ["-z", "-9"]
+        if legacy:
+            args.append("-l")
+
+        proc = self(*args, stdin=src, stdout=dest)
 
         if dest is None:
             return proc.stdout
