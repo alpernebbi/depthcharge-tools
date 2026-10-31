@@ -412,7 +412,7 @@ def installed_kernels(root=None, boot=None):
 
     os_name = os_release(root=root).get("NAME", None)
 
-    return [
+    return sorted(
         KernelEntry(
             release,
             kernel=kernels.get(release, kernels.get(None, None)),
@@ -420,7 +420,7 @@ def installed_kernels(root=None, boot=None):
             fdtdir=fdtdirs.get(release, fdtdirs.get(None, None)),
             os_name=os_name,
         ) for release in releases
-    ]
+    )
 
 
 class KernelEntry:
