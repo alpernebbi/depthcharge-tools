@@ -94,6 +94,9 @@ class depthchargectl_build(
 
         kernel_arches = self.board.arch.kernel_arches
         for k in list(kernels):
+            if k.kernel is None:
+                kernels.remove(k)
+                continue
             if k.arch not in kernel_arches:
                 self.logger.info(
                     "Ignoring kernel '{}' incompatible with board arch."
