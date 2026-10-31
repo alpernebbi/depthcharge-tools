@@ -440,6 +440,9 @@ class KernelEntry:
 
     @property
     def arch(self):
+        if self.kernel is None:
+            return None
+
         kernel = Path(self.kernel)
 
         decomp = decompress(kernel)
