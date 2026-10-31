@@ -413,9 +413,9 @@ def installed_kernels(root=None, boot=None):
     return [
         KernelEntry(
             release,
-            kernel=kernels.get(release, None),
-            initrd=initrds.get(release, None),
-            fdtdir=fdtdirs.get(release, None),
+            kernel=kernels.get(release, kernels.get(None, None)),
+            initrd=initrds.get(release, initrds.get(None, None)),
+            fdtdir=fdtdirs.get(release, fdtdirs.get(None, None)),
             os_name=os_release(root=root).get("NAME", None),
         ) for release in releases
     ]
