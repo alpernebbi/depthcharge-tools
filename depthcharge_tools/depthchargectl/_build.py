@@ -414,8 +414,9 @@ class depthchargectl_build(
 
         # Linux kernel without an initramfs only supports certain
         # types of root parameters, check for them.
-        if self.initrd is None and self.root is not None:
-            if root_requires_initramfs(self.root):
+        microcode = cpu_microcode(self.boot_mountpoint)
+        if self.initrd is None or self.initrd == microcode:
+            if self.root and root_requires_initramfs(self.root):
                 raise ValueError(
                     "An initramfs is required for root '{}'."
                     .format(self.root)
