@@ -193,8 +193,9 @@ class depthchargectl_build(
 
         if not files and self.kernel_version is not None:
             if self.kernel == self.kernel_version.kernel:
-                microcode = cpu_microcode(self.boot_mountpoint)
-                files = [*microcode, self.kernel_version.initrd]
+                files = cpu_microcode(self.boot_mountpoint)
+                if self.kernel_version.initrd is not None:
+                    files.append(self.kernel_version.initrd)
 
         if self.ignore_initramfs:
             for file in files:
