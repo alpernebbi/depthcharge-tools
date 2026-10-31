@@ -410,13 +410,15 @@ def installed_kernels(root=None, boot=None):
         *fdtdirs.keys(),
     ))
 
+    os_name = os_release(root=root).get("NAME", None)
+
     return [
         KernelEntry(
             release,
             kernel=kernels.get(release, kernels.get(None, None)),
             initrd=initrds.get(release, initrds.get(None, None)),
             fdtdir=fdtdirs.get(release, fdtdirs.get(None, None)),
-            os_name=os_release(root=root).get("NAME", None),
+            os_name=os_name,
         ) for release in releases
     ]
 
