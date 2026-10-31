@@ -404,14 +404,20 @@ def installed_kernels(root=None, boot=None):
                 fdtdirs.setdefault(release, fdtdirs[None])
                 del fdtdirs[None]
 
+    releases = set((
+        *kernels.keys(),
+        *initrds.keys(),
+        *fdtdirs.keys(),
+    ))
+
     return [
         KernelEntry(
             release,
-            kernel=kernels[release],
+            kernel=kernels.get(release, None),
             initrd=initrds.get(release, None),
             fdtdir=fdtdirs.get(release, None),
             os_name=os_release(root=root).get("NAME", None),
-        ) for release in kernels.keys()
+        ) for release in releases
     ]
 
 
