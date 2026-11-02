@@ -332,7 +332,6 @@ class mkdepthcharge(
                         .format(osname)
                     )
 
-
             # UKI binaries containing kernel, initramfs, dtb, etc.
             elif ftype.startswith("uki-"):
                 self.logger.info(
