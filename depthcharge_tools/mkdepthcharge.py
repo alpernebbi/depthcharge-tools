@@ -295,7 +295,7 @@ class mkdepthcharge(
                 if parts["dtbauto"]:
                     dtbs.extend(parts["dtbauto"])
                     self.logger.info(
-                        "Using {} auto dtbs from UKI addon: '{}'"
+                        "Using {} auto dtbs from UKI addon."
                         .format(len(parts["dtbauto"]))
                     )
 
