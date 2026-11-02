@@ -221,8 +221,39 @@ class mkdepthcharge(
                     .format(f)
                 )
 
+            # EFI zboot kernels
+            elif ftype.startswith("efi-zboot-"):
+                self.logger.info(
+                    "File '{}' identified as an EFI zboot kernel."
+                    .format(f)
+                )
+
+                data = decomp.read_bytes()
+                zcomp = self._tempfile("zboot-unpack")
+                zoffs = struct.unpack('<L', data[8:12])[0]
+                zsize = struct.unpack('<L', data[12:16])[0]
+                zcomp.write_bytes(data[zoffs:zoffs+zsize])
+                self.logger.info(
+                    "Unpacked EFI zboot kernel '{}' as '{}'."
+                    .format(f, zcomp)
+                )
+
+                zdecomp = self._tempfile("zboot-decomp")
+                zdecomp = decompress(zcomp, zdecomp)
+                if zdecomp is None:
+                    raise ValueError(
+                        "Failed to decompress EFI zboot kernel '{}'."
+                        .format(zcomp)
+                    )
+
+                self.logger.info(
+                    "Using decompressed zboot kernel '{}' as vmlinuz."
+                    .format(zdecomp)
+                )
+                vmlinuz.append(zdecomp)
+
             # Unknown architecture
-            elif ftype in ("pe", "efi", "efi-driver"):
+            elif ftype in ("pe", "efi", "efi-zboot", "efi-driver"):
                 raise ValueError(
                     "Cannot support executable '{}' of unknown architecture"
                     .format(f)
@@ -317,8 +348,43 @@ class mkdepthcharge(
                 parts = self._unukify(decomp)
 
                 if parts["linux"]:
-                    vmlinuz.append(parts["linux"])
-                    self.logger.info("Using vmlinuz from UKI.")
+                    lfile = parts["linux"]
+                    lftype = guess_filetype(lfile)
+
+                    # UKI can probably have EFI zboot as its kernel
+                    if lftype.startswith("efi-zboot-"):
+                        self.logger.info(
+                            "File '{}' identified as an EFI zboot kernel."
+                            .format(lfile)
+                        )
+
+                        ldata = lfile.read_bytes()
+                        zcomp = self._tempfile("uki-zboot-unpack")
+                        zoffs = struct.unpack('<L', ldata[8:12])[0]
+                        zsize = struct.unpack('<L', ldata[12:16])[0]
+                        zcomp.write_bytes(ldata[zoffs:zoffs+zsize])
+                        self.logger.info(
+                            "Unpacked EFI zboot kernel '{}' as '{}'."
+                            .format(lfile, zcomp)
+                        )
+
+                        zdecomp = self._tempfile("uki-zboot-decomp")
+                        zdecomp = decompress(zcomp, zdecomp)
+                        if zdecomp is None:
+                            raise ValueError(
+                                "Failed to decompress EFI zboot kernel '{}'."
+                                .format(zcomp)
+                            )
+
+                        self.logger.info(
+                            "Using decompressed zboot kernel '{}' as vmlinuz."
+                            .format(zdecomp)
+                        )
+                        vmlinuz.append(zdecomp)
+
+                    else:
+                        vmlinuz.append(lfile)
+                        self.logger.info("Using vmlinuz from UKI.")
 
                 if parts["initrd"]:
                     initramfs.extend(parts["initrd"])
