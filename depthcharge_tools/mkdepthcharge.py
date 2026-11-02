@@ -1352,6 +1352,10 @@ class mkdepthcharge(
                         f"{dtb.stem}.lzma": compat,
                     })
 
+                self.logger.info(
+                    "Patching FIT to add compatibles to configurations."
+                )
+
                 confs = fdtget.subnodes(fit_image, "/configurations")
                 for conf in confs:
                     node = f"/configurations/{conf}"
@@ -1361,6 +1365,10 @@ class mkdepthcharge(
                         compat = compats.get(f"{desc}.dtb")
                         continue
                     fdtput.put(fit_image, node, "compatible", compat)
+
+                self.logger.info(
+                    "Patching FIT to mark compression for dtb images."
+                )
 
                 images = fdtget.subnodes(fit_image, "/images")
                 for img in images:
