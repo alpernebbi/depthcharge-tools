@@ -184,6 +184,10 @@ def guess_filetype(path):
             ):
                 ftype = "uki-addon"
 
+        if ftype == "efi":
+            if head[4:8] == b"zimg":
+                ftype = "efi-zboot"
+
         return f"{ftype}-{suffix}" if suffix else ftype
 
     for magic, filetype in {
