@@ -604,13 +604,6 @@ class depthchargectl(
 
             return board
 
-        match_hwid = None
-        match_pre = None
-        match_fwsuf = None
-        match_bcbl = None
-        match_dt = None
-        match_dtsuf = None
-
         hwid = cros_hwid() or ""
         prefix = re.match(r"^([A-Z0-9]+)[^A-Z0-9]", hwid) if hwid else None
         prefix = prefix.group(1).lower() if prefix else None
@@ -649,41 +642,42 @@ class depthchargectl(
             else:
                 return (float("inf"), -1)
 
+        match = {}
         for s, b in boards.items():
             if hwid and b.hwid_match and b.hwid_match.match(hwid):
-                match_hwid = (s, b)
+                match["hwid"] = (s, b)
                 break
 
             if prefix and b.codename == prefix:
-                if match_pre is None:
-                    match_pre = (s, b)
+                match.setdefault("pre", (s, b))
 
             if fwsuf and b.codename == fwsuf:
-                if match_fwsuf is None:
-                    match_fwsuf = (s, b)
+                match.setdefault("fwsuf", (s, b))
 
             if bcbl and b.codename == bcbl:
-                if match_bcbl is None:
-                    match_bcbl = (s, b)
+                match.setdefault("bcbl", (s, b))
 
             if compatibles and b.dt_compatible:
-                match_dt = min(match_dt, (s, b), key=compat_preference)
+                prev = match.get("dt", None)
+                match["dt"] = min(prev, (s, b), key=compat_preference)
 
             if dtsuf and b.codename == dtsuf:
-                if match_dtsuf is None:
-                    match_dtsuf = (s, b)
+                match.setdefault("dtsuf", (s, b))
 
-        for match, method in (
-            (match_hwid, "HWID"),
-            (match_pre, "HWID prefix"),
-            (match_fwsuf, "firmware version suffix"),
-            (match_bcbl, "bootconfig bootloader info"),
-            (match_dt, "device-tree compatibles"),
-            (match_dtsuf, "device-tree compatible suffix"),
-        ):
-            if match is None:
+        methods = {
+            "hwid": "HWID",
+            "pre": "HWID prefix",
+            "fwsuf": "firmware version suffix",
+            "bcbl": "bootconfig bootloader info",
+            "dt": "device-tree compatibles",
+            "dtsuf": "device-tree compatible suffix",
+        }
+
+        for m, method in methods.items():
+            try:
+                sectname, board = match.get(m)
+            except:
                 continue
-            sectname, board = match
 
             if is_cros_libreboot():
                 libreboot_name = "{}/libreboot".format(sectname)
