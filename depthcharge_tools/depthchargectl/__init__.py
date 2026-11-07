@@ -46,6 +46,7 @@ from depthcharge_tools.utils.platform import (
     is_cros_libreboot,
     kernel_cmdline,
     proc_cmdline,
+    proc_bootconfig,
 )
 from depthcharge_tools.utils.string import (
     kernel_cmdline_join,
@@ -606,6 +607,7 @@ class depthchargectl(
         match_hwid = None
         match_pre = None
         match_fwsuf = None
+        match_bcbl = None
         match_dt = None
         match_dtsuf = None
 
@@ -614,8 +616,15 @@ class depthchargectl(
         prefix = prefix.group(1).lower() if prefix else None
 
         fwid = cros_fwid() or ""
-        fwsuf = re.match(r"^Google_([a-zA-Z0-9]+)(.[0-9]+)*", fwid)
+        fwpat = r"Google_([a-zA-Z0-9]+)(.[0-9]+)*"
+        fwsuf = re.match(fwpat, fwid)
         fwsuf = fwsuf.group(1).lower() if fwsuf else None
+
+        bootconfig = proc_bootconfig()
+        bcbl = bootconfig.get("androidboot.bootloader", "")
+        blpat = f"depthcharge-{fwpat}(/.*)?"
+        bcbl = re.match(blpat, bcbl)
+        bcbl = bcbl.group(1).lower() if bcbl else None
 
         compatibles = dt_compatibles() or []
         dtsuf = None
@@ -653,6 +662,10 @@ class depthchargectl(
                 if match_fwsuf is None:
                     match_fwsuf = (s, b)
 
+            if bcbl and b.codename == bcbl:
+                if match_bcbl is None:
+                    match_bcbl = (s, b)
+
             if compatibles and b.dt_compatible:
                 match_dt = min(match_dt, (s, b), key=compat_preference)
 
@@ -664,6 +677,7 @@ class depthchargectl(
             (match_hwid, "HWID"),
             (match_pre, "HWID prefix"),
             (match_fwsuf, "firmware version suffix"),
+            (match_bcbl, "bootconfig bootloader info"),
             (match_dt, "device-tree compatibles"),
             (match_dtsuf, "device-tree compatible suffix"),
         ):
