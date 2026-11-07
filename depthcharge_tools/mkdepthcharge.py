@@ -147,6 +147,7 @@ class mkdepthcharge(
         """Input files"""
         vmlinuz = []
         initramfs = []
+        ucode = []
         dtbs = []
         cmdline = []
         uname = []
@@ -305,7 +306,7 @@ class mkdepthcharge(
 
                 if parts["ucode"]:
                     for img in parts["ucode"]:
-                        initramfs.insert(0, img)
+                        ucode.append(img)
                     self.logger.info(
                         "Using {} microcode images from UKI addon."
                         .format(len(parts["ucode"]))
@@ -405,7 +406,7 @@ class mkdepthcharge(
 
                 if parts["ucode"]:
                     for img in parts["ucode"]:
-                        initramfs.insert(0, img)
+                        ucode.append(img)
                     self.logger.info(
                         "Using {} microcode images from UKI."
                         .format(len(parts["ucode"]))
@@ -434,21 +435,31 @@ class mkdepthcharge(
 
             # Cpio files
             elif ftype == "cpio":
-                self.logger.info(
-                    "File '{}' identified as an initramfs."
-                    .format(f)
-                )
-                if hint not in ("initramfs", "unknown"):
+                if hint not in ("initramfs", "ucode", "unknown"):
                     raise ValueError(
                         "Cannot use '{}' (of type '{}') as a {} file."
                         .format(f, ftype, hint)
                     )
-                # Keep initramfs compressed
-                initramfs.append(f)
 
-                # Avoid name collision when copying initramfs to tmpdir
-                if decomp != f:
-                    decomp.unlink()
+                if hint == "ucode":
+                    self.logger.info(
+                        "File '{}' identified as CPU microcode."
+                        .format(f)
+                    )
+                    # Microcode is uncompressed
+                    ucode.append(decomp)
+
+                else:
+                    self.logger.info(
+                        "File '{}' identified as an initramfs."
+                        .format(f)
+                    )
+                    # Keep initramfs compressed
+                    initramfs.append(f)
+
+                    # Avoid name collision when copying initramfs to tmpdir
+                    if decomp != f:
+                        decomp.unlink()
 
             # Device-tree blobs
             elif ftype == "dtb":
@@ -477,6 +488,14 @@ class mkdepthcharge(
                 )
                 # Keep initramfs compressed
                 initramfs.append(f)
+
+            elif hint == "ucode":
+                self.logger.info(
+                    "Using file '{}' (of type '{}') as CPU microcode."
+                    .format(f, ftype)
+                )
+                # Microcode is placed at start, uncompressed
+                ucode.append(f)
 
             elif hint == "dtb":
                 self.logger.info(
@@ -532,16 +551,16 @@ class mkdepthcharge(
         if not initramfs:
             initramfs = None
 
-        elif len(initramfs) == 1:
+        elif len(ucode) == 0 and len(initramfs) == 1:
             initramfs = self._copy(initramfs[0])
 
-        elif len(initramfs) > 1:
+        elif (len(ucode) + len(initramfs)) > 1:
             self.logger.info(
                 "Concatenating initramfs files as a single initramfs."
             )
             tmp_initramfs = self._tempfile("merged-initramfs.img")
             with tmp_initramfs.open('xb') as merge:
-                for img in initramfs:
+                for img in (*ucode, *initramfs):
                     merge.write(img.read_bytes())
             initramfs = tmp_initramfs
 
