@@ -262,131 +262,92 @@ class mkdepthcharge(
                     .format(f)
                 )
 
-            # UKI addons containing no kernel, but initramfs, dtb, etc.
-            elif ftype.startswith("uki-addon-"):
-                self.logger.info(
-                    "File '{}' identified as an UKI PE addon."
-                    .format(f)
-                )
-                if hint == "vmlinuz":
-                    raise ValueError(
-                        "Cannot use '{}' (of type '{}') as a vmlinuz file."
-                        .format(f, ftype)
-                    )
-                parts = self._unukify(decomp)
-                news = []
-
-                if parts["initrd"]:
-                    news.extend((f, "initramfs") for f in parts["initrd"])
-                    self.logger.info(
-                        "Using {} initramfs images from UKI addon."
-                        .format(len(parts["initrd"]))
-                    )
-
-                if parts["dtbauto"]:
-                    news.extend((f, "dtb") for f in parts["dtbauto"])
-                    self.logger.info(
-                        "Using {} auto dtbs from UKI addon."
-                        .format(len(parts["dtbauto"]))
-                    )
-
-                if parts["dtb"]:
-                    news.insert(0, (parts["dtb"], "dtb"))
-                    self.logger.info("Using fixed dtb from UKI addon.")
-
-                if parts["ucode"]:
-                    news.extend((f, "ucode") for f in parts["ucode"])
-                    self.logger.info(
-                        "Using {} microcode images from UKI addon."
-                        .format(len(parts["ucode"]))
-                    )
-
-                if parts["cmdline"]:
-                    cmdline.extend(parts["cmdline"])
-                    self.logger.info(
-                        "Can use cmdline fragment from UKI addon: '{}'"
-                        .format(kernel_cmdline_join(parts["cmdline"]))
-                    )
-
-                if parts["uname"]:
-                    uname.append(parts["uname"])
-                    self.logger.info(
-                        "Can use uname string from UKI addon: '{}'"
-                        .format(parts["uname"])
-                    )
-
-                if parts["osrel"]:
-                    osname = parts["osrel"].get("NAME", osname)
-                    self.logger.info(
-                        "Can use OS name from UKI addon: '{}'"
-                        .format(osname)
-                    )
-
-                files = news + files
-
-            # UKI binaries containing kernel, initramfs, dtb, etc.
+            # Unified Kernel Images
             elif ftype.startswith("uki-"):
-                self.logger.info(
-                    "File '{}' identified as an unified kernel image."
-                    .format(f)
-                )
-                if hint not in ("vmlinuz", "unknown"):
-                    raise ValueError(
-                        "Cannot use '{}' (of type '{}') as a {} file."
-                        .format(f, ftype, hint)
-                    )
-
                 parts = self._unukify(decomp)
                 news = []
+                ukitype = None
+
+                # UKI binaries containing kernel, initramfs, dtb, etc.
+                if not ftype.startswith("uki-addon-"):
+                    self.logger.info(
+                        "File '{}' identified as an unified kernel image."
+                        .format(f)
+                    )
+                    if hint not in ("vmlinuz", "unknown"):
+                        raise ValueError(
+                            "Cannot use '{}' (of type '{}') as a {} file."
+                            .format(f, ftype, hint)
+                        )
+                    ukitype = "UKI"
+
+                # UKI addons containing no kernel, but initramfs, dtb, etc.
+                else:
+                    self.logger.info(
+                        "File '{}' identified as an UKI PE addon."
+                        .format(f)
+                    )
+                    if hint == "vmlinuz":
+                        raise ValueError(
+                            "Cannot use '{}' (of type '{}') as a vmlinuz file."
+                            .format(f, ftype)
+                        )
+                    ukitype = "UKI PE addon"
 
                 if parts["linux"]:
                     news.append((parts["linux"], "vmlinuz"))
-                    self.logger.info("Using vmlinuz from UKI.")
+                    self.logger.info(
+                        "Using vmlinuz from {}."
+                        .format(ukitype)
+                    )
 
                 if parts["initrd"]:
                     news.extend((f, "initramfs") for f in parts["initrd"])
                     self.logger.info(
-                        "Using {} initramfs images from UKI."
-                        .format(len(parts["initrd"]))
+                        "Using {} initramfs images from {}."
+                        .format(len(parts["initrd"]), ukitype)
                     )
 
                 if parts["dtbauto"]:
                     news.extend((f, "dtb") for f in parts["dtbauto"])
                     self.logger.info(
-                        "Using {} auto-dtbs from UKI."
-                        .format(len(parts["dtbauto"]))
+                        "Using {} auto-dtbs from {}."
+                        .format(len(parts["dtbauto"]), ukitype)
                     )
 
                 if parts["dtb"]:
                     news.insert(0, (parts["dtb"], "dtb"))
-                    self.logger.info("Using fixed dtb from UKI.")
+                    self.logger.info(
+                        "Using fixed dtb from {}."
+                        .format(ukitype)
+                    )
 
                 if parts["ucode"]:
                     news.extend((f, "ucode") for f in parts["ucode"])
                     self.logger.info(
-                        "Using {} microcode images from UKI."
-                        .format(len(parts["ucode"]))
+                        "Using {} microcode images from {}."
+                        .format(len(parts["ucode"]), ukitype)
                     )
 
                 if parts["cmdline"]:
                     cmdline.extend(parts["cmdline"])
                     self.logger.info(
-                        "Can use cmdline from UKI: '{}'"
-                        .format(kernel_cmdline_join(parts["cmdline"]))
+                        "Can use cmdline from {}: '{}'"
+                        .format(ukitype, kernel_cmdline_join(parts["cmdline"]))
                     )
 
                 if parts["uname"]:
                     uname.append(parts["uname"])
                     self.logger.info(
-                        "Can use uname string from UKI: '{}'"
-                        .format(parts["uname"])
+                        "Can use uname string from {}: '{}'"
+                        .format(ukitype, parts["uname"])
                     )
 
                 if parts["osrel"]:
                     osname = parts["osrel"].get("NAME", osname)
                     self.logger.info(
-                        "Can use OS name from UKI: '{}'"
-                        .format(osname)
+                        "Can use OS name from {}: '{}'"
+                        .format(ukitype, osname)
                     )
 
                 files = news + files
