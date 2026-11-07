@@ -113,6 +113,21 @@ def proc_cmdline():
     return kernel_cmdline_split(cmdline)
 
 
+def proc_bootconfig():
+    bootconfig = {}
+
+    bootconfig_f = Path("/proc/bootconfig")
+    if bootconfig_f.exists():
+        text = bootconfig_f.read_text()
+        for line in text.splitlines():
+            lhs, sep, rhs = line.partition("=")
+            lhs = lhs.strip()
+            rhs = rhs.strip().strip('"')
+            bootconfig[lhs] = rhs
+
+    return bootconfig
+
+
 def is_cros_boot():
     dt_cros_firmware = Path("/proc/device-tree/firmware/chromeos")
     if dt_cros_firmware.is_dir():
