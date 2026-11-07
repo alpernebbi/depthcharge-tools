@@ -163,7 +163,9 @@ class mkdepthcharge(
             *((Path(f).resolve(), "unknown") for f in self.files),
         ]
 
-        for f, hint in files:
+        while files:
+            f, hint = files.pop(0)
+
             # Decompress files to run detection on content.
             decomp = self._decompress(f)
             ftype = guess_filetype(decomp)
@@ -238,20 +240,7 @@ class mkdepthcharge(
                     "Unpacked EFI zboot kernel '{}' as '{}'."
                     .format(f, zcomp)
                 )
-
-                zdecomp = self._tempfile("zboot-decomp")
-                zdecomp = decompress(zcomp, zdecomp)
-                if zdecomp is None:
-                    raise ValueError(
-                        "Failed to decompress EFI zboot kernel '{}'."
-                        .format(zcomp)
-                    )
-
-                self.logger.info(
-                    "Using decompressed zboot kernel '{}' as vmlinuz."
-                    .format(zdecomp)
-                )
-                vmlinuz.append(zdecomp)
+                files.insert(0, (zcomp, "vmlinuz"))
 
             # Unknown architecture
             elif ftype in ("pe", "efi", "efi-zboot", "efi-driver"):
@@ -285,28 +274,28 @@ class mkdepthcharge(
                         .format(f, ftype)
                     )
                 parts = self._unukify(decomp)
+                news = []
 
                 if parts["initrd"]:
-                    initramfs.extend(parts["initrd"])
+                    news.extend((f, "initramfs") for f in parts["initrd"])
                     self.logger.info(
                         "Using {} initramfs images from UKI addon."
                         .format(len(parts["initrd"]))
                     )
 
                 if parts["dtbauto"]:
-                    dtbs.extend(parts["dtbauto"])
+                    news.extend((f, "dtb") for f in parts["dtbauto"])
                     self.logger.info(
                         "Using {} auto dtbs from UKI addon."
                         .format(len(parts["dtbauto"]))
                     )
 
                 if parts["dtb"]:
-                    dtbs.insert(0, parts["dtb"])
+                    news.insert(0, (parts["dtb"], "dtb"))
                     self.logger.info("Using fixed dtb from UKI addon.")
 
                 if parts["ucode"]:
-                    for img in parts["ucode"]:
-                        ucode.append(img)
+                    news.extend((f, "ucode") for f in parts["ucode"])
                     self.logger.info(
                         "Using {} microcode images from UKI addon."
                         .format(len(parts["ucode"]))
@@ -333,6 +322,8 @@ class mkdepthcharge(
                         .format(osname)
                     )
 
+                files = news + files
+
             # UKI binaries containing kernel, initramfs, dtb, etc.
             elif ftype.startswith("uki-"):
                 self.logger.info(
@@ -346,67 +337,32 @@ class mkdepthcharge(
                     )
 
                 parts = self._unukify(decomp)
+                news = []
 
                 if parts["linux"]:
-                    lfile = parts["linux"]
-                    lftype = guess_filetype(lfile)
-
-                    # UKI can probably have EFI zboot as its kernel
-                    if lftype.startswith("efi-zboot-"):
-                        self.logger.info(
-                            "File '{}' identified as an EFI zboot kernel."
-                            .format(lfile)
-                        )
-
-                        ldata = lfile.read_bytes()
-                        zcomp = self._tempfile("uki-zboot-unpack")
-                        zoffs = struct.unpack('<L', ldata[8:12])[0]
-                        zsize = struct.unpack('<L', ldata[12:16])[0]
-                        zcomp.write_bytes(ldata[zoffs:zoffs+zsize])
-                        self.logger.info(
-                            "Unpacked EFI zboot kernel '{}' as '{}'."
-                            .format(lfile, zcomp)
-                        )
-
-                        zdecomp = self._tempfile("uki-zboot-decomp")
-                        zdecomp = decompress(zcomp, zdecomp)
-                        if zdecomp is None:
-                            raise ValueError(
-                                "Failed to decompress EFI zboot kernel '{}'."
-                                .format(zcomp)
-                            )
-
-                        self.logger.info(
-                            "Using decompressed zboot kernel '{}' as vmlinuz."
-                            .format(zdecomp)
-                        )
-                        vmlinuz.append(zdecomp)
-
-                    else:
-                        vmlinuz.append(lfile)
-                        self.logger.info("Using vmlinuz from UKI.")
+                    news.append((parts["linux"], "vmlinuz"))
+                    self.logger.info("Using vmlinuz from UKI.")
 
                 if parts["initrd"]:
-                    initramfs.extend(parts["initrd"])
+                    news.extend((f, "initramfs") for f in parts["initrd"])
                     self.logger.info(
                         "Using {} initramfs images from UKI."
                         .format(len(parts["initrd"]))
                     )
 
                 if parts["dtbauto"]:
-                    dtbs.extend(parts["dtbauto"])
+                    news.extend((f, "dtb") for f in parts["dtbauto"])
                     self.logger.info(
                         "Using {} auto-dtbs from UKI."
                         .format(len(parts["dtbauto"]))
                     )
 
                 if parts["dtb"]:
-                    dtbs.insert(0, parts["dtb"])
+                    news.insert(0, (parts["dtb"], "dtb"))
                     self.logger.info("Using fixed dtb from UKI.")
 
                 if parts["ucode"]:
-                    for img in parts["ucode"]:
-                        ucode.append(img)
+                    news.extend((f, "ucode") for f in parts["ucode"])
                     self.logger.info(
                         "Using {} microcode images from UKI."
                         .format(len(parts["ucode"]))
@@ -432,6 +388,8 @@ class mkdepthcharge(
                         "Can use OS name from UKI: '{}'"
                         .format(osname)
                     )
+
+                files = news + files
 
             # Cpio files
             elif ftype == "cpio":
