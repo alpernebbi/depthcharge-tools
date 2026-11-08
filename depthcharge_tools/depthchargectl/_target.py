@@ -87,6 +87,19 @@ class PartitionSizeTooSmallError(CommandExit):
         super().__init__(message=message, returncode=7)
 
 
+class MountedPartitionError(CommandExit):
+    def __init__(self, partition, mountpoints):
+        mstr = str.join(", ", sorted(f"'{m}'" for m in mountpoints))
+        message = (
+            "Partition '{}' has mountpoints: {}"
+            .format(partition, mstr)
+        )
+
+        self.partition = partition
+        self.mountpoints = mountpoints
+        super().__init__(message=message, returncode=8)
+
+
 class NoUsableCrosPartition(CommandExit):
     def __init__(self):
         message = (
@@ -188,6 +201,11 @@ class depthchargectl_target(
         if len(partitions) == 1 and len(disks) == 0:
             part = partitions[0]
 
+            self.logger.info("Checking if target partition is mounted.")
+            mounts = self.diskinfo.mountpoints(part)
+            if mounts:
+                raise MountedPartitionError(part.path, mounts)
+
             self.logger.info("Checking if target partition is writable.")
             if not part.writable():
                 if part.path is not None:
@@ -258,6 +276,15 @@ class depthchargectl_target(
                         .format(p)
                     )
                     continue
+
+            mounts = self.disks.mountpoints(p)
+            if mounts:
+                mstr = str.join(", ", sorted(f"'{m}'" for m in mounts))
+                self.logger.info(
+                    "Skipping partition '{}' with mountpoints: {}"
+                    .format(p, mstr)
+                )
+                continue
 
             if not p.writable():
                 self.logger.warning(
