@@ -91,13 +91,15 @@ def guess_filetype(path):
     if path.is_dir():
         return "directory"
 
-    head = None
     try:
         with path.open("rb") as fd:
             head = fd.read(4096)
+            return guess_datatype(head)
     except:
         return "error"
 
+
+def guess_datatype(head):
     if not head:
         return "empty"
 
