@@ -9,11 +9,13 @@ import collections
 import glob
 import platform
 import re
+import tempfile
 
 from pathlib import Path
 
 from depthcharge_tools.utils.pathlib import (
     decompress,
+    guess_filetype,
 )
 from depthcharge_tools.utils.string import (
     kernel_cmdline_split,
@@ -459,19 +461,25 @@ class KernelEntry:
             return None
 
         kernel = Path(self.kernel)
+        ftype = guess_filetype(kernel)
 
-        decomp = decompress(kernel)
-        if decomp:
-            head = decomp[:4096]
-        else:
-            with kernel.open("rb") as f:
-                head = f.read(4096)
+        if ftype in (
+            "gzip", "xz", "zstd", "lzma", "lz4", "bzip2", "lzop",
+            "unknown",
+        ):
+            with tempfile.TemporaryDirectory() as tmpdir:
+                decomp = Path(tmpdir) / f"{kernel.name}-decomp"
+                decomp = decompress(kernel, decomp)
+                if decomp:
+                    ftype = guess_filetype(decomp)
 
-        if head[0x202:0x206] == b"HdrS":
+        if ftype.endswith("x86"):
             return Architecture("x86")
-        elif head[0x38:0x3c] == b"ARM\x64":
+        elif ftype.endswith("amd64"):
+            return Architecture("amd64")
+        elif ftype.endswith("arm64"):
             return Architecture("arm64")
-        elif head[0x34:0x38] == b"\x45\x45\x45\x45":
+        elif ftype.endswith("arm"):
             return Architecture("arm")
 
     def _comparable_parts(self):
