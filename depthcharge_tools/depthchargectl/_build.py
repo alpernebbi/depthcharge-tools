@@ -28,6 +28,7 @@ from depthcharge_tools.utils.os import (
 )
 from depthcharge_tools.utils.pathlib import (
     copy,
+    unukify,
 )
 from depthcharge_tools.utils.platform import (
     KernelEntry,
@@ -417,8 +418,17 @@ class depthchargectl_build(
 
         # Linux kernel without an initramfs only supports certain
         # types of root parameters, check for them.
+        initrd = self.initrd
+
+        ukiparts = unukify(self.kernel)
+        if ukiparts:
+            initrd = ukiparts.get("initrd", initrd)
+
         microcode = cpu_microcode(self.boot_mountpoint)
-        if self.initrd is None or self.initrd == microcode:
+        if initrd == microcode:
+            initrd = None
+
+        if not initrd:
             if self.root and root_requires_initramfs(self.root):
                 raise ValueError(
                     "An initramfs is required for root '{}'."
