@@ -260,6 +260,8 @@ def installed_kernels(root=None, boot=None):
     boot = Path(boot).resolve()
 
     for f in (
+        *root.glob("lib/modules/*/vmlinuz-dtbloader.efi"),
+        *root.glob("lib/modules/*/vmlinuz.efi"),
         *root.glob("lib/modules/*/vmlinuz"),
         *root.glob("lib/modules/*/vmlinux"),
         *root.glob("lib/modules/*/Image"),
