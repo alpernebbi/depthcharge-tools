@@ -295,6 +295,9 @@ def installed_kernels(root=None, boot=None):
         *boot.glob("Image"),
         *boot.glob("zImage"),
         *boot.glob("bzImage"),
+        *root.glob("nix/var/nix/profiles/system/kernel"),
+        *root.glob("run/current-system/kernel"),
+        *root.glob("run/booted-system/kernel"),
     ):
         if not f.is_file():
             continue
@@ -346,6 +349,9 @@ def installed_kernels(root=None, boot=None):
         *root.glob("initrd.img"),
         *root.glob("initrd"),
         *root.glob("initramfs"),
+        *root.glob("nix/var/nix/profiles/system/initrd"),
+        *root.glob("run/current-system/initrd"),
+        *root.glob("run/booted-system/initrd"),
     ):
         if not f.is_file():
             continue
@@ -396,6 +402,9 @@ def installed_kernels(root=None, boot=None):
         *boot.glob("dtb"),
         *root.glob("usr/share/dtbs"),
         *root.glob("usr/share/dtb"),
+        *root.glob("nix/var/nix/profiles/system/dtbs"),
+        *root.glob("run/current-system/dtbs"),
+        *root.glob("run/booted-system/dtbs"),
     ):
         if not d.is_dir():
             continue
