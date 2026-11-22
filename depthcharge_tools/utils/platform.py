@@ -296,8 +296,14 @@ def installed_kernels(root=None, boot=None):
         *boot.glob("zImage"),
         *boot.glob("bzImage"),
         *root.glob("nix/var/nix/profiles/system/kernel"),
+        *root.glob("var/guix/profiles/system/kernel/vmlinuz"),
+        *root.glob("var/guix/profiles/system/kernel/Image"),
         *root.glob("run/current-system/kernel"),
+        *root.glob("run/current-system/kernel/vmlinuz"),
+        *root.glob("run/current-system/kernel/Image"),
         *root.glob("run/booted-system/kernel"),
+        *root.glob("run/booted-system/kernel/vmlinuz"),
+        *root.glob("run/booted-system/kernel/Image"),
     ):
         if not f.is_file():
             continue
@@ -350,6 +356,7 @@ def installed_kernels(root=None, boot=None):
         *root.glob("initrd"),
         *root.glob("initramfs"),
         *root.glob("nix/var/nix/profiles/system/initrd"),
+        *root.glob("var/guix/profiles/system/initrd"),
         *root.glob("run/current-system/initrd"),
         *root.glob("run/booted-system/initrd"),
     ):
@@ -403,8 +410,11 @@ def installed_kernels(root=None, boot=None):
         *root.glob("usr/share/dtbs"),
         *root.glob("usr/share/dtb"),
         *root.glob("nix/var/nix/profiles/system/dtbs"),
+        *root.glob("var/guix/profiles/system/kernel/lib/dtbs"),
         *root.glob("run/current-system/dtbs"),
+        *root.glob("run/current-system/kernel/lib/dtbs"),
         *root.glob("run/booted-system/dtbs"),
+        *root.glob("run/booted-system/kernel/lib/dtbs"),
     ):
         if not d.is_dir():
             continue
