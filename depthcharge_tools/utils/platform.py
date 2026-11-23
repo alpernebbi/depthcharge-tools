@@ -481,6 +481,52 @@ def installed_kernels(root=None, boot=None):
             initrds[sv] = si if si.is_file() else fi
             fdtdirs[sv] = sd if sd.is_dir() else dd
 
+    for d in sorted(
+        root.glob("var/guix/profiles/system-*-link"),
+        key=nixos_generation_number,
+    ):
+        name = d.name[:-5]
+        if not d.resolve().is_dir():
+            continue
+
+        # "/gnu/store/${hash}-profile/"
+        dk = (d / "kernel").resolve()
+        if not dk.is_dir():
+            continue
+
+        fk = (dk / "vmlinuz").resolve()
+        if not fk.is_file():
+            fk = (dk / "Image").resolve()
+        if not fk.is_file():
+            continue
+
+        # kernel/vmlinuz symlink target has the Linux-libre version
+        # "/gnu/store/${hash}-linux-module-database/vmlinuz", linking to
+        # "/gnu/store/${hash}-linux-libre-${version}/vmlinuz"
+        h, _, v = fk.parent.name.partition("-linux-libre-")
+        if v:
+            v = f"{v}-libre"
+        else:
+            h, _, v = fk.parent.name.partition("-linux-")
+        if not v:
+            continue
+
+        kernels[v] = fk
+        kernels[f"{v}~{name}"] = fk
+
+        # "/gnu/store/${hash}-raw-initrd/initrd.cpio.gz"
+        fi = (d / "initrd").resolve()
+        if fi.is_file():
+            initrds[v] = fi
+            initrds[f"{v}~{name}"] = fi
+
+        # "/gnu/store/${hash}-linux-module-database/lib/dtbs", linking to
+        # "/gnu/store/${hash}-linux-libre-${version}/lib/dtbs"
+        dd = (dk / "lib/dtbs").resolve()
+        if dd.is_dir():
+            fdtdirs[v] = dd
+            fdtdirs[f"{v}~{name}"] = dd
+
     if None in kernels:
         kernel, release = kernels[None], None
         for r, k in kernels.items():
