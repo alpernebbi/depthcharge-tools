@@ -16,6 +16,7 @@ from pathlib import Path
 from depthcharge_tools.utils.pathlib import (
     decompress,
     guess_filetype,
+    relresolve,
 )
 from depthcharge_tools.utils.string import (
     kernel_cmdline_split,
@@ -276,7 +277,7 @@ def installed_kernels(root=None, boot=None):
         if not f.is_file():
             continue
         release = f.parent.name
-        kernels[release] = f.resolve()
+        kernels[release] = relresolve(f, root)
 
     for f in (
         *boot.glob("vmlinuz-*"),
@@ -285,7 +286,7 @@ def installed_kernels(root=None, boot=None):
         if not f.is_file():
             continue
         _, _, release = f.name.partition("-")
-        kernels[release] = f.resolve()
+        kernels[release] = relresolve(f, root)
 
     for f in (
         *boot.glob("vmlinuz"),
@@ -307,7 +308,7 @@ def installed_kernels(root=None, boot=None):
     ):
         if not f.is_file():
             continue
-        kernels[None] = f.resolve()
+        kernels[None] = relresolve(f, root)
         break
 
     for f in (
@@ -323,7 +324,7 @@ def installed_kernels(root=None, boot=None):
         if not f.is_file():
             continue
         release = f.parent.name
-        initrds[release] = f.resolve()
+        initrds[release] = relresolve(f, root)
 
     for f in (
         *boot.glob("initrd-*.img"),
@@ -333,7 +334,7 @@ def installed_kernels(root=None, boot=None):
             continue
         _, _, release = f.name.partition("-")
         release = release[:-4]
-        initrds[release] = f.resolve()
+        initrds[release] = relresolve(f, root)
 
     for f in (
         *boot.glob("initrd-*"),
@@ -344,7 +345,7 @@ def installed_kernels(root=None, boot=None):
         if not f.is_file():
             continue
         _, _, release = f.name.partition("-")
-        initrds[release] = f.resolve()
+        initrds[release] = relresolve(f, root)
 
     for f in (
         *boot.glob("initrd.img"),
@@ -362,7 +363,7 @@ def installed_kernels(root=None, boot=None):
     ):
         if not f.is_file():
             continue
-        initrds[None] = f.resolve()
+        initrds[None] = relresolve(f, root)
         break
 
     for d in (
@@ -371,7 +372,7 @@ def installed_kernels(root=None, boot=None):
         if not d.is_dir():
             continue
         _, _, release = d.name.partition("linux-image-")
-        fdtdirs[release] = d.resolve()
+        fdtdirs[release] = relresolve(d, root)
 
     for d in (
         *root.glob("lib/firmware/*/device-tree"),
@@ -384,7 +385,7 @@ def installed_kernels(root=None, boot=None):
         if not d.is_dir():
             continue
         release = d.parent.name
-        fdtdirs[release] = d.resolve()
+        fdtdirs[release] = relresolve(d, root)
 
     for d in (
         *boot.glob("dtb-*"),
@@ -393,7 +394,7 @@ def installed_kernels(root=None, boot=None):
         if not d.is_dir():
             continue
         _, _, release = d.name.partition("-")
-        fdtdirs[release] = d.resolve()
+        fdtdirs[release] = relresolve(d, root)
 
     for d in (
         *boot.glob("dtb/*"),
@@ -402,7 +403,7 @@ def installed_kernels(root=None, boot=None):
         if not d.is_dir():
             continue
         if d.name in kernels:
-            fdtdirs[d.name] = d.resolve()
+            fdtdirs[d.name] = relresolve(d, root)
 
     for d in (
         *boot.glob("dtbs"),
@@ -423,7 +424,7 @@ def installed_kernels(root=None, boot=None):
         dtbs = d.glob("**/*.dtb")
         counts = collections.Counter(dtb.name for dtb in dtbs)
         if all(c <= 1 for c in counts.values()):
-            fdtdirs[None] = d.resolve()
+            fdtdirs[None] = relresolve(d, root)
             break
 
     def nixos_generation_number(path):
@@ -438,10 +439,10 @@ def installed_kernels(root=None, boot=None):
         key=nixos_generation_number,
     ):
         name = d.name[:-5]
-        if not d.resolve().is_dir():
+        if not relresolve(d, root).is_dir():
             continue
 
-        fk = (d / "kernel").resolve()
+        fk = relresolve(d / "kernel", root)
         if not fk.is_file():
             continue
 
@@ -455,26 +456,26 @@ def installed_kernels(root=None, boot=None):
         kernels[f"{v}~{name}"] = fk
 
         # "/nix/store/${hash}-initrd-linux-${version}/initrd"
-        fi = (d / "initrd").resolve()
+        fi = relresolve(d / "initrd", root)
         if fi.is_file():
             initrds[v] = fi
             initrds[f"{v}~{name}"] = fi
 
         # "/nix/store/${hash}-linux-${version}/dtbs"
-        dd = (d / "dtbs").resolve()
+        dd = relresolve(d / "dtbs", root)
         if dd.is_dir():
             fdtdirs[v] = dd
             fdtdirs[f"{v}~{name}"] = dd
 
         # Specialisations can have the same files as system profiles?
         for s in d.glob("specialisation/*"):
-            s = s.resolve()
+            s = relresolve(s, root)
             if not s.is_dir():
                 continue
 
-            sk = (s / "kernel").resolve()
-            si = (s / "initrd").resolve()
-            sd = (s / "dtbs").resolve()
+            sk = relresolve(s / "kernel", root)
+            si = relresolve(s / "initrd", root)
+            sd = relresolve(s / "dtbs", root)
 
             sv = f"{v}~{name}~{s.name}"
             kernels[sv] = sk if sk.is_file() else fk
@@ -486,17 +487,17 @@ def installed_kernels(root=None, boot=None):
         key=nixos_generation_number,
     ):
         name = d.name[:-5]
-        if not d.resolve().is_dir():
+        if not relresolve(d, root).is_dir():
             continue
 
         # "/gnu/store/${hash}-profile/"
-        dk = (d / "kernel").resolve()
+        dk = relresolve(d / "kernel", root)
         if not dk.is_dir():
             continue
 
-        fk = (dk / "vmlinuz").resolve()
+        fk = relresolve(dk / "vmlinuz", root)
         if not fk.is_file():
-            fk = (dk / "Image").resolve()
+            fk = relresolve(dk / "Image", root)
         if not fk.is_file():
             continue
 
@@ -515,14 +516,14 @@ def installed_kernels(root=None, boot=None):
         kernels[f"{v}~{name}"] = fk
 
         # "/gnu/store/${hash}-raw-initrd/initrd.cpio.gz"
-        fi = (d / "initrd").resolve()
+        fi = relresolve(d / "initrd", root)
         if fi.is_file():
             initrds[v] = fi
             initrds[f"{v}~{name}"] = fi
 
         # "/gnu/store/${hash}-linux-module-database/lib/dtbs", linking to
         # "/gnu/store/${hash}-linux-libre-${version}/lib/dtbs"
-        dd = (dk / "lib/dtbs").resolve()
+        dd = relresolve(dk / "lib/dtbs", root)
         if dd.is_dir():
             fdtdirs[v] = dd
             fdtdirs[f"{v}~{name}"] = dd
