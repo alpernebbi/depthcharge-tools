@@ -426,6 +426,61 @@ def installed_kernels(root=None, boot=None):
             fdtdirs[None] = d.resolve()
             break
 
+    def nixos_generation_number(path):
+        try:
+            # "system-NNN-link"
+            return int(path.name[7:-5])
+        except:
+            return -1
+
+    for d in sorted(
+        root.glob("nix/var/nix/profiles/system-*-link"),
+        key=nixos_generation_number,
+    ):
+        name = d.name[:-5]
+        if not d.resolve().is_dir():
+            continue
+
+        fk = (d / "kernel").resolve()
+        if not fk.is_file():
+            continue
+
+        # Parent of the kernel symlink target has the Linux version
+        # "/nix/store/${hash}-linux-${version}/Image"
+        h, _, v = fk.parent.name.partition("-linux-")
+        if not v:
+            continue
+
+        kernels[v] = fk
+        kernels[f"{v}~{name}"] = fk
+
+        # "/nix/store/${hash}-initrd-linux-${version}/initrd"
+        fi = (d / "initrd").resolve()
+        if fi.is_file():
+            initrds[v] = fi
+            initrds[f"{v}~{name}"] = fi
+
+        # "/nix/store/${hash}-linux-${version}/dtbs"
+        dd = (d / "dtbs").resolve()
+        if dd.is_dir():
+            fdtdirs[v] = dd
+            fdtdirs[f"{v}~{name}"] = dd
+
+        # Specialisations can have the same files as system profiles?
+        for s in d.glob("specialisation/*"):
+            s = s.resolve()
+            if not s.is_dir():
+                continue
+
+            sk = (s / "kernel").resolve()
+            si = (s / "initrd").resolve()
+            sd = (s / "dtbs").resolve()
+
+            sv = f"{v}~{name}~{s.name}"
+            kernels[sv] = sk if sk.is_file() else fk
+            initrds[sv] = si if si.is_file() else fi
+            fdtdirs[sv] = sd if sd.is_dir() else dd
+
     if None in kernels:
         kernel, release = kernels[None], None
         for r, k in kernels.items():
