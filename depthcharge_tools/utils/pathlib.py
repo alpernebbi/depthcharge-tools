@@ -66,6 +66,17 @@ def iterdir(path):
         return []
 
 
+# Resolve symlinks to absolute paths as relative to a given root
+def relresolve(path, root=None):
+    if root not in (None, "/", "") and path.is_symlink():
+        root = Path(root).resolve()
+        target = path.readlink()
+        if target.is_absolute():
+            target = root / target.relative_to(target.root)
+        return relresolve(target, root)
+    return path.resolve()
+
+
 def read_lines(path):
     try:
         if path.is_file():
